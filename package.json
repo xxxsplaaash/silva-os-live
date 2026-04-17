@@ -1,0 +1,23 @@
+{
+  "name": "silva-os",
+  "version": "3.9.9",
+  "description": "Silva Studios AI Division OS v3.9.9 — Elite Makeup Layer",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.3",
+    "better-sqlite3": "^12.8.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

@@ -1,0 +1,181 @@
+/* Silva OS 3.9.9 — final stability + fit pass
+   Focus: stop clipped pages, reduce dead click zones, align profile sections, keep polish light. */
+
+html,body{
+  min-height:100dvh !important;
+  height:100% !important;
+}
+body{
+  min-height:100dvh !important;
+  overflow:hidden !important;
+}
+#sidebar,
+#main{
+  height:100dvh !important;
+  min-height:100dvh !important;
+}
+#main{
+  overscroll-behavior:contain;
+  scroll-behavior:auto !important;
+}
+.page{
+  min-height:calc(100dvh - 1px) !important;
+  padding-top:26px !important;
+  padding-bottom:78px !important;
+}
+
+/* lighter fit for cut top sections on character/planner pages */
+#page-planner,
+#page-aisha,
+#page-leah,
+#page-claudia,
+#page-grok,
+#page-vanya{
+  padding-top:20px !important;
+}
+#page-planner .page-title,
+#page-aisha .char-hero,
+#page-leah .char-hero,
+#page-claudia .char-hero,
+#page-grok .char-hero,
+#page-vanya .char-hero{
+  margin-top:0 !important;
+}
+
+/* consistent hover language across tabs / pills / nav / cards */
+.char-tab,
+.btn.btn-ghost,
+.btn.btn-sm,
+.alpha-home-fixed-tab,
+#sidebar .nav-item,
+.team-card,
+.char-mode-pill{
+  position:relative;
+  transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease !important;
+}
+.char-tab:hover,
+.char-tab:focus-visible,
+.btn.btn-ghost:hover,
+.btn.btn-sm:hover,
+.alpha-home-fixed-tab:hover,
+#sidebar .nav-item:hover,
+.team-card:hover,
+.char-mode-pill:hover{
+  background:linear-gradient(180deg, rgba(255,255,255,.042), rgba(255,255,255,.018)) !important;
+  border-color:rgba(214,196,238,.16) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045),0 0 0 1px rgba(214,196,238,.08),0 10px 22px rgba(0,0,0,.14) !important;
+}
+.char-tab.active,
+.char-tab[data-active="true"],
+.char-mode-pill.active-mode{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)) !important;
+  border-color:rgba(214,196,238,.18) !important;
+}
+
+/* Home System: reliable click targets + readable names */
+#page-homes .alpha-home-fixed-tabs{
+  align-items:stretch !important;
+}
+#page-homes .alpha-home-fixed-tab{
+  cursor:pointer !important;
+  pointer-events:auto !important;
+  user-select:none;
+  z-index:1;
+}
+#page-homes .alpha-home-fixed-tab *{
+  pointer-events:none !important;
+}
+#page-homes .alpha-home-fixed-tab-copy{
+  min-width:0 !important;
+}
+#page-homes .alpha-home-fixed-tab-copy strong,
+#page-homes .alpha-home-fixed-tab-copy span{
+  word-break:break-word;
+}
+#page-homes .alpha-home-fixed-tab-copy strong{
+  font-size:1rem !important;
+  line-height:1.06 !important;
+}
+#page-homes .alpha-home-fixed-tab-copy span{
+  font-size:.73rem !important;
+  line-height:1.32 !important;
+}
+#page-homes .alpha-home-fixed-detailwrap,
+#page-homes .alpha-home-fixed-stage,
+#page-homes .alpha-home-fixed-slide,
+#page-homes .home-card,
+#page-homes .alpha-ref-lane,
+#page-homes .alpha-home-slot-grid,
+#page-homes .alpha-home-slot{
+  min-width:0 !important;
+}
+
+/* Character profile fit: stop right column clipping */
+.profile-wide-grid{
+  display:grid !important;
+  grid-template-columns:minmax(0,1.08fr) minmax(320px,.82fr) !important;
+  gap:18px !important;
+  align-items:start !important;
+}
+.profile-wide-grid > div,
+.profile-subgrid,
+.profile-subgrid > div,
+.profile-block{
+  min-width:0 !important;
+}
+.profile-subgrid{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+#page-aisha .profile-wide-grid,
+#page-vanya .profile-wide-grid,
+#page-leah .profile-wide-grid,
+#page-claudia .profile-wide-grid,
+#page-grok .profile-wide-grid{
+  grid-template-columns:minmax(0,1.02fr) minmax(300px,.78fr) !important;
+}
+@media (max-width: 1220px){
+  #page-aisha .profile-wide-grid,
+  #page-vanya .profile-wide-grid,
+  #page-leah .profile-wide-grid,
+  #page-claudia .profile-wide-grid,
+  #page-grok .profile-wide-grid,
+  .profile-wide-grid{
+    grid-template-columns:1fr !important;
+  }
+}
+@media (max-width: 900px){
+  .profile-subgrid{grid-template-columns:1fr !important;}
+}
+
+/* stop clipped mode pill text */
+.char-mode-pill{
+  min-width:108px !important;
+  min-height:40px !important;
+  padding:9px 16px !important;
+  overflow:visible !important;
+}
+.char-mode-pill .silva-text-sheen,
+.char-mode-pill span,
+.char-mode-pill strong{
+  display:inline-block;
+  overflow:visible !important;
+  text-overflow:clip !important;
+}
+
+/* planner section fit */
+#page-planner .planner-calendar,
+#page-planner .planner-side,
+#page-planner .planner-warning,
+#page-planner .planner-tip,
+#page-planner .day-col{
+  min-width:0 !important;
+}
+
+/* make sidebar/logo fit inside small browser chrome more safely */
+.logo-block{
+  min-height:78px !important;
+  padding-top:12px !important;
+  padding-bottom:12px !important;
+}
+.logo-text{line-height:1 !important;}
+.logo-sub{margin-top:4px !important;}

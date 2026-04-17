@@ -1,0 +1,50 @@
+/* Planner month view should use the available workspace width, not the generic page cap */
+#page-planner{
+  max-width:none !important;
+  width:auto !important;
+}
+
+#page-planner .filter-bar,
+#page-planner #planner-grid,
+#page-planner .week-grid,
+#page-planner .month-grid,
+#page-planner .grid2{
+  width:100% !important;
+  max-width:none !important;
+  min-width:0 !important;
+}
+
+#page-planner .month-grid,
+#page-planner #planner-grid.month-grid{
+  display:grid !important;
+  grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+  gap:12px !important;
+  align-items:stretch !important;
+}
+
+#page-planner .month-cell{
+  min-height:170px !important;
+}
+
+#page-planner .week-grid,
+#page-planner #planner-grid.week-grid{
+  display:grid !important;
+  grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+}
+
+#page-planner .day-col,
+#page-planner .month-cell{
+  min-width:0 !important;
+}
+
+#page-planner .grid2{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+}
+
+@media (max-width:1280px){
+  #page-planner .month-cell{min-height:150px !important;}
+}
+
+@media (max-width:980px){
+  #page-planner .grid2{grid-template-columns:1fr !important;}
+}

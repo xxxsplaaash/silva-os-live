@@ -1,0 +1,224 @@
+
+/* Silva OS v3.9.7 TRUE final overhaul */
+/* Comprehensive visual cleanup + page hydration support */
+
+:root{
+  --elite-bg-1: rgba(255,255,255,.022);
+  --elite-bg-2: rgba(255,255,255,.038);
+  --elite-bg-3: rgba(255,255,255,.06);
+  --elite-br-1: rgba(255,255,255,.08);
+  --elite-br-2: rgba(255,255,255,.12);
+  --elite-shadow: 0 18px 46px rgba(0,0,0,.28);
+  --elite-pill: 999px;
+  --elite-r-xl: 24px;
+  --elite-r-lg: 18px;
+  --elite-r-md: 14px;
+  --elite-soft: rgba(255,255,255,.66);
+  --elite-muted: rgba(255,255,255,.48);
+  --elite-btn-bg: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.045));
+  --elite-btn-bg-hover: linear-gradient(180deg, rgba(255,255,255,.11), rgba(255,255,255,.065));
+  --elite-btn-br: rgba(255,255,255,.12);
+}
+
+html{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.18) transparent;}
+body::-webkit-scrollbar,#sidebar::-webkit-scrollbar,.page::-webkit-scrollbar{width:10px;height:10px;}
+body::-webkit-scrollbar-thumb,#sidebar::-webkit-scrollbar-thumb,.page::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:999px;}
+
+/* Make sidebar reliable */
+#sidebar{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  scrollbar-gutter:stable;
+}
+#sidebar .nav-item{
+  min-height: 44px;
+  border-radius: 14px;
+  display:flex !important;
+  align-items:center !important;
+  gap:11px;
+  margin: 2px 8px;
+  padding: 10px 14px !important;
+}
+#sidebar .nav-item .nav-icon{opacity:.9}
+#sidebar .nav-item [data-count-badge],
+#sidebar .nav-item .nav-count-badge,
+#sidebar .nav-item #count-home,
+#sidebar .nav-item #count-world,
+#sidebar .nav-item #count-assets{
+  margin-left:auto !important;
+  min-width:22px;
+  height:22px;
+  padding:0 8px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  background: rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.11);
+  color: rgba(255,255,255,.82);
+  font-size:11px;
+  flex-shrink:0;
+}
+
+/* Kill the cheap white buttons everywhere */
+button,.btn,.copy-btn,.icon-btn,.wr-gen-btn,.preset-chip,.char-mode-pill,.mode-indicator{
+  transition: background .18s ease,border-color .18s ease,color .18s ease,transform .12s ease,box-shadow .18s ease;
+}
+.btn,.btn-primary,.copy-btn,.wr-gen-btn,button.btn,button{
+  background: var(--elite-btn-bg) !important;
+  color:#f3f3f3 !important;
+  border:1px solid var(--elite-btn-br) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.btn:hover,.btn-primary:hover,.copy-btn:hover,.wr-gen-btn:hover,button:hover{
+  background: var(--elite-btn-bg-hover) !important;
+  border-color: rgba(255,255,255,.18) !important;
+  transform: translateY(-1px);
+}
+.btn-red{
+  background: linear-gradient(180deg, rgba(232,0,30,.26), rgba(232,0,30,.16)) !important;
+  border:1px solid rgba(232,0,30,.28) !important;
+}
+.btn-ghost,.icon-btn,.preset-chip,.char-mode-pill{
+  background: rgba(255,255,255,.03) !important;
+  color: rgba(255,255,255,.84) !important;
+}
+button:disabled,.btn:disabled,.copy-btn:disabled{
+  opacity:.58 !important;
+  cursor:not-allowed;
+  transform:none !important;
+}
+
+/* Inputs */
+input,textarea,select,.search-input,.filter-select,.gen-select,.field-input,.field-textarea{
+  background: rgba(255,255,255,.03) !important;
+  border:1px solid rgba(255,255,255,.1) !important;
+  border-radius: 14px !important;
+  color:#f5f5f5 !important;
+}
+input:focus,textarea:focus,select:focus{
+  outline:none !important;
+  border-color: rgba(255,255,255,.18) !important;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.035);
+}
+
+/* Page rhythm */
+.page{
+  padding-bottom: 46px !important;
+}
+.page-title{
+  letter-spacing:-0.03em;
+  margin-bottom:8px !important;
+}
+.page-sub{
+  color: var(--elite-soft) !important;
+  margin-bottom: 26px !important;
+  max-width: 980px;
+}
+.filter-bar{
+  gap: 10px !important;
+  margin-bottom: 22px !important;
+}
+.card,.prompt-card,.gallery-card,.caption-card,.stat-box,.loc-card,.broll-card,.event-card,.asset-card,.profile-block,.idea-card{
+  border-radius: var(--elite-r-xl) !important;
+  border: 1px solid var(--elite-br-1) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02)) !important;
+  box-shadow: var(--elite-shadow);
+}
+.card:hover,.prompt-card:hover,.gallery-card:hover,.caption-card:hover,.stat-box:hover,.loc-card:hover,.broll-card:hover,.event-card:hover{
+  border-color: var(--elite-br-2) !important;
+}
+
+/* Prompt generator rebalance */
+.gen-grid{
+  grid-template-columns: minmax(360px,.96fr) minmax(540px,1.2fr) !important;
+  gap: 24px !important;
+}
+.gen-output{
+  top: 24px !important;
+  min-height: 100% !important;
+}
+#gen-output-panel, #gen-output{
+  min-height: 320px;
+}
+#gen-ai-tools > .output-block{
+  margin-bottom:0 !important;
+}
+#gen-ai-tools .output-block > div[style*="display:flex"]{
+  gap:10px !important;
+}
+#gen-ai-tools button{
+  min-height: 38px;
+}
+#page-generator .card{
+  padding: 20px !important;
+}
+
+/* Quick chips / feature tags */
+.tag,.api-badge,.mode-indicator,.preset-chip,.char-mode-pill{
+  border-radius: 999px !important;
+  border:1px solid rgba(255,255,255,.09) !important;
+  background: rgba(255,255,255,.04) !important;
+  color: rgba(255,255,255,.84) !important;
+}
+
+/* Hero actions / top CTAs */
+#page-studio .ai-pulse-actions,
+.hero-actions,
+.quick-links-row,
+.quick-links,
+[data-quick-links]{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:10px !important;
+}
+#page-studio .ai-pulse-actions .btn,
+.hero-actions .btn,
+.quick-links .btn{
+  min-height:40px;
+  padding:0 16px !important;
+}
+
+/* Empty states */
+.empty-state,.ghost-empty,[data-empty-state]{
+  padding:18px;
+  border-radius:18px;
+  border:1px dashed rgba(255,255,255,.08);
+  background: rgba(255,255,255,.018);
+  color: rgba(255,255,255,.56);
+}
+
+/* Hide legacy room/chat surfaces if still lingering */
+#page-home .ai-comms-shell,
+#page-home [class*="v396"],
+#room-surface,
+#page-room,
+#page-ai-comms,
+#page-communications,
+#legacy-room,
+#legacy-chat,
+[data-legacy-room],
+[data-legacy-chat]{
+  display:none !important;
+}
+
+/* Campaign & library cards */
+#library-grid,#campaigns-grid{
+  gap:16px !important;
+}
+#campaigns-grid .card,#library-grid .prompt-card{
+  min-height: 100%;
+}
+
+/* Version chips cleanup */
+.version-chip,.hero-chip,.status-chip{
+  border-radius:999px !important;
+  background: rgba(255,255,255,.04) !important;
+  border:1px solid rgba(255,255,255,.09) !important;
+}
+
+/* Responsive */
+@media (max-width: 1320px){
+  .gen-grid{grid-template-columns:1fr !important;}
+  .gen-output{position:relative !important; top:auto !important;}
+}

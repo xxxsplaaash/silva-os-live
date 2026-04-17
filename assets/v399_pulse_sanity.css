@@ -1,0 +1,53 @@
+/* Studio Pulse sanity pass: kill decorative pulse/sheens only on the legacy Studio page */
+
+#page-studio .silva-text-pulse,
+#page-studio .silva-stable-pulse,
+#page-studio .silva-text-sheen,
+#page-studio .silva-text-sheen--soft,
+#page-studio .silva-text-sheen--live,
+#page-studio .thinking,
+#page-studio .thinking-text{
+  animation:none !important;
+  background-image:none !important;
+  background:none !important;
+  -webkit-text-fill-color:currentColor !important;
+  color:inherit !important;
+  filter:none !important;
+  mask:none !important;
+  -webkit-mask-image:none !important;
+}
+
+/* kill glare / trim overlays on Studio Pulse cards only */
+#page-studio .silva-elite-glare,
+#page-studio .silva-elite-ripple{
+  display:none !important;
+}
+
+#page-studio .card::before,
+#page-studio .card::after,
+#page-studio .pulse-card::before,
+#page-studio .pulse-card::after,
+#page-studio .studio-response::before,
+#page-studio .studio-response::after,
+#page-studio .cc-side-card::before,
+#page-studio .cc-side-card::after,
+#page-studio .cc-center > .card::before,
+#page-studio .cc-center > .card::after,
+#page-studio .cc-right > .card::before,
+#page-studio .cc-right > .card::after{
+  animation:none !important;
+  background:none !important;
+  opacity:0 !important;
+  box-shadow:none !important;
+}
+
+/* keep the page clean, not glowing like a drunk spaceship */
+#page-studio .card,
+#page-studio .pulse-card,
+#page-studio .studio-response,
+#page-studio .cc-side-card,
+#page-studio .cc-center > .card,
+#page-studio .cc-right > .card{
+  box-shadow:none !important;
+  filter:none !important;
+}

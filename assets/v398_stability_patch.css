@@ -1,0 +1,71 @@
+/* Silva OS 3.9.8 targeted parity / stability polish */
+.logo-block{
+  padding:24px 20px 18px !important;
+}
+.logo-text{
+  display:flex !important;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+  flex-wrap:nowrap !important;
+  font-size:.72rem !important;
+  letter-spacing:.135em !important;
+  line-height:1.05;
+}
+.logo-text .live-dot{margin-right:0 !important;flex:0 0 auto;}
+.logo-sub{letter-spacing:.12em;}
+
+#sidebar .nav-section:nth-of-type(2) .nav-item[data-page="aisha"]{
+  order:-10;
+}
+#sidebar .nav-item[data-page="aisha"]{
+  color:#c7bfe0;
+}
+#sidebar .nav-item[data-page="aisha"].active{
+  border-left-color:rgba(184,168,216,.92);
+  background:rgba(184,168,216,.055);
+}
+#sidebar .nav-item[data-page="aisha"].active::before{
+  background:rgba(184,168,216,.92);
+  box-shadow:0 0 12px rgba(184,168,216,.20);
+}
+
+#page-homes .home-actions,
+#page-homes .alpha-home-fixed-actions,
+#page-homes .alpha-home-fixed-top,
+#page-assets .asset-body > div[style*="display:flex"]{
+  align-items:center;
+}
+
+#page-assets .asset-slots{
+  align-items:stretch;
+}
+#page-assets .asset-slot img,
+#page-homes .home-slot img{
+  object-fit:cover;
+}
+#page-assets .asset-card,
+#page-homes .home-card,
+#page-homes .alpha-home-fixed-slide{
+  box-shadow:0 10px 30px rgba(0,0,0,.18);
+}
+#page-assets .asset-card:hover,
+#page-homes .home-card:hover,
+#page-homes .alpha-home-fixed-slide:hover{
+  border-color:rgba(255,255,255,.10);
+}
+
+#page-aisha .char-avatar{
+  overflow:hidden;
+}
+#page-aisha .char-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  border-radius:50%;
+}
+#page-aisha .char-role,
+#page-aisha .char-quote{
+  max-width:70ch;
+}

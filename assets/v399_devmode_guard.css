@@ -1,0 +1,44 @@
+/* Kill decorative pulse/glare/trim only while Dev / Admin is open */
+body.silva-dev-open .silva-text-pulse,
+body.silva-dev-open .silva-stable-pulse,
+body.silva-dev-open .silva-text-sheen,
+body.silva-dev-open .silva-text-sheen--soft,
+body.silva-dev-open .silva-text-sheen--live,
+body.silva-dev-open .thinking,
+body.silva-dev-open .thinking-text{
+  animation:none !important;
+  background:none !important;
+  background-image:none !important;
+  -webkit-text-fill-color:currentColor !important;
+  color:inherit !important;
+  filter:none !important;
+  mask:none !important;
+  -webkit-mask-image:none !important;
+}
+
+body.silva-dev-open .silva-elite-glare,
+body.silva-dev-open .silva-elite-ripple{
+  display:none !important;
+}
+
+body.silva-dev-open .card::before,
+body.silva-dev-open .card::after,
+body.silva-dev-open .prompt-card::before,
+body.silva-dev-open .prompt-card::after,
+body.silva-dev-open .gallery-card::before,
+body.silva-dev-open .gallery-card::after,
+body.silva-dev-open .asset-card::before,
+body.silva-dev-open .asset-card::after,
+body.silva-dev-open .home-card::before,
+body.silva-dev-open .home-card::after,
+body.silva-dev-open .loc-card::before,
+body.silva-dev-open .loc-card::after,
+body.silva-dev-open .broll-card::before,
+body.silva-dev-open .broll-card::after,
+body.silva-dev-open .event-card::before,
+body.silva-dev-open .event-card::after{
+  animation:none !important;
+  background:none !important;
+  opacity:0 !important;
+  box-shadow:none !important;
+}

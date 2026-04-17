@@ -1,0 +1,29 @@
+/* Kill the mouse-follow glare nonsense */
+.silva-elite-glare,
+.silva-elite-ripple{
+  display:none !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+/* Kill any leftover reactive trim on Studio Pulse / Home shell cards */
+#page-home .card::before,
+#page-home .card::after,
+#page-home .cc-side-card::before,
+#page-home .cc-side-card::after,
+#page-home .cc-center > .card::before,
+#page-home .cc-center > .card::after,
+#page-home .cc-right > .card::before,
+#page-home .cc-right > .card::after,
+#page-home .studio-response::before,
+#page-home .studio-response::after,
+#page-home .pulse-card::before,
+#page-home .pulse-card::after,
+#page-studio .card::before,
+#page-studio .card::after,
+#page-studio .studio-response::before,
+#page-studio .studio-response::after{
+  background:none !important;
+  box-shadow:none !important;
+  animation:none !important;
+}

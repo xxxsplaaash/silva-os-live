@@ -1,0 +1,106 @@
+/* Studio Pulse / Home only: kill compositing seams, moving hover sheen, and glass repaint artifacts */
+
+#page-home,
+#page-studio{
+  isolation:isolate !important;
+}
+
+#page-home .cc-shell,
+#page-home .card,
+#page-home .cc-side-card,
+#page-home .cc-center > .card,
+#page-home .cc-right > .card,
+#page-home .studio-response,
+#page-home .pulse-card,
+#page-home .stat-box,
+#page-home .sr-textarea,
+#page-home .cc-ask,
+#page-home .cc-output,
+#page-studio .card,
+#page-studio .studio-response,
+#page-studio .pulse-card{
+  transform:none !important;
+  filter:none !important;
+  will-change:auto !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background-image:none !important;
+  background:rgba(8,10,16,.96) !important;
+  background-clip:padding-box !important;
+  contain:paint !important;
+  isolation:isolate !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 0 0 1px rgba(255,255,255,.05) !important;
+}
+
+/* kill all pseudo-layer tricks on Studio/Home surfaces */
+#page-home .cc-shell::before,
+#page-home .cc-shell::after,
+#page-home .card::before,
+#page-home .card::after,
+#page-home .cc-side-card::before,
+#page-home .cc-side-card::after,
+#page-home .cc-center > .card::before,
+#page-home .cc-center > .card::after,
+#page-home .cc-right > .card::before,
+#page-home .cc-right > .card::after,
+#page-home .studio-response::before,
+#page-home .studio-response::after,
+#page-home .pulse-card::before,
+#page-home .pulse-card::after,
+#page-studio .card::before,
+#page-studio .card::after,
+#page-studio .studio-response::before,
+#page-studio .studio-response::after{
+  content:none !important;
+  display:none !important;
+  background:none !important;
+  box-shadow:none !important;
+  animation:none !important;
+}
+
+/* kill reactive state layers inside Studio/Home */
+#page-home .silva-state-layer,
+#page-home .silva-chip-glyph,
+#page-home .silva-elite-glare,
+#page-home .silva-elite-ripple,
+#page-home .tilt-card,
+#page-studio .silva-state-layer,
+#page-studio .silva-chip-glyph,
+#page-studio .silva-elite-glare,
+#page-studio .silva-elite-ripple,
+#page-studio .tilt-card{
+  display:none !important;
+}
+
+/* buttons in Studio/Home must stay flat and not shimmer */
+#page-home .btn,
+#page-home button,
+#page-studio .btn,
+#page-studio button{
+  transform:none !important;
+  filter:none !important;
+  will-change:auto !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  background-image:none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 1px rgba(255,255,255,.06) !important;
+  transition:
+    border-color .16s ease,
+    background-color .16s ease,
+    box-shadow .16s ease !important;
+}
+
+#page-home .btn:hover,
+#page-home button:hover,
+#page-studio .btn:hover,
+#page-studio button:hover{
+  transform:none !important;
+  filter:none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 0 0 1px rgba(255,255,255,.09) !important;
+}

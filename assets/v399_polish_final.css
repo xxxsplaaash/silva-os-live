@@ -1,0 +1,196 @@
+/* Silva OS 3.9.9 — final polish layer
+   Surgical fixes only: home system responsiveness, label fit, hover consistency,
+   safe shared aura trim. Uses earlier toast/elite files as reference, but lighter. */
+
+:root{
+  --silva-polish-ring: rgba(214,196,238,.18);
+  --silva-polish-soft: rgba(255,255,255,.055);
+  --silva-polish-shadow: 0 14px 30px rgba(0,0,0,.18);
+}
+
+/* shared subtle aura trim language */
+#sidebar .nav-item,
+.char-mode-pill,
+.alpha-home-fixed-tab,
+#page-home .quick-modes .btn,
+#page-home .cc-quickasks button,
+#page-crosschar .grid3 > .card,
+.home-card,
+.team-card,
+.tag,
+.preset-chip{
+  position:relative;
+}
+
+#sidebar .nav-item:hover,
+#sidebar .nav-item:focus-visible,
+.char-mode-pill:hover,
+.char-mode-pill:focus-visible,
+.alpha-home-fixed-tab:hover,
+.alpha-home-fixed-tab:focus-visible,
+#page-home .quick-modes .btn:hover,
+#page-home .cc-quickasks button:hover,
+#page-crosschar .grid3 > .card:hover,
+.home-card:hover,
+.team-card:hover,
+.tag:hover,
+.preset-chip:hover{
+  border-color: rgba(214,196,238,.14) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.045),
+    0 0 0 1px rgba(214,196,238,.08),
+    0 12px 24px rgba(0,0,0,.16) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018)) !important;
+}
+
+#sidebar .nav-item.active,
+#sidebar .nav-item.active:hover{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.055),
+    0 0 0 1px var(--red-dim),
+    0 14px 28px rgba(0,0,0,.20) !important;
+}
+
+/* Home System: make cards readable and reliably clickable */
+#page-homes .alpha-home-fixed-topbar{overflow:visible;}
+#page-homes .alpha-home-fixed-tabs{
+  display:grid !important;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:12px !important;
+  overflow:visible !important;
+  padding-bottom:0 !important;
+}
+#page-homes .alpha-home-fixed-tab{
+  min-width:0 !important;
+  width:100% !important;
+  flex:unset !important;
+  align-items:flex-start !important;
+  padding:16px 16px 15px !important;
+  min-height:96px !important;
+  border-radius:18px !important;
+  overflow:hidden !important;
+  -webkit-tap-highlight-color: transparent;
+}
+#page-homes .alpha-home-fixed-tab .alpha-home-menu-dot{
+  margin-top:6px;
+  flex:0 0 10px;
+}
+#page-homes .alpha-home-fixed-tab-copy{
+  min-width:0;
+  width:100%;
+  gap:6px !important;
+}
+#page-homes .alpha-home-fixed-tab-copy strong{
+  white-space:normal !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+  display:-webkit-box !important;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  line-height:1.06 !important;
+  font-size:1rem !important;
+}
+#page-homes .alpha-home-fixed-tab-copy span{
+  display:-webkit-box !important;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+  line-height:1.35 !important;
+  font-size:.73rem !important;
+}
+#page-homes .alpha-home-fixed-tab.active{
+  border-color: rgba(214,196,238,.18) !important;
+}
+#page-homes .alpha-home-fixed-tab::before,
+#page-homes .alpha-home-fixed-tab::after{
+  pointer-events:none !important;
+}
+
+/* keep full-width layout at lower widths without chopping labels */
+@media (max-width: 1440px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns:repeat(3,minmax(0,1fr)) !important;}
+}
+@media (max-width: 1100px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns:repeat(2,minmax(0,1fr)) !important;}
+}
+@media (max-width: 760px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns:1fr !important;}
+}
+
+/* Home detail shell clean alignment */
+#page-homes .home-head{align-items:flex-start !important; gap:16px !important;}
+#page-homes .home-head .home-title{line-height:1.05 !important;}
+#page-homes .home-head .home-sub{line-height:1.45 !important;}
+#page-homes .home-row{align-items:flex-start !important;}
+#page-homes .home-key{padding-top:2px;}
+#page-homes .home-slot{cursor:pointer;}
+#page-homes .home-slot::before,
+#page-homes .home-slot::after{pointer-events:none !important;}
+
+/* Sidebar consistency: every character item gets same hover language */
+#sidebar .nav-item[data-page="aisha"],
+#sidebar .nav-item[data-page="leah"],
+#sidebar .nav-item[data-page="claudia"],
+#sidebar .nav-item[data-page="grok"],
+#sidebar .nav-item[data-page="vanya"],
+#sidebar .nav-item[data-page="crosschar"]{
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease !important;
+}
+#sidebar .nav-item[data-page="aisha"]:hover,
+#sidebar .nav-item[data-page="leah"]:hover,
+#sidebar .nav-item[data-page="claudia"]:hover,
+#sidebar .nav-item[data-page="grok"]:hover,
+#sidebar .nav-item[data-page="vanya"]:hover,
+#sidebar .nav-item[data-page="crosschar"]:hover{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 0 0 1px rgba(214,196,238,.08),
+    0 10px 22px rgba(0,0,0,.15) !important;
+}
+
+/* Character page mode pills: stop clipping and apply subtle consistent pulse */
+.char-mode-pill{
+  min-height:38px !important;
+  padding:8px 14px !important;
+  line-height:1.12 !important;
+  overflow:visible !important;
+}
+.char-mode-pill .silva-text-sheen{
+  display:inline-block;
+  padding-inline:1px;
+}
+.char-mode-pill.active-mode{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.05),
+    0 0 0 1px rgba(214,196,238,.08),
+    0 10px 20px rgba(0,0,0,.14) !important;
+}
+
+/* Let the good cross-character pulse live elsewhere, quietly */
+#page-home .section-title,
+#page-home .studio-response .mono,
+#page-home .quick-modes .btn.active-mode,
+#page-crosschar .grid3 > .card .section-title,
+#page-aisha .char-mode-pill.active-mode,
+#page-leah .char-mode-pill.active-mode,
+#page-claudia .char-mode-pill.active-mode,
+#page-grok .char-mode-pill.active-mode,
+#page-vanya .char-mode-pill.active-mode{
+  text-shadow: 0 0 10px rgba(255,255,255,.02);
+}
+
+/* Keep hover cards above everything and clean */
+#silva-char-hovercard{z-index: 99999 !important; pointer-events:none !important;}
+
+/* stop ghost hit areas from blocking clicks */
+.alpha-orbit-svg,
+.alpha-orbit-target::before,
+.alpha-orbit-target::after,
+.nav-item::before,
+.nav-item::after,
+.char-mode-pill::before,
+.char-mode-pill::after,
+.alpha-home-fixed-tab::before,
+.alpha-home-fixed-tab::after{
+  pointer-events:none !important;
+}

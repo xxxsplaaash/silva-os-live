@@ -1,0 +1,468 @@
+/* Silva OS 3.9.8 cleanup patch 5 — consistency, hover, input, avatar and control polish */
+:root{
+  --silva-ui-radius: 16px;
+  --silva-ui-radius-sm: 13px;
+  --silva-ui-border: rgba(255,255,255,.055);
+  --silva-ui-border-strong: rgba(255,255,255,.085);
+  --silva-ui-fill: linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.012));
+  --silva-ui-shadow: 0 10px 28px rgba(0,0,0,.18);
+  --silva-aura-border: rgba(184,168,216,.18);
+  --silva-aura-soft: rgba(184,168,216,.11);
+  --silva-aura-hot: rgba(255,102,153,.08);
+}
+
+html, body, button, input, select, textarea { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, .btn, .nav-item, .char-tab, .char-mode-pill, .alpha-home-fixed-tab, .alpha-home-menu-item, .asset-slot, .home-slot, .alpha-home-slot, .team-card, .card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* global control consistency */
+.btn,
+.btn-ghost,
+.btn-primary,
+.btn-red,
+.copy-btn,
+.icon-btn,
+.filter-select,
+.search-input,
+textarea,
+input[type="text"],
+input[type="search"],
+.char-mode-pill,
+.char-tab,
+.preset-chip,
+.alpha-home-fixed-tab,
+.alpha-home-menu-item,
+#page-home .cc-quickasks button,
+#page-crosschar .grid3 > .card .btn {
+  border-radius: var(--silva-ui-radius-sm) !important;
+}
+
+.btn,
+.btn-ghost,
+.copy-btn,
+.icon-btn,
+.char-mode-pill,
+.preset-chip,
+.alpha-home-fixed-tab,
+.alpha-home-menu-item,
+#page-home .cc-quickasks button {
+  min-height: 42px !important;
+  font-weight: 600 !important;
+  letter-spacing: .01em !important;
+}
+
+.search-input,
+.filter-select,
+textarea,
+input[type="text"],
+input[type="search"]{
+  border: 1px solid var(--silva-ui-border) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.024), rgba(255,255,255,.012)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+.search-input:focus,
+.filter-select:focus,
+textarea:focus,
+input[type="text"]:focus,
+input[type="search"]:focus{
+  outline: none !important;
+  border-color: var(--silva-aura-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.03),
+    0 0 0 1px rgba(184,168,216,.08),
+    0 0 24px rgba(184,168,216,.08) !important;
+}
+
+/* sidebar cleanup */
+#sidebar{
+  overflow-x: hidden !important;
+}
+#sidebar .nav-label{
+  color:#7d869d !important;
+  letter-spacing:.24em !important;
+}
+#sidebar .nav-item{
+  border: 1px solid transparent !important;
+  isolation:isolate;
+  overflow: visible !important;
+}
+#sidebar .nav-item::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  background: radial-gradient(65% 120% at 14% 6%, rgba(184,168,216,.16), transparent 52%),
+              radial-gradient(45% 80% at 86% 100%, rgba(255,105,138,.06), transparent 60%);
+  opacity:0;
+  z-index:-1;
+  pointer-events:none;
+  transition:opacity .18s ease, transform .18s ease;
+}
+#sidebar .nav-item:hover,
+#sidebar .nav-item:focus-visible{
+  border-color: rgba(255,255,255,.06) !important;
+}
+#sidebar .nav-item:hover::before,
+#sidebar .nav-item:focus-visible::before,
+#sidebar .nav-item.active:hover::before{
+  opacity:.95;
+}
+#sidebar .nav-item.active:hover::after{opacity:.82 !important;}
+#sidebar .nav-item[data-page="aisha"],
+#sidebar .nav-item-aisha{
+  --silva-item-tint: rgba(184,168,216,.20);
+}
+#sidebar .nav-item[data-page="aisha"]:hover,
+#sidebar .nav-item-aisha:hover,
+#sidebar .nav-item[data-page="aisha"].active,
+#sidebar .nav-item-aisha.active{
+  box-shadow: 0 10px 26px rgba(0,0,0,.16), 0 0 0 1px rgba(184,168,216,.08) !important;
+}
+#sidebar .nav-item[data-page="aisha"] .nav-label-box,
+#sidebar .nav-item-aisha .nav-label-box{
+  border-color: rgba(184,168,216,.16) !important;
+}
+
+/* tiny hover box for character items */
+#sidebar .nav-item[data-page="aisha"] .nav-label-box,
+#sidebar .nav-item[data-page="leah"] .nav-label-box,
+#sidebar .nav-item[data-page="claudia"] .nav-label-box,
+#sidebar .nav-item[data-page="grok"] .nav-label-box,
+#sidebar .nav-item[data-page="vanya"] .nav-label-box{
+  position:absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(10,12,18,.96), rgba(6,8,12,.97));
+  box-shadow: 0 18px 38px rgba(0,0,0,.28);
+  color:#e8edf7;
+  font-size:.68rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;
+}
+#sidebar .nav-item[data-page="aisha"]:hover .nav-label-box,
+#sidebar .nav-item[data-page="aisha"]:focus-visible .nav-label-box,
+#sidebar .nav-item[data-page="leah"]:hover .nav-label-box,
+#sidebar .nav-item[data-page="claudia"]:hover .nav-label-box,
+#sidebar .nav-item[data-page="grok"]:hover .nav-label-box,
+#sidebar .nav-item[data-page="vanya"]:hover .nav-label-box,
+#sidebar .nav-item[data-page="aisha"].active:hover .nav-label-box{
+  opacity:1;
+  visibility:visible;
+  transform: translateY(-50%) translateX(0);
+}
+#sidebar .nav-item .nav-label-box .dot{
+  width:8px;height:8px;border-radius:999px;background:currentColor;opacity:.85;
+}
+
+/* page and card rhythm */
+.page{padding-top: 30px !important;}
+.page-title{margin-bottom:8px !important;}
+.page-sub{max-width: none !important;}
+.card,
+.prompt-card,
+.gallery-card,
+.asset-card,
+.home-card,
+.char-hero,
+.char-panel,
+.dev-box,
+.loc-card,
+.broll-card,
+.event-card,
+.stat-box,
+.cc-side-card,
+.cc-center .card,
+.cc-right .card,
+.alpha-home-fixed-slide,
+.alpha-ref-lane,
+#page-crosschar .grid3 > .card,
+#page-homes .alpha-home-fixed-card,
+#page-homes .alpha-home-fixed-slide-card{
+  border:1px solid var(--silva-ui-border) !important;
+  background: var(--silva-ui-fill) !important;
+  box-shadow: var(--silva-ui-shadow) !important;
+}
+
+/* apply key aura language in selected places only */
+.silva-aura-key,
+#page-crosschar .grid3 > .card,
+#page-aisha .char-hero,
+#page-home .cc-side-card,
+#page-home .cc-center > .card,
+#page-home .cc-right > .card,
+#page-homes .alpha-home-fixed-tab.active,
+#page-homes .team-card.active,
+#page-aisha .char-mode-pill.active-mode,
+#page-aisha .char-tab.active,
+#page-home .cc-quickasks button.active-mode{
+  position:relative;
+}
+.silva-aura-key::after,
+#page-crosschar .grid3 > .card::after,
+#page-aisha .char-hero::after,
+#page-home .cc-side-card::after,
+#page-home .cc-center > .card::after,
+#page-home .cc-right > .card::after,
+#page-homes .alpha-home-fixed-tab.active::after,
+#page-homes .team-card.active::after,
+#page-aisha .char-mode-pill.active-mode::after,
+#page-aisha .char-tab.active::after,
+#page-home .cc-quickasks button.active-mode::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  padding:1px;
+  background: linear-gradient(135deg, rgba(184,168,216,.26), rgba(255,255,255,.04) 38%, rgba(255,118,154,.10) 86%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+          mask-composite:exclude;
+  opacity:.58;
+  pointer-events:none;
+}
+.silva-aura-key::before,
+#page-crosschar .grid3 > .card::before,
+#page-aisha .char-hero::before,
+#page-home .cc-side-card::before,
+#page-home .cc-center > .card::before,
+#page-home .cc-right > .card::before,
+#page-homes .alpha-home-fixed-tab.active::before,
+#page-homes .team-card.active::before,
+#page-aisha .char-mode-pill.active-mode::before,
+#page-aisha .char-tab.active::before,
+#page-home .cc-quickasks button.active-mode::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius:inherit;
+  background: radial-gradient(55% 110% at 14% 6%, rgba(184,168,216,.13), transparent 58%), radial-gradient(40% 80% at 88% 100%, rgba(255,118,154,.05), transparent 64%);
+  opacity:.78;
+  filter: blur(16px);
+  pointer-events:none;
+  z-index:-1;
+}
+
+/* Aisha hero / avatar */
+#page-aisha .char-hero{
+  min-height: 140px !important;
+}
+#aisha-avatar-slot,
+#page-aisha .char-avatar{
+  width: 58px !important;
+  height: 58px !important;
+  border-radius: 18px !important;
+  display:grid !important;
+  place-items:center !important;
+}
+#aisha-avatar-slot img,
+#page-aisha .char-avatar img{
+  width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit;
+}
+#aisha-avatar-slot::after{
+  content:"Change" !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 6px !important;
+  inset-top: auto;
+  transform: translateX(-50%) translateY(6px) !important;
+  width: calc(100% - 10px) !important;
+  min-width: 0 !important;
+  padding: 5px 6px !important;
+  font-size: .54rem !important;
+  line-height: 1 !important;
+  letter-spacing: .10em !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+#aisha-avatar-slot:hover::after,
+#aisha-avatar-slot:focus-visible::after{
+  transform: translateX(-50%) translateY(0) !important;
+}
+#aisha-avatar-slot .avatar-edit-tip{
+  display:none;
+}
+#page-aisha .char-role,
+#page-aisha .char-quote{max-width: none !important;}
+#page-aisha .char-tabs{
+  row-gap: 10px !important;
+}
+#page-aisha .grid2{
+  align-items:start !important;
+}
+#page-aisha .char-panel{
+  min-height: 0 !important;
+}
+
+/* home system cleanup */
+#page-homes .alpha-home-system-shell{gap: 18px !important;}
+#page-homes .alpha-home-view-toggle,
+#page-homes .alpha-home-fixed-toolbar,
+#page-homes .alpha-home-toolbar{
+  align-items:center !important;
+  gap:12px !important;
+}
+#page-homes .alpha-home-fixed-tabs,
+#page-homes .alpha-home-fixed-topbar{
+  gap:14px !important;
+}
+#page-homes .alpha-home-fixed-topbar{
+  overflow-x:auto !important;
+  padding-bottom: 2px !important;
+}
+#page-homes .alpha-home-fixed-tab{
+  min-height: 106px !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+#page-homes .alpha-home-fixed-tab-copy strong,
+#page-homes .team-card .team-name{
+  font-size: 1rem !important;
+  line-height: 1.12 !important;
+}
+#page-homes .alpha-home-fixed-tab-copy span,
+#page-homes .team-card .team-role{
+  line-height: 1.35 !important;
+}
+#page-homes .alpha-home-fixed-stage,
+#page-homes .alpha-home-fixed-slide,
+#page-homes .alpha-ref-lane,
+#page-homes .home-card{
+  overflow:hidden !important;
+}
+#page-homes .alpha-home-slot,
+#page-homes .home-slot,
+#page-assets .asset-slot{
+  cursor:pointer;
+}
+#page-homes .alpha-home-slot .slot-label,
+#page-homes .home-slot .slot-label,
+#page-assets .asset-slot .slot-label{
+  line-height:1.35 !important;
+}
+#page-homes .team-card[data-person="aisha"],
+#page-homes .alpha-home-fixed-tab[data-home-id="aisha"]{
+  box-shadow: 0 12px 26px rgba(0,0,0,.18), 0 0 0 1px rgba(184,168,216,.08) !important;
+}
+
+/* cross character enhancement */
+#page-crosschar .grid3{
+  align-items:stretch !important;
+}
+#page-crosschar .grid3 > .card{
+  min-height: 176px !important;
+  overflow:hidden !important;
+}
+#page-crosschar .grid3 > .card .section-title{
+  line-height:1.22 !important;
+}
+
+/* reduce visual grime from random legacy styles */
+#page-aisha .never-list,
+#page-aisha .lock-list,
+#page-home .small-note,
+#page-crosschar .small-note,
+#page-homes .small-note{
+  color: var(--silva-text-soft) !important;
+}
+.section-title,
+.field-label,
+.output-label,
+.profile-block-title{
+  color:#9ca5bf !important;
+}
+
+/* hidden scrollbars but keep scroll */
+*{
+  scrollbar-width:none;
+}
+*::-webkit-scrollbar{
+  width:0 !important;
+  height:0 !important;
+}
+
+@media (max-width: 1100px){
+  #sidebar .nav-item .nav-label-box{display:none !important;}
+}
+
+/* selective text pulse / sheen */
+@keyframes silvaTextSweep {
+  0% { background-position: 130% 50%; opacity: .78; }
+  45% { background-position: 62% 50%; opacity: .98; }
+  55% { background-position: 48% 50%; opacity: 1; }
+  100% { background-position: -30% 50%; opacity: .82; }
+}
+@keyframes silvaTextGlow {
+  0%,100% { filter: drop-shadow(0 0 0 rgba(134,165,255,0)); }
+  50% { filter: drop-shadow(0 0 10px rgba(134,165,255,.10)); }
+}
+.silva-text-sheen{
+  color: rgba(236,241,252,.88);
+  background-image: linear-gradient(90deg,
+    rgba(236,241,252,.68) 0%,
+    rgba(236,241,252,.84) 28%,
+    rgba(160,184,255,.98) 49%,
+    rgba(238,225,255,.95) 56%,
+    rgba(236,241,252,.84) 68%,
+    rgba(236,241,252,.68) 100%);
+  background-size: 240% 100%;
+  background-position: 120% 50%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  animation: silvaTextSweep 6.1s cubic-bezier(.4,0,.2,1) infinite, silvaTextGlow 6.1s cubic-bezier(.4,0,.2,1) infinite;
+  will-change: background-position, filter;
+}
+.silva-text-sheen--soft{
+  animation-duration: 7.8s, 7.8s;
+  opacity:.96;
+}
+.silva-text-sheen--live{
+  animation-duration: 4.9s, 4.9s;
+}
+#page-crosschar .grid3 > .card .section-title.silva-text-sheen{
+  display:inline-block;
+  letter-spacing:.11em;
+}
+.char-mode-pill.active-mode.silva-pulse-pill{
+  box-shadow: 0 0 0 1px rgba(146,174,255,.12), 0 10px 24px rgba(0,0,0,.14) !important;
+}
+.char-mode-pill.active-mode.silva-pulse-pill .silva-text-sheen{
+  font-weight:600;
+}
+#page-home .small-note .silva-text-sheen,
+#page-home .studio-thinking .silva-text-sheen,
+#page-home #studio-ask-output .silva-text-sheen,
+#page-home #ai-helper-output .silva-text-sheen,
+#page-home .studio-response .silva-text-sheen{
+  display:inline-block;
+}
+#page-home .quick-mode-chip.active .silva-text-sheen,
+#page-home .toggle-chip.active .silva-text-sheen{
+  letter-spacing:.08em;
+}
+@media (prefers-reduced-motion: reduce){
+  .silva-text-sheen,
+  .silva-text-sheen--soft,
+  .silva-text-sheen--live{
+    animation:none !important;
+    background:none !important;
+    -webkit-text-fill-color: currentColor !important;
+    color: rgba(236,241,252,.92) !important;
+    filter:none !important;
+  }
+}
