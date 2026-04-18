@@ -409,3 +409,170 @@ input, textarea, select, button {
     grid-template-columns:1fr;
   }
 }
+
+
+/* SILVA_ACTUAL_SOURCE_FIX_V3 */
+
+/* kill leftover glow/ripple */
+.silva-elite-glare,
+.silva-elite-ripple{
+  display:none !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+/* kill home/studio seam + reactive overlays */
+#page-home .cc-side-card::before,
+#page-home .cc-side-card::after,
+#page-home .cc-center > .card::before,
+#page-home .cc-center > .card::after,
+#page-home .cc-right > .card::before,
+#page-home .cc-right > .card::after,
+#page-home .studio-response::before,
+#page-home .studio-response::after,
+#page-studio .card::before,
+#page-studio .card::after,
+#page-studio .studio-response::before,
+#page-studio .studio-response::after{
+  content:none !important;
+  display:none !important;
+  opacity:0 !important;
+  background:none !important;
+  box-shadow:none !important;
+  animation:none !important;
+  filter:none !important;
+  transition:none !important;
+}
+
+/* restore hit targets */
+.card::before,.card::after,
+.prompt-card::before,.prompt-card::after,
+.gallery-card::before,.gallery-card::after,
+.asset-card::before,.asset-card::after,
+.home-card::before,.home-card::after,
+.loc-card::before,.loc-card::after,
+.broll-card::before,.broll-card::after,
+.event-card::before,.event-card::after,
+.nav-item::before,.nav-item::after,
+.char-mode-pill::before,.char-mode-pill::after,
+.char-tab::before,.char-tab::after{
+  pointer-events:none !important;
+}
+
+input, textarea, select, button{
+  pointer-events:auto !important;
+}
+
+.page input,
+.page textarea,
+.page select{
+  position:relative !important;
+  z-index:4 !important;
+}
+
+/* character tab rail breathing room */
+.silva-char-tab-row{
+  position:relative !important;
+  display:flex !important;
+  flex-wrap:wrap !important;
+  align-items:flex-end !important;
+  gap:12px 18px !important;
+  padding-bottom:18px !important;
+  margin-bottom:24px !important;
+  border-bottom:none !important;
+}
+
+.silva-char-tab-row::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:1px;
+  background:rgba(255,255,255,.08);
+  pointer-events:none;
+}
+
+.silva-char-tab-row > .char-tab{
+  margin:0 0 6px !important;
+  position:relative !important;
+  z-index:1 !important;
+  max-width:100% !important;
+}
+
+/* inline profile editor */
+.silva-inline-editor{
+  margin:18px 0 22px !important;
+  padding:16px !important;
+}
+
+.silva-inline-editor-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.silva-inline-editor-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.silva-inline-editor-body{
+  display:none;
+}
+
+.silva-inline-editor.is-open .silva-inline-editor-body{
+  display:block;
+}
+
+.silva-inline-editor-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.silva-inline-editor-grid label{
+  display:grid;
+  gap:6px;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.62);
+}
+
+.silva-inline-editor-grid label.bio{
+  grid-column:1 / -1;
+}
+
+.silva-inline-editor-grid input,
+.silva-inline-editor-grid textarea{
+  width:100%;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+  color:#fff;
+  padding:12px 14px;
+  outline:none;
+}
+
+.silva-inline-editor-grid textarea{
+  min-height:130px;
+  resize:vertical;
+}
+
+.silva-env-note{
+  margin-top:10px;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.56);
+}
+
+@media (max-width: 900px){
+  .silva-inline-editor-grid{
+    grid-template-columns:1fr;
+  }
+}
