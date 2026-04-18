@@ -14,25 +14,6 @@ dotenv.config();
 
 const app = express();
 
-// SILVA_PHASE1_PUBLIC_PREVIEW
-const SILVA_PUBLIC_DIR = path.join(__dirname, 'public');
-const SILVA_PUBLIC_INDEX = path.join(SILVA_PUBLIC_DIR, 'index.html');
-const SILVA_LEGACY_INDEX = path.join(__dirname, 'index.html');
-
-app.use('/app-static', express.static(SILVA_PUBLIC_DIR));
-
-app.get('/app', (_req, res) => {
-  res.sendFile(SILVA_PUBLIC_INDEX);
-});
-
-app.get(/^\/app\/.*$/, (_req, res) => {
-  res.sendFile(SILVA_PUBLIC_INDEX);
-});
-
-app.get('/legacy', (_req, res) => {
-  res.sendFile(SILVA_LEGACY_INDEX);
-});
-
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '30mb' }));
