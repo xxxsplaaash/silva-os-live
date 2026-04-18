@@ -63,3 +63,44 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
   else boot();
 })();
+
+
+/* SILVA_SOURCE_FIX_RUNTIME */
+(function(){
+  const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  function cleanupBadRuntime(){
+    qsa('.silva-elite-glare,.silva-elite-ripple,.silva-text-pulse,.silva-stable-pulse').forEach(el => {
+      if (el.classList.contains('silva-elite-glare') || el.classList.contains('silva-elite-ripple')) el.remove();
+      else {
+        el.classList.remove('silva-text-pulse');
+        el.classList.remove('silva-stable-pulse');
+      }
+    });
+
+    qsa('#silva-live-edit-btn,#silva-live-edit-backdrop,#silva-cloud-edit-btn,#silva-cloud-edit-backdrop').forEach(el => el.remove());
+
+    qsa('#page-settings input,#page-settings textarea,#page-settings select,#page-aisha input,#page-aisha textarea,#page-aisha select,#page-leah input,#page-leah textarea,#page-leah select,#page-claudia input,#page-claudia textarea,#page-claudia select,#page-grok input,#page-grok textarea,#page-grok select,#page-vanya input,#page-vanya textarea,#page-vanya select').forEach(el => {
+      el.style.pointerEvents = 'auto';
+      el.style.zIndex = '4';
+      if (el.disabled) el.disabled = false;
+    });
+
+    qsa('#page-settings input,#page-settings textarea').forEach(el => {
+      const txt = (((el.closest('.card,div')||{}).textContent)||'') + ' ' + (el.placeholder||'');
+      if (/api key|provider routing|primary text provider|primary image provider|fallback/i.test(txt)) {
+        el.readOnly = true;
+        if (!el.value) el.placeholder = 'Managed in Render environment';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', cleanupBadRuntime, { once:true });
+  } else {
+    cleanupBadRuntime();
+  }
+
+  const mo = new MutationObserver(() => cleanupBadRuntime());
+  mo.observe(document.documentElement, { childList:true, subtree:true });
+})();

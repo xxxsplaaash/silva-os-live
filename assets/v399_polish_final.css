@@ -194,3 +194,39 @@
 .alpha-home-fixed-tab::after{
   pointer-events:none !important;
 }
+
+
+/* SILVA_SOURCE_FIX_INPUTS */
+.card::before,.card::after,
+.prompt-card::before,.prompt-card::after,
+.gallery-card::before,.gallery-card::after,
+.asset-card::before,.asset-card::after,
+.home-card::before,.home-card::after,
+.loc-card::before,.loc-card::after,
+.broll-card::before,.broll-card::after,
+.event-card::before,.event-card::after,
+.nav-item::before,.nav-item::after,
+.char-mode-pill::before,.char-mode-pill::after,
+.char-tab::before,.char-tab::after {
+  pointer-events: none !important;
+}
+
+input, textarea, select, button {
+  pointer-events: auto !important;
+}
+
+.page input,
+.page textarea,
+.page select {
+  position: relative !important;
+  z-index: 4 !important;
+}
+
+#page-settings .card,
+#page-aisha .card,
+#page-leah .card,
+#page-claudia .card,
+#page-grok .card,
+#page-vanya .card {
+  overflow: visible !important;
+}
