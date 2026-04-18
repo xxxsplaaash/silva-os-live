@@ -1,77 +1,49 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Silva Studios OS • Premium App</title>
-  <link rel="stylesheet" href="/public/css/tokens.css" />
-  <link rel="stylesheet" href="/public/css/base.css" />
-  <link rel="stylesheet" href="/public/css/layout.css" />
-  <link rel="stylesheet" href="/public/css/components.css" />
-  <link rel="stylesheet" href="/public/css/pages.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Silva OS</title>
+  <link rel="stylesheet" href="/app-static/css/tokens.css" />
+  <link rel="stylesheet" href="/app-static/css/base.css" />
+  <link rel="stylesheet" href="/app-static/css/layout.css" />
+  <link rel="stylesheet" href="/app-static/css/components.css" />
+  <link rel="stylesheet" href="/app-static/css/pages.css" />
 </head>
 <body>
-  <div class="app-shell" id="appShell">
-    <aside class="sidebar panel panel-soft">
+  <div class="shell">
+    <aside class="shell-sidebar">
       <div class="brand-block">
-        <div class="brand-mark">S</div>
+        <div class="brand-mark">SS</div>
         <div>
-          <div class="brand-title">Silva Studios OS</div>
-          <div class="brand-subtitle">AI Division • 3.9.8</div>
+          <div class="brand-title">Silva Studios</div>
+          <div class="brand-sub">AI Division OS <span class="version-pill" data-silva-version></span></div>
         </div>
       </div>
-      <div class="sidebar-section-label">Workspace</div>
-      <nav class="nav" id="nav"></nav>
-      <div class="sidebar-footer panel panel-tint" id="agentCard"></div>
+
+      <nav id="silva-nav" class="nav"></nav>
+
+      <div class="sidebar-footer">
+        <a class="ghost-link" href="/legacy">Open legacy app</a>
+      </div>
     </aside>
 
-    <main class="main-shell">
+    <main class="shell-main">
       <header class="topbar">
         <div>
-          <div class="eyebrow">Sealed premium instrument</div>
-          <h1 id="pageTitle">Home</h1>
+          <div class="eyebrow">Public Runtime Preview</div>
+          <h1 id="page-title">Silva OS</h1>
         </div>
         <div class="topbar-actions">
-          <button class="btn btn-ghost" id="commandToggle">⌘K</button>
-          <button class="btn btn-ghost" id="openRail">Review Rail</button>
+          <span class="topbar-badge">Phase 1</span>
+          <span class="topbar-badge" data-silva-version></span>
         </div>
       </header>
 
-      <section class="hero-bar panel panel-hero aura-primary" id="heroPanel">
-        <div>
-          <div class="hero-kicker">Studio Pulse</div>
-          <h2>One controlled surface. Better judgment. Less sludge.</h2>
-          <p>The new shell keeps Silva’s brain, gives Aisha proper authority, and stops the UI from acting like a neon car crash.</p>
-        </div>
-        <div class="hero-actions">
-          <button class="btn btn-primary" data-jump="generator">Generate</button>
-          <button class="btn btn-ghost" data-jump="review">Run Aisha Review</button>
-        </div>
-      </section>
-
-      <section class="workspace" id="workspace"></section>
+      <section id="page-host" class="page-host"></section>
     </main>
-
-    <aside class="review-rail panel panel-soft" id="reviewRail" data-open="false">
-      <div class="rail-header">
-        <div>
-          <div class="eyebrow">Aisha Review Rail</div>
-          <h3>Cold eye on output quality</h3>
-        </div>
-        <button class="icon-btn" id="closeRail">×</button>
-      </div>
-      <div class="rail-content" id="railContent"></div>
-    </aside>
   </div>
 
-  <div class="command-palette" id="commandPalette" hidden>
-    <div class="command-backdrop" id="commandBackdrop"></div>
-    <div class="command-panel panel panel-hero aura-primary">
-      <input id="commandInput" class="command-input" placeholder="Jump to home, generator, gallery, review, identity, planner, settings…" />
-      <div class="command-list" id="commandList"></div>
-    </div>
-  </div>
-
-  <script type="module" src="/public/js/app.js"></script>
+  <script src="/app-static/js/app.js"></script>
 </body>
 </html>
