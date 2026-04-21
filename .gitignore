@@ -14,3 +14,7 @@ skills-lock.json
 *.bak
 *.bak.*
 .DS_Store
+.fixbackups/
+phase1_public_preview.sh
+apply_real_fix_v3.sh
+server.js.bak
