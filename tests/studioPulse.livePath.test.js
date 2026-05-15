@@ -258,26 +258,39 @@ test('Studio Pulse falls back locally when A.I.S.H.A flag is on but package is u
   });
 });
 
-test('Studio Pulse can activate mocked public A.I.S.H.A host response when flag is on', async () => {
+test('aisha_success_does_not_bypass_room_planner', async () => {
   await withAishaFlag('true', async () => {
+    let capturedRequest = null;
     __setAishaRuntimeImporterForTests(async specifier => {
       assert.equal(specifier, 'aisha-runtime-pack1');
       return {
-        processAishaRequest: async request => ({
-          responses: [{ speakerId: 'vanya', content: `A.I.S.H.A heard "${request.message}" and returned through the public host.` }],
-          memorySummary: {
-            activeTruths: [],
-            supersededTruths: [],
-            memoryCandidates: [],
-            sessionId: request.sessionId
-          },
-          stateEnvelope: { mood: 0.2 },
-          relationshipDeltas: [],
-          trace: { status: 'succeeded' },
-          engineMode: 'production',
-          aishaEngineConnected: true,
-          confidence: 0.88
-        })
+        processAishaRequest: async request => {
+          capturedRequest = request;
+          assert.equal(request.messageText, 'hi team');
+          assert.equal(request.activeSpeakerId, 'vanya');
+          assert.equal(request.activeCharacterId, 'vanya');
+          assert.ok(request.localRoomState && typeof request.localRoomState === 'object');
+          assert.ok(request.characterStates && typeof request.characterStates === 'object');
+          assert.equal(request.projectContext?.roomPlan?.intentFamily, 'room-greeting');
+          assert.equal(request.projectContext?.roomPlan?.responseOrder?.[0], 'vanya');
+          assert.equal(request.projectContext?.responseIntent, 'greeting');
+          return {
+            ok: true,
+            responses: [{ speakerId: 'aisha', content: 'Hey team. I am in the room and keeping this warm without turning it into a meeting.' }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: { status: 'succeeded' },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.88
+          };
+        }
       };
     });
     const originalFetch = global.fetch;
@@ -296,8 +309,211 @@ test('Studio Pulse can activate mocked public A.I.S.H.A host response when flag 
         assert.equal(data.provider, 'aisha');
         assert.equal(data.model, 'aisha-runtime-pack1');
         assert.equal(event.speakerId, 'vanya');
-        assert.match(event.text, /public host/);
+        assert.match(event.text, /keeping this warm/i);
+        assert.equal(event.providerMode, 'aisha-accepted');
+        assert.equal(event.engineMode, 'aisha');
+        assert.equal(event.aishaEngineConnected, true);
+        assert.ok(capturedRequest, 'A.I.S.H.A request was captured');
         assert.doesNotMatch(JSON.stringify(data), /\[Mock A\.I\.S\.H\.A\]/);
+        assert.doesNotMatch(JSON.stringify(data.response), /aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('aisha_generic_hello_rejected_for_room_mode', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{ speakerId: 'aisha', content: 'Hello.' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.88
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for generic A.I.S.H.A rejection smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const event = data.response.messageEvents[0];
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, true);
+        assert.equal(data.aishaEngineMode, 'production');
+        assert.equal(data.activeEngine, 'local-room-intelligence');
+        assert.equal(data.fallbackReason, 'aisha-generic-output');
+        assert.equal(data.provider, 'studio-room-intelligence-v0');
+        assert.equal(event.speakerId, 'vanya');
+        assert.equal(event.providerMode, 'aisha-rejected-fallback');
+        assert.equal(event.validationFallbackReason, 'aisha-generic-output');
+        assert.doesNotMatch(event.text, /^hello\.?$/i);
+        assert.match(event.text, /Aisha is watching the room|Hey\\. I'm here|room/i);
+        assert.equal(data.roomIntelligence.aishaRejectedFallbackCount, 1);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('aisha_context_request_contains_room_state', async () => {
+  await withAishaFlag('true', async () => {
+    let capturedRequest = null;
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequest = request;
+        return {
+          ok: true,
+          responses: [{ content: 'Hey. I am here with the room context, and Vanya can keep this human.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        };
+      }
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for A.I.S.H.A context smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        assert.equal(data.activeEngine, 'aisha-runtime-pack1');
+        assert.ok(capturedRequest, 'A.I.S.H.A request was captured');
+        assert.equal(capturedRequest.messageText, 'hi team');
+        assert.equal(capturedRequest.activeSpeakerId, 'vanya');
+        assert.equal(capturedRequest.activeCharacterId, 'vanya');
+        assert.ok(capturedRequest.localRoomState?.knownPresenceStatus);
+        assert.ok(capturedRequest.characterStates?.vanya);
+        assert.equal(capturedRequest.projectContext?.roomPlan?.intentFamily, 'room-greeting');
+        assert.equal(capturedRequest.projectContext?.selectedSpeakerId, 'vanya');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('aisha_accepted_maps_to_planned_speaker', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{ speakerId: 'aisha', content: 'Hey. I can feel the room settling in; Vanya keeps the welcome human while Aisha watches the edges.' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.88
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for planned-speaker A.I.S.H.A smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const event = data.response.messageEvents[0];
+        assert.equal(data.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(event.speakerId, 'vanya');
+        assert.equal(event.providerMode, 'aisha-accepted');
+        assert.match(event.text, /room settling/i);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse falls back locally when A.I.S.H.A returns no responses', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.88
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for empty A.I.S.H.A fallback smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const text = JSON.stringify(data.response.messageEvents || []);
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, false);
+        assert.equal(data.aishaEngineMode, 'unavailable');
+        assert.equal(data.activeEngine, 'local-room-intelligence');
+        assert.equal(data.fallbackReason, 'no-responses');
+        assert.equal(data.provider, 'studio-room-intelligence-v0');
+        assert.match(text, /Aisha is watching the room|Vanya Khumalo|Hey\\. I'm here/);
+        assert.doesNotMatch(text, /A\\.I\\.S\\.H\\.A live response|\\[Mock A\\.I\\.S\\.H\\.A\\]/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse falls back locally when A.I.S.H.A returns disconnected content', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{ speakerId: 'vanya', content: 'Disconnected A.I.S.H.A content should not show' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: false,
+        confidence: 0.88
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for disconnected A.I.S.H.A fallback smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const text = JSON.stringify(data.response.messageEvents || []);
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, false);
+        assert.equal(data.aishaEngineMode, 'unavailable');
+        assert.equal(data.activeEngine, 'local-room-intelligence');
+        assert.equal(data.fallbackReason, 'not-connected');
+        assert.equal(data.provider, 'studio-room-intelligence-v0');
+        assert.doesNotMatch(text, /Disconnected A\\.I\\.S\\.H\\.A content|\\[Mock A\\.I\\.S\\.H\\.A\\]/);
       });
     } finally {
       global.fetch = originalFetch;

@@ -53,12 +53,11 @@ const {
   parseRoomCharacterOutput,
   validateRoomCharacterTurn,
   fallbackTurnFromStep,
-  deterministicTurnFromStep,
   buildRoomStudioResponse
 } = require('../lib/studio/roomIntelligence');
 const {
   callAishaEngine,
-  isUsableAishaResponse
+  getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
 const { createAishaStudioPulseRequest } = require('../lib/aisha/aishaTypes');
 const {
@@ -2258,17 +2257,31 @@ router.post('/pulse', async (req, res) => {
       }));
   }
 
-  function buildAishaBoundaryRequest(messageText = '') {
-    const existingRuntimeState = system.currentThread?.meta?.roomRuntimeState?.roomIntelligenceV0
+  function buildAishaBoundaryRequest(messageText = '', overrides = {}) {
+    const existingRuntimeState = overrides.localRoomState
+      || system.currentThread?.meta?.roomRuntimeState?.roomIntelligenceV0
       || system.roomRuntimeState?.roomIntelligenceV0
       || null;
+    const activeSpeakerId = String(
+      overrides.activeSpeakerId
+      || req.body?.activeSpeakerId
+      || system.currentThread?.meta?.lastTargetedSpeaker
+      || ''
+    ).trim();
+    const activeCharacterId = String(
+      overrides.activeCharacterId
+      || req.body?.activeCharacterId
+      || activeSpeakerId
+      || ''
+    ).trim();
     return createAishaStudioPulseRequest({
       sessionId: workingThreadId || threadId || system.currentThread?.id || '',
       userId: req.body?.userId || req.body?.sessionId || 'local-user',
       threadId: workingThreadId || threadId || system.currentThread?.id || '',
       roomId: req.body?.roomId || workingThreadId || threadId || system.currentThread?.id || 'studio-pulse-room',
-      activeCharacterId: req.body?.activeCharacterId || '',
-      activeSpeakerId: req.body?.activeSpeakerId || system.currentThread?.meta?.lastTargetedSpeaker || '',
+      activeCharacterId,
+      activeSpeakerId,
+      messageText,
       message: messageText,
       recentMessages: recentMessagesForAisha(),
       projectContext: {
@@ -2278,22 +2291,25 @@ router.post('/pulse', async (req, res) => {
         workflowIntent: explicitWorkflowIntent,
         workflowDraftId: requestedWorkflowDraftId,
         commitRequested,
-        confirmCommit
+        confirmCommit,
+        ...(overrides.projectContext && typeof overrides.projectContext === 'object' ? overrides.projectContext : {})
       },
       localRoomState: existingRuntimeState || {},
-      characterStates: existingRuntimeState?.characterStates || {},
+      characterStates: overrides.characterStates || existingRuntimeState?.characterStates || {},
       modality: {
         surface: 'studio-pulse',
         channel: 'text',
         inputType: 'text',
-        outputType: 'text'
+        outputType: 'text',
+        activeSpeakerId,
+        recognizedPersonId: activeCharacterId
       }
     });
   }
 
-  async function attemptAishaBoundary(messageText = '') {
+  async function attemptAishaBoundary(messageText = '', overrides = {}) {
     try {
-      return await callAishaEngine(buildAishaBoundaryRequest(messageText));
+      return await callAishaEngine(buildAishaBoundaryRequest(messageText, overrides));
     } catch (err) {
       return {
         ok: false,
@@ -2341,65 +2357,6 @@ router.post('/pulse', async (req, res) => {
     };
   }
 
-  function studioResponseFromAishaAttempt(response = {}) {
-    if (!isUsableAishaResponse(response)) return null;
-    const events = (Array.isArray(response.responses) ? response.responses : [])
-      .map((item, index) => {
-        const text = String(item?.content || item?.text || '').trim();
-        if (!text || text === '[Mock A.I.S.H.A]') return null;
-        const speakerId = String(item?.speakerId || item?.speaker || item?.characterId || 'aisha').trim().toLowerCase();
-        return {
-          speakerId,
-          speakerName: item?.speakerName || speakerId,
-          kind: 'message',
-          text,
-          tone: String(item?.tone || item?.mood || 'focused'),
-          delayMs: index * 140,
-          roomIntent: String(item?.responseIntent || item?.intent || 'message'),
-          presence: String(item?.presence || ''),
-          emotionalState: String(item?.emotionalState || item?.mood || ''),
-          metadata: {
-            engineMode: String(response.engineMode || 'aisha'),
-            aishaEngineConnected: true
-          },
-          visible: true,
-          saveToArchive: true
-        };
-      })
-      .filter(Boolean);
-    if (!events.length) return null;
-    const speakers = events.map(item => item.speakerId).filter(Boolean);
-    return {
-      title: 'Open room',
-      summary: '',
-      departmentLead: speakers[0] || 'aisha',
-      departmentPerspective: events[0]?.text || '',
-      aishaFinal: '',
-      messageEvents: events,
-      actions: [],
-      consistencyChecks: [],
-      suggestedAssets: [],
-      promptIdeas: [],
-      relationshipDeltas: Array.isArray(response.relationshipDeltas) ? response.relationshipDeltas : [],
-      threadMeta: {
-        responsePattern: events.length > 1 ? 'room-multi' : 'solo',
-        intent: 'aisha-host',
-        lastIntentPattern: 'aisha-host',
-        requiredSpeakers: speakers,
-        lastTargetedSpeaker: speakers[0] || '',
-        lastActiveSpeakers: speakers,
-        activeTopicTags: ['aisha-host'],
-        engineMode: 'aisha',
-        aishaEngineConnected: true,
-        selectionReason: 'aisha-host-boundary'
-      },
-      archiveMeta: {
-        saveSuggested: true,
-        includeInContext: true
-      }
-    };
-  }
-
   function pulsePayload(base = {}) {
     const aishaMeta = aishaHostMetadata(base);
     if (HARD_CUT_REBUILD) {
@@ -2427,7 +2384,6 @@ router.post('/pulse', async (req, res) => {
   }
 
   const effectiveQuestion = resolution.effectiveQuestion;
-  aishaAttempt = await attemptAishaBoundary(effectiveQuestion || question);
 
   if (resolution.clarificationNeeded) {
     const response = fallbackEnvelopeToStudioResponse(clarificationResponse(question), system, question, {
@@ -2478,38 +2434,6 @@ router.post('/pulse', async (req, res) => {
         model: null,
         fallback: false,
         deterministic: true,
-        relationshipUpdates: committed.relationshipUpdates,
-        thread: committed.thread,
-        messages: committed.messages,
-        roomRuntime: committed.roomRuntime
-      }));
-    }
-    const aishaStudioResponse = studioResponseFromAishaAttempt(aishaAttempt);
-    if (aishaStudioResponse) {
-      const committed = commitResponse(aishaStudioResponse, {
-        effectiveQuestion,
-        deterministic: false,
-        skipLegacyEnforcement: true
-      });
-      return res.json(pulsePayload({
-        ok: true,
-        mode,
-        response: clientStudioResponse(committed.normalized),
-        provider: 'aisha',
-        model: 'aisha-runtime-pack1',
-        fallback: false,
-        deterministic: false,
-        consciousRoom: true,
-        providerCallCount: 0,
-        lane: 'room',
-        intentFamily: 'aisha-host',
-        engineMode: 'aisha',
-        activeEngine: 'aisha-runtime-pack1',
-        targetSpeakerId: committed.normalized.threadMeta?.lastTargetedSpeaker || null,
-        activeSpeakers: Array.isArray(committed.normalized.threadMeta?.lastActiveSpeakers) ? committed.normalized.threadMeta.lastActiveSpeakers : [],
-        memoryAnchors: ['aisha-host'],
-        workflowContext: null,
-        resolvedFromHistory: resolution.resolvedFromHistory,
         relationshipUpdates: committed.relationshipUpdates,
         thread: committed.thread,
         messages: committed.messages,
@@ -2594,13 +2518,138 @@ router.post('/pulse', async (req, res) => {
       perception: roomPerception,
       roomState: roomIntelligenceState
     });
+
+    const roomPlanForAisha = (plan = roomPlan) => ({
+      intentFamily: plan.intentFamily || 'room',
+      deterministic: !!plan.deterministic,
+      requiresProvider: !!plan.requiresProvider,
+      responseOrder: Array.isArray(plan.responseOrder) ? plan.responseOrder : [],
+      trace: plan.trace || '',
+      steps: (Array.isArray(plan.steps) ? plan.steps : []).map(step => ({
+        speakerId: step.speakerId || '',
+        responseIntent: step.responseIntent || '',
+        reason: step.reason || '',
+        tone: step.tone || ''
+      }))
+    });
+    const roomPerceptionForAisha = (perception = roomPerception) => ({
+      text: perception.text || effectiveQuestion,
+      emotionalTone: perception.emotionalTone || '',
+      taskType: perception.taskType || '',
+      socialIntent: perception.socialIntent || '',
+      questionType: perception.questionType || '',
+      topicFocus: perception.topicFocus || '',
+      asksEveryone: !!perception.asksEveryone,
+      allowsMetaRoomTalk: !!perception.allowsMetaRoomTalk,
+      requestedCharacterIds: Array.isArray(perception.requestedCharacterIds) ? perception.requestedCharacterIds : []
+    });
+    function buildAishaRequestForRoomStep(step = {}, plan = roomPlan, perception = roomPerception, state = roomIntelligenceState, messageText = effectiveQuestion) {
+      const speakerId = String(step.speakerId || '').trim().toLowerCase();
+      return buildAishaBoundaryRequest(messageText, {
+        activeCharacterId: speakerId,
+        activeSpeakerId: speakerId,
+        localRoomState: state,
+        characterStates: state?.characterStates || {},
+        projectContext: {
+          studioPulseRuntime: 'room-intelligence-v0.1',
+          activeEnginePolicy: 'local-room-intelligence-plans-first',
+          roomPlan: roomPlanForAisha(plan),
+          roomPerception: roomPerceptionForAisha(perception),
+          responseIntent: step.responseIntent || '',
+          selectionReason: step.reason || plan.trace || 'room-intelligence-v0',
+          selectedSpeakerId: speakerId,
+          selectedSpeakerName: system.characters?.[speakerId]?.name || speakerId,
+          studioPulseMode: mode,
+          studioPulseModeContext: modeContext
+        }
+      });
+    }
+    function firstAishaContent(response = {}) {
+      const item = (Array.isArray(response.responses) ? response.responses : [])
+        .find(entry => String(entry?.content || entry?.text || '').trim());
+      return {
+        item: item || null,
+        content: String(item?.content || item?.text || '').trim()
+      };
+    }
+    function turnFromAishaResponseForStep(response = {}, step = {}) {
+      const { item, content } = firstAishaContent(response);
+      return {
+        speakerId: String(step.speakerId || '').toLowerCase(),
+        content,
+        responseIntent: String(item?.responseIntent || item?.intent || step.responseIntent || 'message'),
+        emotionalDelta: item?.emotionalDelta && typeof item.emotionalDelta === 'object' ? item.emotionalDelta : (step.emotionalDelta || {}),
+        roomStateDelta: item?.roomStateDelta && typeof item.roomStateDelta === 'object' ? item.roomStateDelta : (step.roomStateDelta || {}),
+        memoryCandidate: item?.memoryCandidate && typeof item.memoryCandidate === 'object' ? item.memoryCandidate : (step.memoryCandidate || null),
+        trace: String(item?.trace || response.trace?.status || 'aisha-runtime-pack1'),
+        source: 'aisha-accepted',
+        providerMode: 'aisha-accepted',
+        validationFallbackReason: '',
+        engineMode: 'aisha',
+        aishaEngineConnected: true
+      };
+    }
+    function aishaRoomOutputRejectionReason(turn = {}, step = {}, perception = roomPerception, state = roomIntelligenceState) {
+      const content = String(turn.content || '').trim();
+      const normalized = content
+        .toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/[^a-z0-9\s]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const genericOutputs = new Set(['hello', 'hi', 'hey', 'okay', 'ok', 'sure', 'yes', 'no', 'thanks', 'thank you']);
+      if (!content) return 'empty-response-content';
+      if (genericOutputs.has(normalized)) return 'aisha-generic-output';
+      const wordCount = normalized ? normalized.split(' ').filter(Boolean).length : 0;
+      if (wordCount > 0 && wordCount < 4) return 'aisha-low-context-output';
+      return validateRoomCharacterTurn(turn, step, perception, state);
+    }
+    async function aishaTurnForRoomStep(step = {}) {
+      const response = await callAishaEngine(buildAishaRequestForRoomStep(step));
+      aishaAttempt = response;
+      const usability = getAishaResponseUsability(response);
+      if (!usability.usable) {
+        return {
+          accepted: false,
+          response,
+          reason: response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response',
+          turn: fallbackTurnFromStep(step, roomPerception, {
+            providerMode: response?.aishaEngineConnected === true ? 'aisha-rejected-fallback' : 'deterministic-fallback',
+            validationFallbackReason: response?.aishaEngineConnected === true ? (response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response') : ''
+          })
+        };
+      }
+      const turn = turnFromAishaResponseForStep(response, step);
+      const rejectionReason = aishaRoomOutputRejectionReason(turn, step, roomPerception, roomIntelligenceState);
+      if (rejectionReason) {
+        return {
+          accepted: false,
+          response,
+          reason: rejectionReason,
+          turn: fallbackTurnFromStep(step, roomPerception, {
+            providerMode: 'aisha-rejected-fallback',
+            validationFallbackReason: rejectionReason
+          })
+        };
+      }
+      return {
+        accepted: true,
+        response,
+        reason: '',
+        turn
+      };
+    }
     const commitRoomIntelligenceTurns = ({
       turns = [],
       provider = 'studio',
       model = null,
       keyLabel = '',
-      providerCallCount = budget.providerCalls
+      providerCallCount = budget.providerCalls,
+      activeEngine = '',
+      fallbackReason = ''
     } = {}) => {
+      const aishaAccepted = (Array.isArray(turns) ? turns : []).some(turn => String(turn?.providerMode || '') === 'aisha-accepted');
+      const resolvedActiveEngine = String(activeEngine || (aishaAccepted ? 'aisha-runtime-pack1' : 'local-room-intelligence')).trim();
       const nextRoomState = reduceRoomState({
         previous: roomIntelligenceState,
         perception: roomPerception,
@@ -2617,7 +2666,7 @@ router.post('/pulse', async (req, res) => {
       });
       const committed = commitResponse(roomResponse, {
         effectiveQuestion,
-        deterministic: !!roomPlan.deterministic,
+        deterministic: !!roomPlan.deterministic && !aishaAccepted,
         skipLegacyEnforcement: true,
         roomIntelligenceV0: nextRoomState
       });
@@ -2629,14 +2678,16 @@ router.post('/pulse', async (req, res) => {
         model,
         keyLabel,
         fallback: false,
-        deterministic: !!roomPlan.deterministic,
+        deterministic: !!roomPlan.deterministic && !aishaAccepted,
         consciousRoom: true,
         roomIntelligence: roomResponse.roomIntelligence,
         providerCallCount,
         lane: 'room',
         intentFamily: roomPlan.intentFamily || 'room',
-        engineMode: 'local-room-intelligence',
-        aishaEngineConnected: false,
+        engineMode: resolvedActiveEngine === 'aisha-runtime-pack1' ? 'aisha' : 'local-room-intelligence',
+        activeEngine: resolvedActiveEngine,
+        aishaEngineConnected: aishaAttempt?.aishaEngineConnected === true,
+        fallbackReason,
         targetSpeakerId: (Array.isArray(roomPlan.responseOrder) ? roomPlan.responseOrder[0] : '') || null,
         activeSpeakers: Array.isArray(roomPlan.responseOrder) ? roomPlan.responseOrder : [],
         memoryAnchors: [roomPlan.intentFamily || 'room'].filter(Boolean),
@@ -2649,20 +2700,39 @@ router.post('/pulse', async (req, res) => {
       }));
     };
     if (roomPlan.deterministic) {
-      const turns = (Array.isArray(roomPlan.steps) ? roomPlan.steps : [])
-        .map(deterministicTurnFromStep)
-        .filter(item => item.speakerId && item.content);
+      const turnResults = [];
+      for (const step of (Array.isArray(roomPlan.steps) ? roomPlan.steps : [])) {
+        turnResults.push(await aishaTurnForRoomStep(step));
+      }
+      const turns = turnResults
+        .map(item => item?.turn)
+        .filter(item => item?.speakerId && item?.content);
+      const aishaAccepted = turnResults.some(item => item?.accepted);
+      const fallbackReason = aishaAccepted
+        ? ''
+        : String(turnResults.find(item => item?.reason)?.reason || aishaAttempt?.fallbackReason || '').trim();
       return commitRoomIntelligenceTurns({
         turns,
-        provider: 'studio-room-intelligence-v0',
-        model: null,
-        providerCallCount: 0
+        provider: aishaAccepted ? 'aisha' : 'studio-room-intelligence-v0',
+        model: aishaAccepted ? 'aisha-runtime-pack1' : null,
+        providerCallCount: 0,
+        activeEngine: aishaAccepted ? 'aisha-runtime-pack1' : 'local-room-intelligence',
+        fallbackReason
       });
     }
     if (roomPlan.requiresProvider) {
       const providerTurns = [];
       let lastGeneration = null;
+      let aishaFallbackReason = '';
+      let aishaAcceptedCount = 0;
       for (const step of (Array.isArray(roomPlan.steps) ? roomPlan.steps : []).slice(0, 3)) {
+        const aishaStep = await aishaTurnForRoomStep(step);
+        if (aishaStep.accepted) {
+          aishaAcceptedCount += 1;
+          providerTurns.push(aishaStep.turn);
+          continue;
+        }
+        if (aishaStep.reason) aishaFallbackReason = aishaFallbackReason || aishaStep.reason;
         const roomPrompt = buildRoomCharacterPrompt({
           step,
           roomState: roomIntelligenceState,
@@ -2699,12 +2769,15 @@ router.post('/pulse', async (req, res) => {
         });
       }
       if (providerTurns.length) {
+        const onlyAishaAccepted = aishaAcceptedCount > 0 && aishaAcceptedCount === providerTurns.length;
         return commitRoomIntelligenceTurns({
           turns: providerTurns,
-          provider: lastGeneration?.provider || 'gemini',
-          model: lastGeneration?.model || null,
+          provider: onlyAishaAccepted ? 'aisha' : (lastGeneration?.provider || 'gemini'),
+          model: onlyAishaAccepted ? 'aisha-runtime-pack1' : (lastGeneration?.model || null),
           keyLabel: lastGeneration?.keyLabel || '',
-          providerCallCount: budget.providerCalls
+          providerCallCount: budget.providerCalls,
+          activeEngine: onlyAishaAccepted ? 'aisha-runtime-pack1' : 'local-room-intelligence',
+          fallbackReason: onlyAishaAccepted ? '' : aishaFallbackReason
         });
       }
     }
