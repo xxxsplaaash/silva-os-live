@@ -6,8 +6,22 @@ const http = require('node:http');
 const express = require('express');
 
 const studioRouter = require('../routes/studio');
+const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
 
 const ROOT = path.resolve(__dirname, '..');
+
+async function withAishaFlag(value, fn) {
+  const original = process.env.AISHA_ENGINE_ENABLED;
+  if (value == null) delete process.env.AISHA_ENGINE_ENABLED;
+  else process.env.AISHA_ENGINE_ENABLED = String(value);
+  try {
+    await fn();
+  } finally {
+    if (original == null) delete process.env.AISHA_ENGINE_ENABLED;
+    else process.env.AISHA_ENGINE_ENABLED = original;
+    __setAishaRuntimeImporterForTests(null);
+  }
+}
 
 function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -188,28 +202,107 @@ test('live fallback module remains outage, clarification, and quiet-room only', 
 });
 
 test('Studio Pulse attempts A.I.S.H.A boundary but falls back to local Room Intelligence when mock is disconnected', async () => {
-  const originalFetch = global.fetch;
-  try {
-    global.fetch = async (url, options) => {
-      if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
-      throw new Error('external provider should not be called for deterministic A.I.S.H.A boundary fallback smoke');
-    };
-    await withStudioServer(async baseUrl => {
-      const data = await pulsePost(baseUrl, 'hi team');
-      const text = JSON.stringify(data.response.messageEvents || []);
-      assert.equal(data.aishaAttempted, true);
-      assert.equal(data.aishaEngineConnected, false);
-      assert.equal(data.aishaEngineMode, 'mock');
-      assert.equal(data.activeEngine, 'local-room-intelligence');
-      assert.equal(data.fallbackReason, 'aisha-not-connected');
-      assert.equal(data.engineMode, 'local-room-intelligence');
-      assert.equal(data.roomIntelligence.engineMode, 'local-room-intelligence');
-      assert.equal(data.roomIntelligence.aishaEngineConnected, false);
-      assert.doesNotMatch(text, /\[Mock A\.I\.S\.H\.A\]/);
+  await withAishaFlag(undefined, async () => {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for deterministic A.I.S.H.A boundary fallback smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const text = JSON.stringify(data.response.messageEvents || []);
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, false);
+        assert.equal(data.aishaEngineMode, 'mock');
+        assert.equal(data.activeEngine, 'local-room-intelligence');
+        assert.equal(data.fallbackReason, 'aisha-not-connected');
+        assert.equal(data.engineMode, 'local-room-intelligence');
+        assert.equal(data.roomIntelligence.engineMode, 'local-room-intelligence');
+        assert.equal(data.roomIntelligence.aishaEngineConnected, false);
+        assert.doesNotMatch(text, /\[Mock A\.I\.S\.H\.A\]/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse falls back locally when A.I.S.H.A flag is on but package is unavailable', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => {
+      const err = new Error('Cannot find module aisha-runtime-pack1');
+      err.code = 'MODULE_NOT_FOUND';
+      throw err;
     });
-  } finally {
-    global.fetch = originalFetch;
-  }
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for unavailable A.I.S.H.A fallback smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const text = JSON.stringify(data.response.messageEvents || []);
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, false);
+        assert.equal(data.aishaEngineMode, 'unavailable');
+        assert.equal(data.activeEngine, 'local-room-intelligence');
+        assert.equal(data.fallbackReason, 'aisha-runtime-unavailable');
+        assert.equal(data.provider, 'studio-room-intelligence-v0');
+        assert.doesNotMatch(text, /\[Mock A\.I\.S\.H\.A\]/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse can activate mocked public A.I.S.H.A host response when flag is on', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async specifier => {
+      assert.equal(specifier, 'aisha-runtime-pack1');
+      return {
+        processAishaRequest: async request => ({
+          responses: [{ speakerId: 'vanya', content: `A.I.S.H.A heard "${request.message}" and returned through the public host.` }],
+          memorySummary: {
+            activeTruths: [],
+            supersededTruths: [],
+            memoryCandidates: [],
+            sessionId: request.sessionId
+          },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        })
+      };
+    });
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for accepted A.I.S.H.A host smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const event = data.response.messageEvents[0];
+        assert.equal(data.aishaAttempted, true);
+        assert.equal(data.aishaEngineConnected, true);
+        assert.equal(data.aishaEngineMode, 'production');
+        assert.equal(data.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(data.provider, 'aisha');
+        assert.equal(data.model, 'aisha-runtime-pack1');
+        assert.equal(event.speakerId, 'vanya');
+        assert.match(event.text, /public host/);
+        assert.doesNotMatch(JSON.stringify(data), /\[Mock A\.I\.S\.H\.A\]/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 [

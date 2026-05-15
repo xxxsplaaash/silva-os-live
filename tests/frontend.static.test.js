@@ -1544,7 +1544,13 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(route, /activeEngine[\s\S]{0,220}local-room-intelligence/);
   assert.match(route, /fallbackReason:\s*['"]aisha-not-connected['"]/);
   assert.match(aishaAdapter, /callAishaEngine/);
-  assert.match(aishaAdapter, /processAishaRequest\(\)/);
+  assert.match(aishaAdapter, /processAishaRequest/);
+  assert.match(aishaAdapter, /aisha-runtime-pack1/);
+  assert.match(aishaAdapter, /AISHA_ENGINE_ENABLED/);
+  assert.match(aishaAdapter, /engineMode:\s*['"]production['"]/);
+  assert.doesNotMatch(aishaAdapter, /\bprocessTurn\b/);
+  assert.doesNotMatch(aishaAdapter, /\bruntimeBuilder\b/);
+  assert.doesNotMatch(aishaAdapter, /\bmemoryStore|memoryStores|memoryStores\b/);
   assert.match(aishaAdapter, /aishaEngineConnected:\s*false|createDisconnectedAishaResponse/);
   assert.match(aishaTypes, /a569440/);
   assert.match(aishaTypes, /\[Mock A\.I\.S\.H\.A\]/);

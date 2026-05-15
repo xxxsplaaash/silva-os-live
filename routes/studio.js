@@ -2329,7 +2329,7 @@ router.post('/pulse', async (req, res) => {
 
   function aishaHostMetadata(base = {}) {
     const connected = aishaAttempt?.aishaEngineConnected === true;
-    const activeEngine = String(base.activeEngine || (connected && base.engineMode === 'aisha' ? 'aisha' : 'local-room-intelligence')).trim();
+    const activeEngine = String(base.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')).trim();
     return {
       aishaAttempted: true,
       aishaEngineConnected: connected,
@@ -2496,7 +2496,7 @@ router.post('/pulse', async (req, res) => {
         mode,
         response: clientStudioResponse(committed.normalized),
         provider: 'aisha',
-        model: 'aisha-host',
+        model: 'aisha-runtime-pack1',
         fallback: false,
         deterministic: false,
         consciousRoom: true,
@@ -2504,7 +2504,7 @@ router.post('/pulse', async (req, res) => {
         lane: 'room',
         intentFamily: 'aisha-host',
         engineMode: 'aisha',
-        activeEngine: 'aisha',
+        activeEngine: 'aisha-runtime-pack1',
         targetSpeakerId: committed.normalized.threadMeta?.lastTargetedSpeaker || null,
         activeSpeakers: Array.isArray(committed.normalized.threadMeta?.lastActiveSpeakers) ? committed.normalized.threadMeta.lastActiveSpeakers : [],
         memoryAnchors: ['aisha-host'],

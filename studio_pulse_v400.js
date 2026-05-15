@@ -1939,7 +1939,7 @@
 	    const active = String(meta.activeEngine || 'local-room-intelligence').trim();
 	    const aishaConnected = meta.aishaEngineConnected === true;
 	    return {
-	      activeLabel: active === 'aisha' ? 'A.I.S.H.A' : 'Local Room Intelligence',
+	      activeLabel: active === 'aisha' || active === 'aisha-runtime-pack1' ? 'A.I.S.H.A' : 'Local Room Intelligence',
 	      aishaLabel: aishaConnected ? 'Connected' : 'Not connected'
 	    };
 	  }
