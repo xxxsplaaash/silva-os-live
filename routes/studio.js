@@ -48,6 +48,8 @@ const {
   createRoomIntelligenceContext,
   perceiveRoomMessage,
   planRoomTurn,
+  calculateSocialImpulses,
+  continuityPayloadForAisha,
   reduceRoomState,
   buildRoomCharacterPrompt,
   parseRoomCharacterOutput,
@@ -2036,6 +2038,7 @@ router.post('/pulse', async (req, res) => {
   let surfaceWorkflowContext = false;
   let workflowTurnQuestion = String(question || '').trim();
   let aishaAttempt = null;
+  let aishaRejectionDebug = null;
 
   if (workingThreadId && (!workingThread || String(workingThread?.id || '').trim() !== workingThreadId)) {
     workingThread = ensurePulseThread({
@@ -2357,12 +2360,61 @@ router.post('/pulse', async (req, res) => {
     };
   }
 
+  function aishaDebugEnabled() {
+    return process.env.NODE_ENV !== 'production'
+      || String(process.env.AISHA_DEBUG || '').trim().toLowerCase() === 'true';
+  }
+
+  function summarizeAishaRequestShape(request = {}) {
+    const recentMessages = Array.isArray(request.recentMessages) ? request.recentMessages : [];
+    const characterStates = request.characterStates && typeof request.characterStates === 'object' ? request.characterStates : {};
+    return {
+      hasMessageText: !!String(request.messageText || '').trim(),
+      activeSpeakerId: String(request.activeSpeakerId || '').trim(),
+      activeCharacterId: String(request.activeCharacterId || '').trim(),
+      hasLocalRoomState: !!(request.localRoomState && typeof request.localRoomState === 'object' && Object.keys(request.localRoomState).length),
+      hasCharacterStates: !!Object.keys(characterStates).length,
+      recentMessagesCount: recentMessages.length,
+      hasProjectContext: !!(request.projectContext && typeof request.projectContext === 'object' && Object.keys(request.projectContext).length)
+    };
+  }
+
+  function summarizeAishaResponseShape(response = {}) {
+    const responses = Array.isArray(response.responses) ? response.responses : [];
+    const first = responses[0] || {};
+    return {
+      ok: response?.ok === true,
+      engineMode: String(response?.engineMode || '').trim(),
+      connected: response?.aishaEngineConnected === true,
+      responseCount: responses.length,
+      firstResponseHasContent: !!String(first.content || first.text || '').trim()
+    };
+  }
+
+  function recordAishaRejectionDebug({ request = {}, response = {}, reason = '', content = '' } = {}) {
+    if (!aishaDebugEnabled()) return;
+    const rejectedText = String(content || '').replace(/\s+/g, ' ').trim();
+    aishaRejectionDebug = {
+      aishaRejectedTextPreview: rejectedText.slice(0, 120),
+      aishaRejectedLength: rejectedText.length,
+      aishaRejectionReason: String(reason || '').trim(),
+      aishaRequestShapeSummary: summarizeAishaRequestShape(request),
+      aishaResponseShapeSummary: summarizeAishaResponseShape(response)
+    };
+  }
+
+  function aishaDebugMetadata() {
+    return aishaDebugEnabled() && aishaRejectionDebug ? aishaRejectionDebug : {};
+  }
+
   function pulsePayload(base = {}) {
     const aishaMeta = aishaHostMetadata(base);
+    const aishaDebugMeta = aishaDebugMetadata();
     if (HARD_CUT_REBUILD) {
       return {
         ...base,
         ...aishaMeta,
+        ...aishaDebugMeta,
         thread: clientStudioThread(base.thread, { debug: debugRoomRuntime }),
         messages: clientThreadMessages(base.messages, 48),
         attachments: currentAttachments,
@@ -2374,6 +2426,7 @@ router.post('/pulse', async (req, res) => {
     return {
       ...base,
       ...aishaMeta,
+      ...aishaDebugMeta,
       thread: clientStudioThread(base.thread, { debug: debugRoomRuntime }),
       messages: clientThreadMessages(base.messages, 48),
       attachments: currentAttachments,
@@ -2514,9 +2567,15 @@ router.post('/pulse', async (req, res) => {
       messages: system.currentThreadMessages || []
     });
     const roomPerception = perceiveRoomMessage(effectiveQuestion, roomIntelligenceState);
+    const socialImpulses = calculateSocialImpulses({
+      perception: roomPerception,
+      roomState: roomIntelligenceState,
+      continuityState: roomIntelligenceState.characterContinuityV0
+    });
     const roomPlan = planRoomTurn({
       perception: roomPerception,
-      roomState: roomIntelligenceState
+      roomState: roomIntelligenceState,
+      socialImpulses
     });
 
     const roomPlanForAisha = (plan = roomPlan) => ({
@@ -2555,6 +2614,7 @@ router.post('/pulse', async (req, res) => {
           activeEnginePolicy: 'local-room-intelligence-plans-first',
           roomPlan: roomPlanForAisha(plan),
           roomPerception: roomPerceptionForAisha(perception),
+          characterContinuityV0: continuityPayloadForAisha(state.characterContinuityV0, plan.socialImpulses || socialImpulses),
           responseIntent: step.responseIntent || '',
           selectionReason: step.reason || plan.trace || 'room-intelligence-v0',
           selectedSpeakerId: speakerId,
@@ -2605,23 +2665,28 @@ router.post('/pulse', async (req, res) => {
       return validateRoomCharacterTurn(turn, step, perception, state);
     }
     async function aishaTurnForRoomStep(step = {}) {
-      const response = await callAishaEngine(buildAishaRequestForRoomStep(step));
+      const request = buildAishaRequestForRoomStep(step);
+      const response = await callAishaEngine(request);
       aishaAttempt = response;
       const usability = getAishaResponseUsability(response);
       if (!usability.usable) {
+        const { content } = firstAishaContent(response);
+        const reason = response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response';
+        recordAishaRejectionDebug({ request, response, reason, content });
         return {
           accepted: false,
           response,
-          reason: response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response',
+          reason,
           turn: fallbackTurnFromStep(step, roomPerception, {
             providerMode: response?.aishaEngineConnected === true ? 'aisha-rejected-fallback' : 'deterministic-fallback',
-            validationFallbackReason: response?.aishaEngineConnected === true ? (response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response') : ''
+            validationFallbackReason: response?.aishaEngineConnected === true ? reason : ''
           })
         };
       }
       const turn = turnFromAishaResponseForStep(response, step);
       const rejectionReason = aishaRoomOutputRejectionReason(turn, step, roomPerception, roomIntelligenceState);
       if (rejectionReason) {
+        recordAishaRejectionDebug({ request, response, reason: rejectionReason, content: turn.content });
         return {
           accepted: false,
           response,
@@ -2655,6 +2720,7 @@ router.post('/pulse', async (req, res) => {
         perception: roomPerception,
         plan: roomPlan,
         turns,
+        socialImpulses: roomPlan.socialImpulses || socialImpulses,
         threadId: workingThreadId
       });
       const roomResponse = buildRoomStudioResponse({

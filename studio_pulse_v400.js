@@ -1924,7 +1924,8 @@
 	      knownPresenceStatus:{ aisha:'active', vanya:'active', leah:'quiet', claudia:'quiet', grok:'quiet' },
 	      activeCharacterIds:['aisha','vanya'],
 	      inactiveCharacterIds:[],
-	      characterStates:{}
+	      characterStates:{},
+	      characterContinuityV0:{ roomSocialState:{ dominantMood:'steady', currentFloorHolder:'', suppressedSpeakers:[] } }
 	    };
 	  }
 	  function roomPresenceLabel(ids){
@@ -1947,18 +1948,24 @@
 	    const room = roomIntelligenceRuntime();
 	    const engine = pulseEngineStatus();
 	    const status = room.knownPresenceStatus || {};
+	    const continuity = room.characterContinuityV0 && typeof room.characterContinuityV0 === 'object' ? room.characterContinuityV0 : {};
+	    const social = continuity.roomSocialState && typeof continuity.roomSocialState === 'object' ? continuity.roomSocialState : {};
 	    const active = Object.keys(status).filter(id => status[id] === 'active');
 	    const quiet = Object.keys(status).filter(id => status[id] === 'quiet');
 	    const away = Object.keys(status).filter(id => status[id] === 'away');
 	    const unknown = Object.keys(status).filter(id => status[id] === 'unknown');
 	    const speaker = CHARS[room.lastSpeakerId] ? room.lastSpeakerId : '';
+	    const floor = CHARS[social.currentFloorHolder] ? social.currentFloorHolder : speaker;
+	    const suppressed = Array.isArray(social.suppressedSpeakers) ? social.suppressedSpeakers.filter(id => CHARS[id]) : [];
 	    const chips = [
 	      `<span class="sp-room-presence-chip"><i class="sp-room-dot is-active"></i><strong>Present</strong>${esc(roomPresenceLabel(active))}</span>`,
 	      `<span class="sp-room-presence-chip"><i class="sp-room-dot is-quiet"></i><strong>Quiet</strong>${esc(roomPresenceLabel(quiet))}</span>`,
 	      away.length ? `<span class="sp-room-presence-chip"><i class="sp-room-dot is-away"></i><strong>Away</strong>${esc(roomPresenceLabel(away))}</span>` : '',
 	      unknown.length ? `<span class="sp-room-presence-chip"><i class="sp-room-dot is-unknown"></i><strong>Unknown</strong>${esc(roomPresenceLabel(unknown))}</span>` : '',
 	      speaker ? `<span class="sp-room-presence-chip"><strong>Current speaker</strong>${esc(characterLabel(speaker))}</span>` : '',
-	      `<span class="sp-room-presence-chip"><strong>Mood</strong>${esc(String(room.roomMood || 'steady'))}</span>`,
+	      floor ? `<span class="sp-room-presence-chip"><strong>Floor</strong>${esc(characterLabel(floor))}</span>` : '',
+	      `<span class="sp-room-presence-chip"><strong>Mood</strong>${esc(String(social.dominantMood || room.roomMood || 'steady'))}</span>`,
+	      suppressed.length ? `<span class="sp-room-presence-chip"><strong>Holding back</strong>${esc(roomPresenceLabel(suppressed))}</span>` : '',
 	      `<span class="sp-room-presence-chip is-engine"><strong>Active Engine</strong>${esc(engine.activeLabel)}</span>`,
 	      `<span class="sp-room-presence-chip is-engine"><strong>A.I.S.H.A</strong>${esc(engine.aishaLabel)}</span>`
 	    ].filter(Boolean).join('');
@@ -1999,6 +2006,11 @@
 	      'diagnose': 'Diagnostic',
 	      'memory-candidate': 'Focused',
 	      'campaign-plan': 'Focused',
+	      'design-critique': 'Sharp',
+	      'pattern-critique': 'Diagnostic',
+	      'pattern-diagnosis': 'Diagnostic',
+	      'emotional-check-in': 'Warm',
+	      'room-stabilise': 'Focused',
 	      'room-answer': 'Listening',
 	      'direct-answer': 'Leaning in',
 	      'message': 'Listening',

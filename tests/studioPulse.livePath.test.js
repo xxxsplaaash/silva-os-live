@@ -86,12 +86,13 @@ async function withMockProvider(output, fn) {
   }
 }
 
-async function pulsePost(baseUrl, question) {
+async function pulsePost(baseUrl, question, extra = {}) {
   const response = await fetch(`${baseUrl}/api/studio/pulse`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       question,
+      ...extra,
       providerConfig: {
         textPrimary: {
           provider: 'gemini',
@@ -100,7 +101,8 @@ async function pulsePost(baseUrl, question) {
           label: 'Mock Gemini'
         },
         pulseApiKeys: []
-      }
+      },
+      ...(extra.providerConfig ? { providerConfig: extra.providerConfig } : {})
     })
   });
   assert.equal(response.status, 200);
@@ -359,11 +361,120 @@ test('aisha_generic_hello_rejected_for_room_mode', async () => {
         assert.doesNotMatch(event.text, /^hello\.?$/i);
         assert.match(event.text, /Aisha is watching the room|Hey\\. I'm here|room/i);
         assert.equal(data.roomIntelligence.aishaRejectedFallbackCount, 1);
+        assert.equal(data.aishaRejectedTextPreview, 'Hello.');
+        assert.equal(data.aishaRejectedLength, 6);
+        assert.equal(data.aishaRejectionReason, 'aisha-generic-output');
+        assert.deepEqual(data.aishaRequestShapeSummary, {
+          hasMessageText: true,
+          activeSpeakerId: 'vanya',
+          activeCharacterId: 'vanya',
+          hasLocalRoomState: true,
+          hasCharacterStates: true,
+          recentMessagesCount: 0,
+          hasProjectContext: true
+        });
+        assert.deepEqual(data.aishaResponseShapeSummary, {
+          ok: true,
+          engineMode: 'production',
+          connected: true,
+          responseCount: 1,
+          firstResponseHasContent: true
+        });
       });
     } finally {
       global.fetch = originalFetch;
     }
   });
+});
+
+test('A.I.S.H.A rejection diagnostics are hidden in production without debug flag', async () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalDebug = process.env.AISHA_DEBUG;
+  process.env.NODE_ENV = 'production';
+  delete process.env.AISHA_DEBUG;
+  try {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => ({
+          ok: true,
+          responses: [{ speakerId: 'aisha', content: 'Hello.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        })
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for production-hidden A.I.S.H.A debug smoke');
+        };
+        await withStudioServer(async baseUrl => {
+          const data = await pulsePost(baseUrl, 'hi team');
+          assert.equal(data.activeEngine, 'local-room-intelligence');
+          assert.equal(data.fallbackReason, 'aisha-generic-output');
+          assert.equal(Object.prototype.hasOwnProperty.call(data, 'aishaRejectedTextPreview'), false);
+          assert.equal(Object.prototype.hasOwnProperty.call(data, 'aishaRequestShapeSummary'), false);
+          assert.equal(Object.prototype.hasOwnProperty.call(data, 'aishaResponseShapeSummary'), false);
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  } finally {
+    if (originalNodeEnv == null) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalDebug == null) delete process.env.AISHA_DEBUG;
+    else process.env.AISHA_DEBUG = originalDebug;
+  }
+});
+
+test('A.I.S.H.A rejection diagnostics are visible in production with AISHA_DEBUG', async () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalDebug = process.env.AISHA_DEBUG;
+  process.env.NODE_ENV = 'production';
+  process.env.AISHA_DEBUG = 'true';
+  try {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => ({
+          ok: true,
+          responses: [{ speakerId: 'aisha', content: 'Hello.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        })
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for production-enabled A.I.S.H.A debug smoke');
+        };
+        await withStudioServer(async baseUrl => {
+          const data = await pulsePost(baseUrl, 'hi team');
+          assert.equal(data.activeEngine, 'local-room-intelligence');
+          assert.equal(data.aishaRejectedTextPreview, 'Hello.');
+          assert.equal(data.aishaRejectionReason, 'aisha-generic-output');
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  } finally {
+    if (originalNodeEnv == null) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalDebug == null) delete process.env.AISHA_DEBUG;
+    else process.env.AISHA_DEBUG = originalDebug;
+  }
 });
 
 test('aisha_context_request_contains_room_state', async () => {
@@ -402,6 +513,10 @@ test('aisha_context_request_contains_room_state', async () => {
         assert.ok(capturedRequest.characterStates?.vanya);
         assert.equal(capturedRequest.projectContext?.roomPlan?.intentFamily, 'room-greeting');
         assert.equal(capturedRequest.projectContext?.selectedSpeakerId, 'vanya');
+        assert.ok(capturedRequest.projectContext?.characterContinuityV0);
+        assert.ok(capturedRequest.projectContext.characterContinuityV0.characterMemories?.vanya);
+        assert.ok(capturedRequest.projectContext.characterContinuityV0.relationshipStates?.vanya__user);
+        assert.equal(capturedRequest.projectContext.characterContinuityV0.socialImpulses?.[0]?.characterId, 'aisha');
       });
     } finally {
       global.fetch = originalFetch;
@@ -437,6 +552,36 @@ test('aisha_accepted_maps_to_planned_speaker', async () => {
         assert.equal(event.speakerId, 'vanya');
         assert.equal(event.providerMode, 'aisha-accepted');
         assert.match(event.text, /room settling/i);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('character continuity persists in thread metadata and visible messages hide raw social tags', async () => {
+  await withAishaFlag(null, async () => {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for continuity persistence smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const first = await pulsePost(baseUrl, 'hi team');
+        const threadId = first.thread?.id || first.response?.threadMeta?.id;
+        assert.ok(threadId, 'thread id should be returned');
+        const firstContinuity = first.roomRuntime?.roomIntelligenceV0?.characterContinuityV0
+          || first.roomIntelligence?.roomState?.characterContinuityV0;
+        assert.equal(firstContinuity?.schemaVersion, 'studio-pulse.character-continuity.v0');
+
+        const second = await pulsePost(baseUrl, 'where is everyone else', { threadId });
+        const secondContinuity = second.roomRuntime?.roomIntelligenceV0?.characterContinuityV0
+          || second.roomIntelligence?.roomState?.characterContinuityV0;
+        assert.equal(secondContinuity?.schemaVersion, 'studio-pulse.character-continuity.v0');
+        assert.ok(Object.keys(secondContinuity.relationshipStates || {}).includes('vanya__user'));
+        const visibleText = JSON.stringify(second.response?.messageEvents || []);
+        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|socialImpulses|suppressedSpeakers|aishaDiagnostics)\b/i);
       });
     } finally {
       global.fetch = originalFetch;
