@@ -172,7 +172,7 @@ test('everyone_opinion_answers_user_topic', () => {
 
 test('presence questions are deterministic and reference active plus quiet room state', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-presence' });
-  const perception = perceiveRoomMessage('who is online?', state);
+  const perception = perceiveRoomMessage('room state?', state);
   const plan = planRoomTurn({ perception, roomState: state });
   assert.equal(perception.asksAboutRoomState, true);
   assert.equal(perception.asksRollCall, false);
@@ -207,6 +207,28 @@ test('role call returns a concise room roll call instead of only Vanya', () => {
   assert.doesNotMatch(text, FORBIDDEN_ARCHITECTURE_RX);
 });
 
+test('online and present variants classify as roll-call instead of generic Vanya fallback', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-online-variants' });
+  [
+    'whos online?',
+    "who's online?",
+    'who is online?',
+    'who is here?',
+    "who's here?",
+    'who is present?',
+    'anyone online?',
+    'anyone here?'
+  ].forEach(prompt => {
+    const perception = perceiveRoomMessage(prompt, state);
+    const plan = planRoomTurn({ perception, roomState: state });
+    assert.equal(perception.asksRollCall, true, prompt);
+    assert.equal(plan.intentFamily, 'room-roll-call', prompt);
+    assert.deepEqual(plan.responseOrder, ['aisha'], prompt);
+    assert.match(plan.steps[0].deterministicText, /Online check|Role call/i, prompt);
+    assert.doesNotMatch(plan.steps[0].deterministicText, /Say the thing plainly/i, prompt);
+  });
+});
+
 test('everyone else calls in quiet members naturally without generic critique copy', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-everyone-else' });
   const perception = perceiveRoomMessage('everyone else?', state);
@@ -225,6 +247,21 @@ test('everyone else calls in quiet members naturally without generic critique co
   });
   assert.match(text, /\b(quiet|listening|present|tracking|pattern)\b/i);
   assert.doesNotMatch(text, FORBIDDEN_ARCHITECTURE_RX);
+});
+
+test('casual pizza questions produce a visible personality-rich room response', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-pizza' });
+  ['who likes pizza?', 'who here likes pizza?', 'anyone like pizza?'].forEach(prompt => {
+    const perception = perceiveRoomMessage(prompt, state);
+    const plan = planRoomTurn({ perception, roomState: state });
+    assert.equal(perception.taskType, 'social_food', prompt);
+    assert.equal(plan.intentFamily, 'casual-social', prompt);
+    assert.equal(plan.deterministic, true, prompt);
+    assert.deepEqual(plan.responseOrder, ['vanya'], prompt);
+    assert.match(plan.steps[0].deterministicText, /Pizza roll call/i, prompt);
+    assert.match(plan.steps[0].deterministicText, /Vanya|Aisha|Leah|Claudia|Grok/i, prompt);
+    assert.doesNotMatch(plan.steps[0].deterministicText, FORBIDDEN_ARCHITECTURE_RX, prompt);
+  });
 });
 
 test('everyone honest opinion produces distinct planned speakers', () => {
@@ -330,7 +367,7 @@ test('Pulse route answers presence from room intelligence without provider calls
       assert.equal(data.provider, 'studio-room-intelligence-v0');
       assert.equal(data.providerCallCount, 0);
       assert.equal(data.response.messageEvents[0].speakerId, 'aisha');
-      assert.match(data.response.messageEvents[0].text, /Roll call/i);
+      assert.match(data.response.messageEvents[0].text, /Role call|Roll call/i);
       assert.match(data.response.messageEvents[0].text, /Leah Mokoena/i);
       assert.ok(data.roomRuntime.roomIntelligenceV0);
       assert.equal(data.roomRuntime.roomIntelligenceV0.knownPresenceStatus.leah, 'quiet');

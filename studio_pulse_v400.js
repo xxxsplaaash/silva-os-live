@@ -935,6 +935,11 @@
 	      targetSpeakerId: String(item.targetSpeakerId || item.target_speaker_id || ''),
 	      targetType: String(item.targetType || item.target_type || ''),
 	      metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : {},
+	      roomIntent: String(item.roomIntent || item.room_intent || item.responseIntent || item.response_intent || item.metadata?.roomIntent || item.metadata?.responseIntent || ''),
+	      responseIntent: String(item.responseIntent || item.response_intent || item.roomIntent || item.room_intent || item.metadata?.responseIntent || item.metadata?.roomIntent || ''),
+	      presence: String(item.presence || item.metadata?.presence || ''),
+	      emotionalState: String(item.emotionalState || item.emotional_state || item.metadata?.emotionalState || ''),
+	      providerMode: String(item.providerMode || item.provider_mode || item.metadata?.providerMode || ''),
 	      createdAt: String(item.createdAt || item.created_at || ''),
 	      directTarget: String(item.directTarget || item.direct_target || '')
 	    })).filter(item => item.text);

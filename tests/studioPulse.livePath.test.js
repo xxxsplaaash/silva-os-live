@@ -610,10 +610,18 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
         assert.equal(wellbeing.response.messageEvents[0].speakerId, 'vanya');
         assert.match(wellbeing.response.messageEvents[0].text, /\b(present|quiet|call them in)\b/i);
 
+        const online = await pulsePost(baseUrl, 'whos online?', { threadId });
+        assert.equal(online.response.messageEvents.length, 1);
+        assert.equal(online.response.messageEvents[0].speakerId, 'aisha');
+        assert.equal(online.response.messageEvents[0].roomIntent, 'roll-call');
+        assert.match(online.response.messageEvents[0].text, /Online check/i);
+        assert.match(online.response.messageEvents[0].text, /Leah Mokoena/i);
+        assert.doesNotMatch(online.response.messageEvents[0].text, /Say the thing plainly/i);
+
         const rollCall = await pulsePost(baseUrl, 'role call!!!', { threadId });
         assert.equal(rollCall.response.messageEvents.length, 1);
         assert.equal(rollCall.response.messageEvents[0].speakerId, 'aisha');
-        assert.match(rollCall.response.messageEvents[0].text, /Roll call/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Role call|Roll call/i);
         assert.match(rollCall.response.messageEvents[0].text, /Aisha Motsepe/i);
         assert.match(rollCall.response.messageEvents[0].text, /Vanya Khumalo/i);
         assert.match(rollCall.response.messageEvents[0].text, /Leah Mokoena/i);
@@ -632,6 +640,13 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
         assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.leah, 'quiet');
         assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.claudia, 'quiet');
         assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.grok, 'quiet');
+
+        const pizza = await pulsePost(baseUrl, 'who likes pizza?', { threadId });
+        assert.equal(pizza.response.messageEvents.length, 1);
+        assert.equal(pizza.response.messageEvents[0].speakerId, 'vanya');
+        assert.equal(pizza.response.messageEvents[0].roomIntent, 'social-read');
+        assert.match(pizza.response.messageEvents[0].text, /Pizza roll call/i);
+        assert.match(pizza.response.messageEvents[0].text, /Vanya|Aisha|Leah|Claudia|Grok/i);
       });
     } finally {
       global.fetch = originalFetch;
