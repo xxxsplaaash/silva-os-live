@@ -13,6 +13,7 @@
   var booted = false;
   var renderSeq = { full: 0, settings: 0 };
   var OWNER_ID = 'assets/provider_control_center_v1.js';
+  var providerDraftValues = {};
 
   function $(id){ return document.getElementById(id); }
   function qsa(sel, root){ return Array.from((root || document).querySelectorAll(sel)); }
@@ -119,7 +120,11 @@
     return cache.status;
   }
   function captureDraftValues(root){
-    var drafts = [];
+    var drafts = Object.keys(providerDraftValues).map(function(selector){
+      return { selector: selector, value: providerDraftValues[selector] };
+    });
+    var seen = {};
+    drafts.forEach(function(draft){ seen[draft.selector] = true; });
     qsa('[data-provider-input], [data-provider-json], [data-provider-path], #pvc-fal-gpt2-model, #pvc-fal-gpt15-model, #pvc-fal-flux-pro-model, #pvc-fal-flux-max-model, #pvc-fal-seedream-text-model, #pvc-fal-seedream-edit-model, #pvc-fal-utility-edit-model, #pvc-usd-zar-rate', root).forEach(function(input){
       if (!input || typeof input.value === 'undefined' || !input.value) return;
       var selector = '';
@@ -127,7 +132,15 @@
       else if (input.hasAttribute('data-provider-json')) selector = '[data-provider-json="' + input.getAttribute('data-provider-json') + '"]';
       else if (input.hasAttribute('data-provider-path')) selector = '[data-provider-path="' + input.getAttribute('data-provider-path') + '"]';
       else if (input.id) selector = '#' + input.id;
-      if (selector) drafts.push({ selector: selector, value: input.value });
+      if (selector) {
+        providerDraftValues[selector] = input.value;
+        if (seen[selector]) {
+          drafts = drafts.map(function(draft){ return draft.selector === selector ? { selector: selector, value: input.value } : draft; });
+        } else {
+          seen[selector] = true;
+          drafts.push({ selector: selector, value: input.value });
+        }
+      }
     });
     return drafts;
   }
@@ -135,6 +148,25 @@
     (drafts || []).forEach(function(draft){
       var input = root.querySelector(draft.selector);
       if (input && !input.value) input.value = draft.value;
+    });
+  }
+  function selectorForDraftInput(input){
+    if (!input) return '';
+    if (input.hasAttribute('data-provider-input')) return '[data-provider-input="' + input.getAttribute('data-provider-input') + '"]';
+    if (input.hasAttribute('data-provider-json')) return '[data-provider-json="' + input.getAttribute('data-provider-json') + '"]';
+    if (input.hasAttribute('data-provider-path')) return '[data-provider-path="' + input.getAttribute('data-provider-path') + '"]';
+    return input.id ? '#' + input.id : '';
+  }
+  function rememberDraftInput(input){
+    var selector = selectorForDraftInput(input);
+    if (!selector) return;
+    var value = typeof input.value === 'undefined' ? '' : input.value;
+    if (value) providerDraftValues[selector] = value;
+    else delete providerDraftValues[selector];
+  }
+  function clearProviderDraft(provider){
+    ['[data-provider-input="' + provider + '"]', '[data-provider-json="' + provider + '"]', '[data-provider-path="' + provider + '"]'].forEach(function(selector){
+      delete providerDraftValues[selector];
     });
   }
   async function fetchJsonWithTimeout(url, options, timeoutMs){
@@ -387,6 +419,7 @@
         secretType: provider === 'fal' ? 'api_key' : (provider === 'google' ? 'service_account_path' : 'api_key')
       });
       if (input) input.value = '';
+      clearProviderDraft(provider);
       providerMessages[provider] = 'Saved to the server vault. Generator readiness will refresh automatically.';
       toast('Provider key saved to server vault');
       rerenderRoot(root, includeHome, false);
@@ -401,6 +434,10 @@
     }
   }
   function bind(root, includeHome){
+    qsa('[data-provider-input], [data-provider-json], [data-provider-path], #pvc-fal-gpt2-model, #pvc-fal-gpt15-model, #pvc-fal-flux-pro-model, #pvc-fal-flux-max-model, #pvc-fal-seedream-text-model, #pvc-fal-seedream-edit-model, #pvc-fal-utility-edit-model, #pvc-usd-zar-rate', root).forEach(function(input){
+      input.addEventListener('input', function(){ rememberDraftInput(input); });
+      input.addEventListener('change', function(){ rememberDraftInput(input); });
+    });
     qsa('[data-provider-file]', root).forEach(function(input){
       input.onchange = function(){
         var provider = input.getAttribute('data-provider-file');
@@ -429,6 +466,7 @@
             value: value
           });
           if (textarea) textarea.value = '';
+          clearProviderDraft(provider);
           var file = root.querySelector('[data-provider-file="' + provider + '"]');
           if (file) file.value = '';
           providerMessages[provider] = 'JSON key saved server-side. Vertex now uses the generated .runtime path.';
