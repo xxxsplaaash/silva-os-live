@@ -1,50 +1,390 @@
-/* Planner month view should use the available workspace width, not the generic page cap */
+/* Content Planner rescue: one readable board, contained density, no data deletion */
 #page-planner{
   max-width:none !important;
-  width:auto !important;
+  width:calc(100vw - var(--nav-w) - 24px) !important;
+  padding:32px 20px 80px 20px !important;
 }
 
-#page-planner .filter-bar,
+#page-planner .page-title{
+  margin-bottom:8px !important;
+}
+
+#page-planner .page-sub{
+  margin-bottom:16px !important;
+  max-width:980px !important;
+}
+
+#page-planner .filter-bar{
+  width:100% !important;
+  max-width:none !important;
+  min-width:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  gap:8px !important;
+  flex-wrap:wrap !important;
+  margin:12px 0 20px !important;
+}
+
 #page-planner #planner-grid,
 #page-planner .week-grid,
-#page-planner .month-grid,
-#page-planner .grid2{
+#page-planner .month-grid{
   width:100% !important;
   max-width:none !important;
   min-width:0 !important;
 }
 
-#page-planner .month-grid,
-#page-planner #planner-grid.month-grid{
+#page-planner #planner-grid.month-grid,
+#page-planner .month-grid.planner-month-board{
   display:grid !important;
   grid-template-columns:repeat(7,minmax(0,1fr)) !important;
-  gap:12px !important;
+  gap:8px !important;
   align-items:stretch !important;
 }
 
-#page-planner .month-cell{
-  min-height:170px !important;
+#page-planner .month-head{
+  padding:0 4px 4px !important;
+  font-family:"DM Mono",monospace !important;
+  font-size:var(--type-2xs) !important;
+  letter-spacing:var(--tracking-wider) !important;
+  color:var(--muted) !important;
+  text-transform:uppercase !important;
 }
 
-#page-planner .week-grid,
-#page-planner #planner-grid.week-grid{
+#page-planner .month-cell,
+#page-planner .planner-month-cell{
+  min-width:0 !important;
+  min-height:156px !important;
+  max-height:180px !important;
+  padding:8px !important;
+  display:grid !important;
+  grid-template-rows:auto 1fr auto !important;
+  gap:8px !important;
+  overflow:hidden !important;
+  border-radius:18px !important;
+  background:linear-gradient(180deg,var(--color-white-a3_4),var(--color-white-a1_6)) !important;
+  border:1px solid var(--color-white-a7) !important;
+}
+
+#page-planner .month-cell.other{
+  opacity:.46 !important;
+}
+
+#page-planner .month-cell.today{
+  border-color:var(--color-rgba-255-47-84-35) !important;
+  box-shadow:inset 0 0 0 1px var(--color-rgba-255-47-84-14),0 18px 44px var(--color-black-a22) !important;
+}
+
+#page-planner .planner-date-btn{
+  appearance:none !important;
+  border:0 !important;
+  background:var(--color-transparent) !important;
+  color:inherit !important;
+  padding:0 !important;
+  text-align:left !important;
+  cursor:pointer !important;
+}
+
+#page-planner .month-date.planner-date-btn{
+  width:100% !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  font-family:"DM Mono",monospace !important;
+  font-size:var(--type-sm) !important;
+  color:var(--silver) !important;
+}
+
+#page-planner .month-date span{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-width:20px !important;
+  height:16px !important;
+  border-radius:999px !important;
+  background:var(--color-white-a6) !important;
+  color:var(--muted2) !important;
+  font-size:var(--type-2xs) !important;
+}
+
+#page-planner .planner-cell-events{
+  min-width:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  gap:4px !important;
+  overflow:hidden !important;
+}
+
+#page-planner .planner-event-chip,
+#page-planner .planner-more-btn{
+  width:100% !important;
+  min-width:0 !important;
+  min-height:24px !important;
+  margin:0 !important;
+  border-radius:9px !important;
+  border:1px solid var(--color-white-a5_5) !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  gap:4px !important;
+  cursor:pointer !important;
+  text-align:left !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+}
+
+#page-planner .planner-event-chip span,
+#page-planner .planner-event-chip em{
+  min-width:0 !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+#page-planner .planner-event-chip span{
+  font-size:var(--type-xs) !important;
+  font-style:normal !important;
+}
+
+#page-planner .planner-event-chip em{
+  flex:0 1 auto !important;
+  color:var(--muted) !important;
+  font-size:var(--type-2xs) !important;
+  font-style:normal !important;
+}
+
+#page-planner .planner-review-group{
+  background:var(--color-rgba-201-160-64-105) !important;
+  border-left:2px solid var(--gold,var(--color-hex-c9a040)) !important;
+}
+
+#page-planner .planner-more-btn{
+  justify-content:center !important;
+  padding:4px 8px !important;
+  background:var(--color-white-a3_5) !important;
+  color:var(--muted2) !important;
+  font-family:"DM Mono",monospace !important;
+  font-size:var(--type-2xs) !important;
+}
+
+#page-planner .planner-add-btn{
+  align-self:flex-start !important;
+  width:auto !important;
+  color:var(--muted2) !important;
+  font-family:"DM Mono",monospace !important;
+  font-size:var(--type-2xs) !important;
+}
+
+#page-planner #planner-grid.week-grid,
+#page-planner .week-grid.planner-week-agenda{
   display:grid !important;
   grid-template-columns:repeat(7,minmax(0,1fr)) !important;
+  gap:8px !important;
+  align-items:stretch !important;
 }
 
-#page-planner .day-col,
-#page-planner .month-cell{
+#page-planner .planner-week-day{
   min-width:0 !important;
+  min-height:520px !important;
+  max-height:calc(100vh - 340px) !important;
+  padding:12px !important;
+  display:grid !important;
+  grid-template-rows:auto 1fr auto !important;
+  gap:8px !important;
+  overflow:hidden !important;
+  border-radius:18px !important;
 }
 
-#page-planner .grid2{
-  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+#page-planner .planner-week-day .day-label{
+  margin:0 !important;
+  width:100% !important;
+}
+
+#page-planner .planner-week-day .day-label strong{
+  display:block !important;
+  margin-top:8px !important;
+  color:var(--muted2) !important;
+  font-size:var(--type-2xs) !important;
+  font-weight:var(--weight-medium) !important;
+  letter-spacing:var(--tracking-wide) !important;
+}
+
+#page-planner .planner-day-scroll{
+  min-height:0 !important;
+  overflow:auto !important;
+  display:flex !important;
+  flex-direction:column !important;
+  gap:4px !important;
+  padding-right:2px !important;
+}
+
+#page-planner .planner-day-scroll::-webkit-scrollbar,
+.planner-drawer-list::-webkit-scrollbar{
+  width:4px;
+}
+
+#page-planner .planner-day-scroll::-webkit-scrollbar-thumb,
+.planner-drawer-list::-webkit-scrollbar-thumb{
+  background:var(--color-white-a12);
+  border-radius:999px;
+}
+
+.planner-day-drawer{
+  position:fixed;
+  inset:0;
+z-index:var(--z-modal);
+  pointer-events:none;
+}
+
+.planner-day-drawer.is-open{
+  pointer-events:auto;
+}
+
+.planner-drawer-backdrop{
+  position:absolute;
+  inset:0;
+  background:var(--color-black-a58);
+  backdrop-filter:blur(6px);
+}
+
+.planner-drawer-panel{
+  position:absolute;
+  top:0;
+  right:0;
+  width:min(560px,calc(100vw - 24px));
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:24px;
+  background:linear-gradient(180deg,var(--color-hex-121316),var(--color-hex-090a0d));
+  border-left:1px solid var(--color-white-a9);
+  box-shadow:-30px 0 80px var(--color-black-a52);
+  overflow:hidden;
+}
+
+.planner-drawer-head{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+}
+
+.planner-drawer-head h3{
+  margin:4px 0 4px;
+  color:var(--white);
+  font-family:"Syne",sans-serif;
+  font-size:var(--type-lg);
+}
+
+.planner-drawer-head p{
+  margin:0;
+  color:var(--muted2);
+  font-size:var(--type-xs);
+}
+
+.planner-drawer-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.planner-drawer-list{
+  min-height:0;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding-right:4px;
+}
+
+.planner-drawer-group{
+  border:1px solid var(--color-white-a7_5);
+  border-radius:16px;
+  background:var(--color-white-a2_6);
+  overflow:hidden;
+}
+
+.planner-drawer-group summary{
+  list-style:none;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 12px;
+  color:var(--silver);
+  font-size:var(--type-sm);
+}
+
+.planner-drawer-group summary::-webkit-details-marker{
+  display:none;
+}
+
+.planner-drawer-group summary em{
+  color:var(--muted);
+  font-style:normal;
+  font-size:var(--type-xs);
+}
+
+.planner-drawer-row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 12px;
+  border-top:1px solid var(--color-white-a5_5);
+}
+
+.planner-drawer-row strong,
+.planner-drawer-row span{
+  display:block;
+}
+
+.planner-drawer-row strong{
+  color:var(--white);
+  font-size:var(--type-sm);
+  line-height:var(--leading-tight);
+}
+
+.planner-drawer-row span{
+  color:var(--muted2);
+  font-size:var(--type-xs);
+  margin-top:4px;
+}
+
+.planner-day-empty{
+  border:1px dashed var(--color-white-a12);
+  border-radius:16px;
+  padding:24px;
+  color:var(--muted2);
+  font-size:var(--type-sm);
+  text-align:center;
 }
 
 @media (max-width:1280px){
-  #page-planner .month-cell{min-height:150px !important;}
+  #page-planner #planner-grid.month-grid,
+  #page-planner .month-grid.planner-month-board{
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  }
+  #page-planner #planner-grid.week-grid,
+  #page-planner .week-grid.planner-week-agenda{
+    grid-template-columns:repeat(2,minmax(260px,1fr)) !important;
+  }
+  #page-planner .month-head{
+    display:none !important;
+  }
 }
 
-@media (max-width:980px){
-  #page-planner .grid2{grid-template-columns:1fr !important;}
+@media (max-width:760px){
+  #page-planner{
+    width:100% !important;
+    padding:24px 12px 64px !important;
+  }
+  #page-planner #planner-grid.month-grid,
+  #page-planner .month-grid.planner-month-board,
+  #page-planner #planner-grid.week-grid,
+  #page-planner .week-grid.planner-week-agenda{
+    grid-template-columns:1fr !important;
+  }
+  #page-planner .planner-week-day{
+    min-height:360px !important;
+    max-height:440px !important;
+  }
 }

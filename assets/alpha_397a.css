@@ -948,7 +948,7 @@ html:not(.alpha-show-scrollbars) *::-webkit-scrollbar{ width:0 !important; heigh
 #page-homes .alpha-home-detail{min-width:0 !important;}
 #page-homes .alpha-home-detail .home-card{min-height:780px !important;}
 #page-homes .planner-tip{margin-bottom:14px !important;}
-#page-homes .home-grid{display:none !important;}
+#page-homes .home-grid{display:grid !important;}
 
 /* Aisha role page and general cards */
 #page-aisha .grid2{grid-template-columns:minmax(0,1.25fr) minmax(360px,.75fr) !important;}

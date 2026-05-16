@@ -20,8 +20,8 @@ body{
 }
 .page{
   min-height:calc(100dvh - 1px) !important;
-  padding-top:26px !important;
-  padding-bottom:78px !important;
+  padding-top:24px !important;
+  padding-bottom:80px !important;
 }
 
 /* lighter fit for cut top sections on character/planner pages */
@@ -51,7 +51,7 @@ body{
 .team-card,
 .char-mode-pill{
   position:relative;
-  transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease,opacity .18s ease !important;
+  transition:background-color var(--motion-base) ease,border-color var(--motion-base) ease,box-shadow var(--motion-base) ease,color var(--motion-base) ease,opacity var(--motion-base) ease !important;
 }
 .char-tab:hover,
 .char-tab:focus-visible,
@@ -61,15 +61,15 @@ body{
 #sidebar .nav-item:hover,
 .team-card:hover,
 .char-mode-pill:hover{
-  background:linear-gradient(180deg, rgba(255,255,255,.042), rgba(255,255,255,.018)) !important;
-  border-color:rgba(214,196,238,.16) !important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.045),0 0 0 1px rgba(214,196,238,.08),0 10px 22px rgba(0,0,0,.14) !important;
+  background:linear-gradient(180deg, var(--color-white-a4_2), var(--color-white-a1_8)) !important;
+  border-color:var(--color-rgba-214-196-238-16) !important;
+  box-shadow:inset 0 0 0 1px var(--color-white-a4_5),0 0 0 1px var(--color-rgba-214-196-238-08),0 10px 22px var(--color-black-a14) !important;
 }
 .char-tab.active,
 .char-tab[data-active="true"],
 .char-mode-pill.active-mode{
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)) !important;
-  border-color:rgba(214,196,238,.18) !important;
+  background:linear-gradient(180deg, var(--color-white-a5), var(--color-white-a2)) !important;
+  border-color:var(--color-rgba-214-196-238-18) !important;
 }
 
 /* Home System: reliable click targets + readable names */
@@ -93,12 +93,12 @@ body{
   word-break:break-word;
 }
 #page-homes .alpha-home-fixed-tab-copy strong{
-  font-size:1rem !important;
-  line-height:1.06 !important;
+  font-size:var(--type-md) !important;
+  line-height:var(--leading-tight) !important;
 }
 #page-homes .alpha-home-fixed-tab-copy span{
-  font-size:.73rem !important;
-  line-height:1.32 !important;
+  font-size:var(--type-sm) !important;
+  line-height:var(--leading-tight) !important;
 }
 #page-homes .alpha-home-fixed-detailwrap,
 #page-homes .alpha-home-fixed-stage,
@@ -114,7 +114,7 @@ body{
 .profile-wide-grid{
   display:grid !important;
   grid-template-columns:minmax(0,1.08fr) minmax(320px,.82fr) !important;
-  gap:18px !important;
+  gap:16px !important;
   align-items:start !important;
 }
 .profile-wide-grid > div,
@@ -151,7 +151,7 @@ body{
 .char-mode-pill{
   min-width:108px !important;
   min-height:40px !important;
-  padding:9px 16px !important;
+  padding:8px 16px !important;
   overflow:visible !important;
 }
 .char-mode-pill .silva-text-sheen,
@@ -173,9 +173,9 @@ body{
 
 /* make sidebar/logo fit inside small browser chrome more safely */
 .logo-block{
-  min-height:78px !important;
+  min-height:80px !important;
   padding-top:12px !important;
   padding-bottom:12px !important;
 }
-.logo-text{line-height:1 !important;}
+.logo-text{line-height:var(--leading-tight) !important;}
 .logo-sub{margin-top:4px !important;}

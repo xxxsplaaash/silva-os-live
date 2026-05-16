@@ -1,0 +1,163 @@
+/* Silva OS 3.9.9 — polish pass 4
+   Focus: clipped character tabs, home system reliability, lighter render pressure. */
+
+:root{
+  --v399-tab-gap: 12px;
+}
+
+/* Character pages: tabs and mode rows should wrap, not clip or shove off-canvas */
+#page-aisha .char-hero,
+#page-leah .char-hero,
+#page-claudia .char-hero,
+#page-grok .char-hero,
+#page-vanya .char-hero{
+  overflow: visible !important;
+}
+
+#page-aisha .char-tabs,
+#page-leah .char-tabs,
+#page-claudia .char-tabs,
+#page-grok .char-tabs,
+#page-vanya .char-tabs{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  align-items:center !important;
+  gap: var(--v399-tab-gap) !important;
+  row-gap: 8px !important;
+  overflow: visible !important;
+  white-space: normal !important;
+}
+
+#page-aisha .char-tab,
+#page-leah .char-tab,
+#page-claudia .char-tab,
+#page-grok .char-tab,
+#page-vanya .char-tab{
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  white-space: nowrap !important;
+  padding: 12px 16px !important;
+  margin: 0 !important;
+  line-height: var(--leading-tight) !important;
+}
+
+#page-aisha .char-tab::before,
+#page-leah .char-tab::before,
+#page-claudia .char-tab::before,
+#page-grok .char-tab::before,
+#page-vanya .char-tab::before,
+#page-aisha .char-tab::after,
+#page-leah .char-tab::after,
+#page-claudia .char-tab::after,
+#page-grok .char-tab::after,
+#page-vanya .char-tab::after{
+  pointer-events:none !important;
+}
+
+#page-aisha .char-mode-bar,
+#page-leah .char-mode-bar,
+#page-claudia .char-mode-bar,
+#page-grok .char-mode-bar,
+#page-vanya .char-mode-bar,
+#page-aisha .char-hero .chip-row,
+#page-leah .char-hero .chip-row,
+#page-claudia .char-hero .chip-row,
+#page-grok .char-hero .chip-row,
+#page-vanya .char-hero .chip-row{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  row-gap:8px !important;
+  align-items:center !important;
+}
+
+#page-aisha .char-mode-pill,
+#page-leah .char-mode-pill,
+#page-claudia .char-mode-pill,
+#page-grok .char-mode-pill,
+#page-vanya .char-mode-pill{
+  flex: 0 0 auto !important;
+  min-width: 104px !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+}
+
+/* Home System top tabs: allow names to breathe and keep clicks clean */
+#page-homes .alpha-home-fixed-tabs{
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) !important;
+  gap:12px !important;
+  align-items:stretch !important;
+}
+
+#page-homes .alpha-home-fixed-tab{
+  min-height: 96px !important;
+  align-items:flex-start !important;
+  justify-content:flex-start !important;
+  overflow: hidden !important;
+  isolation:isolate;
+}
+
+#page-homes .alpha-home-fixed-tab .alpha-home-menu-dot{
+  flex: 0 0 10px !important;
+  margin-top: 8px !important;
+}
+
+#page-homes .alpha-home-fixed-tab-copy{
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:flex-start !important;
+  min-width:0 !important;
+  width:100% !important;
+}
+
+#page-homes .alpha-home-fixed-tab-copy strong{
+  display:block !important;
+  font-size: var(--type-md) !important;
+  line-height: var(--leading-tight) !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  max-height: calc(1.05em * 2) !important;
+}
+
+#page-homes .alpha-home-fixed-tab-copy span{
+  display:block !important;
+  font-size: var(--type-xs) !important;
+  line-height: var(--leading-tight) !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+#page-homes .alpha-home-fixed-tab::before,
+#page-homes .alpha-home-fixed-tab::after,
+#page-homes .alpha-home-fixed-tab *::before,
+#page-homes .alpha-home-fixed-tab *::after{
+  pointer-events:none !important;
+}
+
+/* Sections with empty copy: keep them stable and modular instead of huge voids */
+.profile-block:empty::before,
+.profile-subgrid > div:empty::before{
+  content: '—';
+  opacity: .42;
+}
+
+/* Small-screen safety */
+@media (max-width: 980px){
+  #page-aisha .char-tab,
+  #page-leah .char-tab,
+  #page-claudia .char-tab,
+  #page-grok .char-tab,
+  #page-vanya .char-tab{
+    padding: 8px 12px !important;
+    font-size: var(--type-md) !important;
+  }
+}

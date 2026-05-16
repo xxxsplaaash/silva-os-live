@@ -1,0 +1,166 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Silva Probe</title>
+<iframe id="app" src="/" style="width:1400px;height:2400px;border:0"></iframe>
+<pre id="out">loading</pre>
+<script>
+const out = document.getElementById('out');
+const frame = document.getElementById('app');
+
+const PAGE_PROBES = {
+  home: '#page-home .card, #page-home .cc-shell, #page-home .studio-response',
+  homes: '#page-homes .alpha-home-system-shell, #page-homes .home-card, #page-homes .alpha-home-fixed-tab',
+  workflow: '#page-workflow #workflow-wrap .workflow-step, #page-workflow #workflow-wrap .card',
+  ideas: '#page-ideas #ideas-grid .idea-card, #page-ideas #ideas-grid .card',
+  campaigns: '#page-campaigns #campaigns-grid .campaign-card, #page-campaigns #campaigns-grid .card',
+  aisha: '#page-aisha .char-hero, #aisha-tab-content .card, #aisha-tab-content .profile-block',
+  leah: '#page-leah .char-hero, #leah-tab-content .card, #leah-tab-content .profile-block',
+  claudia: '#page-claudia .char-hero, #claudia-tab-content .card, #claudia-tab-content .profile-block',
+  grok: '#page-grok .char-hero, #grok-tab-content .card, #grok-tab-content .profile-block',
+  vanya: '#page-vanya .char-hero, #vanya-tab-content .card, #vanya-tab-content .profile-block',
+  team: '#page-team #team-grid .team-card, #page-team .team-stat',
+  providers: '#page-providers .provider-card, #page-providers .alpha-provider-card, #page-providers .card',
+  analytics: '#page-analytics #analytics-wrap .card, #page-analytics .analytics-list, #page-analytics .card',
+  dev: '#page-dev #dev-grid .dev-box, #page-dev .card',
+  settings: '#page-settings .alpha-provider-card, #page-settings .card'
+};
+
+const CRITICAL_PAGES = ['home','homes','workflow','ideas','campaigns','aisha','leah','claudia','grok','vanya','team','providers','analytics','dev','settings'];
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function pageSnapshot(d, page) {
+  const el = d.getElementById('page-' + page);
+  const selector = PAGE_PROBES[page];
+  const primaryMatches = selector ? d.querySelectorAll(selector).length : 0;
+  const hero = el && el.querySelector('.char-hero');
+  const isCharacter = ['aisha','leah','claudia','grok','vanya'].includes(page);
+  const isHomes = page === 'homes';
+  let storedFace = null;
+  let storedAvatar = null;
+  if (isCharacter) {
+    try {
+      const raw = d.defaultView.localStorage.getItem('silva_assets_' + page);
+      storedFace = !!(raw && JSON.parse(raw).face);
+    } catch (e) {
+      storedFace = false;
+    }
+    try {
+      storedAvatar = !!d.defaultView.localStorage.getItem('silva_avatar_' + page);
+    } catch (e) {
+      storedAvatar = false;
+    }
+  }
+  let tabReports = null;
+  if (isCharacter && el) {
+    const tabs = [...el.querySelectorAll(`.char-tab[data-char="${page}"]`)];
+    const container = d.getElementById(page + '-tab-content');
+    const w = d.defaultView;
+    tabReports = {};
+    tabs.forEach(tabEl => {
+      const tab = tabEl.getAttribute('data-tab');
+      try {
+        if (typeof w.renderCharTab === 'function' && container && tab) {
+          w.renderCharTab(page, tab, container);
+          tabReports[tab] = {
+            textLen: (container.innerText || '').trim().length,
+            cards: container.querySelectorAll('.card, .profile-block, .profile-item, .caption-card').length
+          };
+        }
+      } catch (e) {
+        tabReports[tab] = { error: String(e && e.message || e) };
+      }
+    });
+    try {
+      if (typeof w.renderCharPage === 'function') w.renderCharPage(page);
+    } catch (e) {}
+  }
+  return el ? {
+    exists: true,
+    active: el.classList.contains('active'),
+    primaryMatches,
+    textLen: (el.innerText || '').trim().length,
+    text: (el.innerText || '').trim().slice(0, 320),
+    htmlLen: (el.innerHTML || '').length,
+    heroActions: isCharacter ? !!(hero && hero.querySelector('.solid-char-actions')) : null,
+    heroHint: isCharacter ? !!(hero && hero.querySelector('.solid-char-subhint')) : null,
+    heroModeNote: isCharacter ? !!el.querySelector('.mode-effect-note') : null,
+    heroAvatarImg: isCharacter ? !!(hero && hero.querySelector('.char-avatar img')) : null,
+    tabReports,
+    homeContinuityRows: isHomes ? el.querySelectorAll('.alpha-home-continuity .home-row, .alpha-ref-lane .home-row').length : null,
+    homePromptRows: isHomes ? el.querySelectorAll('.alpha-home-continuity .home-row .home-val, .alpha-ref-lane .home-row .home-val').length : null,
+    storedFace,
+    storedAvatar
+  } : { exists: false, active: false, primaryMatches: 0, textLen: 0, htmlLen: 0 };
+}
+
+function write(label, payload) {
+  out.textContent += '\n' + JSON.stringify({ label, ...payload }, null, 2);
+}
+
+function snap(label) {
+  try {
+    const w = frame.contentWindow;
+    const d = w.document;
+    const payload = {
+      active: [...d.querySelectorAll('.page.active')].map(x => x.id),
+      pageOwners: w.__SILVA_PAGE_OWNERS__ || null,
+      navType: typeof w.nav,
+      criticalNavWrapped: !!(w.nav && w.nav.__silvaCriticalOwner),
+      pages: Object.fromEntries(CRITICAL_PAGES.map(page => [page, pageSnapshot(d, page)]))
+    };
+    write(label, payload);
+  } catch (e) {
+    out.textContent += '\nERR ' + label + ': ' + (e && e.stack ? e.stack : e);
+  }
+}
+
+async function warmRuntime() {
+  const w = frame.contentWindow;
+  try {
+    CRITICAL_PAGES.forEach(page => {
+      try { if (typeof w.ensureRuntimePageShell === 'function') w.ensureRuntimePageShell(page); } catch (e) {}
+    });
+    if (typeof w.renderWorkflow === 'function') w.renderWorkflow();
+    if (typeof w.renderIdeas === 'function') w.renderIdeas();
+    if (typeof w.renderCampaignsV35 === 'function') w.renderCampaignsV35();
+    else if (typeof w.renderCampaigns === 'function') w.renderCampaigns();
+    if (typeof w.renderHomesV12 === 'function') w.renderHomesV12({ force: true });
+    else if (typeof w.renderHomes === 'function') w.renderHomes({ force: true });
+    if (typeof w.renderCharPage === 'function') ['aisha','leah','claudia','grok','vanya'].forEach(id => { try { w.renderCharPage(id); } catch (e) {} });
+    if (typeof w.renderTeamOps === 'function') w.renderTeamOps();
+    if (typeof w.renderProviderShellV12 === 'function') w.renderProviderShellV12();
+    else if (typeof w.renderProviders === 'function') w.renderProviders();
+    if (typeof w.renderAnalytics === 'function') w.renderAnalytics();
+    if (typeof w.renderDevAdmin === 'function') w.renderDevAdmin();
+    if (typeof w.renderSettingsV12 === 'function') w.renderSettingsV12();
+    else if (typeof w.openSettingsShell === 'function') w.openSettingsShell();
+    if (typeof w.syncStateToBackend === 'function') await w.syncStateToBackend('probe_warm');
+  } catch (e) {
+    out.textContent += '\nWARM ERR ' + e.stack;
+  }
+}
+
+async function navAndSnap(page) {
+  try {
+    frame.contentWindow.nav(page);
+  } catch (e) {
+    out.textContent += '\nNAV ' + page + ' ERR ' + e.stack;
+  }
+  await sleep(page === 'homes' ? 1100 : 650);
+  snap('after ' + page);
+}
+
+frame.addEventListener('load', async () => {
+  await sleep(1800);
+  snap('initial');
+  await warmRuntime();
+  await sleep(900);
+  snap('after warm');
+  for (const page of CRITICAL_PAGES) {
+    await navAndSnap(page);
+  }
+});
+</script>

@@ -1,0 +1,674 @@
+/*
+TYPOGRAPHY AUDIT - GENERATED BEFORE MIGRATION ON 2026-05-12
+Scope: live root index.html, linked live CSS, and linked live JS style/template strings.
+Format: count | size | weight | tracking | transform | representative source
+39 | .78rem | inherit | inherit | inherit | index.html:11439 | .v396-copy
+35 | .72rem | inherit | inherit | inherit | index.html:234 | .library-health-copy
+31 | .68rem | inherit | inherit | inherit | index.html:5585 | .provider-shell
+23 | .74rem | inherit | inherit | inherit | index.html:297 | #page-library .prompt-text
+21 | .76rem | inherit | inherit | inherit | index.html:735 | .workflow-step-body
+21 | 0.78rem | inherit | inherit | inherit | index.html:93 | .nav-icon
+17 | .75rem | inherit | inherit | inherit | index.html:725 | .profile-quote
+16 | .62rem | inherit | inherit | inherit | index.html:715 | .ref-quickview .rq-note
+14 | .65rem | inherit | inherit | inherit | index.html:746 | #page-homes .home-sub
+14 | .7rem | inherit | inherit | inherit | index.html:291 | .library-archive-note
+14 | 0.74rem | inherit | inherit | inherit | index.html:367 | .filter-select
+14 | 1rem | inherit | inherit | inherit | index.html:518 | .modal-close
+11 | .64rem | inherit | inherit | inherit | index.html:722 | .idea-card .idea-meta
+11 | 0.68rem | inherit | inherit | inherit | index.html:202 | .icon-btn
+11 | 0.72rem | inherit | inherit | inherit | index.html:380 | .output-text
+10 | .66rem | inherit | inherit | inherit | index.html:756 | #page-homes .home-prompt
+10 | .73rem | inherit | inherit | inherit | index.html:730 | .mock-preview .mp-body
+9 | 0.67rem | inherit | inherit | inherit | index.html:192 | .prompt-meta
+9 | 0.7rem | inherit | inherit | inherit | index.html:163 | .btn-sm
+8 | .82rem | inherit | inherit | inherit | index.html:245 | .library-empty-state
+8 | .94rem | inherit | inherit | inherit | studio_pulse_v400.js:145 | #page-home .sp-response-summary
+8 | 0.6rem | inherit | inherit | inherit | index.html:466 | .char-mode-pill
+8 | 0.75rem | inherit | inherit | inherit | index.html:615 | .alert
+8 | 0.76rem | inherit | inherit | inherit | index.html:681 | .profile-item
+8 | inherit | 700 | inherit | inherit | index.html:235 | .library-health-copy strong
+6 | .56rem | inherit | .14em | uppercase | studio_pulse_v400.js:148 | #page-home .sp-spark-head
+6 | .58rem | inherit | .08em | uppercase | index.html:5579 | .team-stat .l
+6 | .58rem | inherit | inherit | inherit | index.html:5593 | .month-post
+6 | 0.62rem | inherit | inherit | uppercase | index.html:5174 | (inline style)
+5 | .62rem | inherit | .16em | uppercase | index.html:10270 | .sr-kicker
+5 | .63rem | inherit | inherit | inherit | index.html:719 | .preset-chip
+5 | .67rem | inherit | inherit | inherit | index.html:752 | #page-homes .home-slot
+5 | .84rem | inherit | inherit | inherit | index.html:782 | .ai-pulse-copy
+5 | .8rem | inherit | inherit | inherit | index.html:10308 | .sr-textarea
+5 | .92rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:8516 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-identity-lock-head strong
+5 | 0.61rem | inherit | inherit | inherit | index.html:387 | .copy-btn
+5 | 0.73rem | inherit | inherit | inherit | index.html:463 | .char-role
+5 | 0.88rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:9338 | #page-generator.pg52-generator-owned .pg52-sa-moment-tile strong
+5 | inherit | 600 | inherit | inherit | index.html:860 | .cc-ambient-pill .who
+5 | inherit | 650 | inherit | inherit | assets/prompt_generator_v3.css:537 | #page-generator .pg3-list strong
+4 | .79rem | inherit | inherit | inherit | index.html:837 | .cc-copy
+4 | 0.62rem | inherit | inherit | inherit | index.html:400 | .lock-icon
+4 | 0.95rem | inherit | inherit | inherit | index.html:1240 | (inline style)
+4 | inherit | inherit | 0.08em | uppercase | assets/prompt_generator_v3.css:56 | #page-generator .pg3-flow-steps span
+3 | .58rem | inherit | .14em | uppercase | studio_pulse_v400.js:26 | #page-home .sp-accordion-title span:first-child
+3 | .58rem !important | inherit | inherit | inherit | assets/calendar_fullscreen_fix.css:95 | #page-planner .month-date span
+3 | .6rem | inherit | .14em | uppercase | assets/shelf_fix_v10.css:33 | .alpha-home-fixed-slide-badge
+3 | .86rem | inherit | inherit | inherit | index.html:10272 | .sr-copy
+3 | .8rem | 560 | inherit | inherit | assets/prompt_generator_v3.css:3823 | #page-generator .pg52-location-input
+3 | .9rem | inherit | -.02em | inherit | assets/prompt_generator_v3.css:4472 | #page-generator .pg52-concept-blast-head strong
+3 | 0.59rem | inherit | inherit | inherit | index.html:406 | .yes-list li::before
+3 | 0.63rem | inherit | inherit | inherit | index.html:443 | .caption-meta
+3 | 0.64rem | inherit | inherit | inherit | index.html:621 | .cross-badge
+3 | 0.66rem | inherit | inherit | inherit | index.html:660 | .asset-sub
+3 | 0.71rem | inherit | inherit | inherit | index.html:194 | .prompt-text
+3 | 0.84rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:9720 | .pg52-quick-config-picker-head p
+3 | 1rem | inherit | -.02em | inherit | studio_pulse_v400.js:76 | #page-home .sp-compose-panel-head strong
+3 | 1rem !important | inherit | inherit | inherit | assets/v398_cleanup_patch5.css:319 | #page-homes .team-card .team-name
+3 | inherit | 800 | inherit | inherit | assets/prompt_generator_v3.css:2661 | #page-generator .pg51-section-title
+3 | inherit | inherit | 0.10em | uppercase | assets/prompt_generator_v3.css:9477 | #page-generator.pg52-generator-owned .pg52-authenticity-guide-head strong
+3 | inherit | inherit | 0.16em | uppercase | assets/prompt_generator_v3.css:9331 | #page-generator.pg52-generator-owned .pg52-sa-moment-index
+2 | .54rem | inherit | inherit | inherit | index.html:11480 | .v396-bmeta
+2 | .55rem | inherit | .12em | uppercase | index.html:11478 | .v396-bwho
+2 | .56rem | inherit | .12em | uppercase | index.html:11496 | .v396-item .k
+2 | .56rem | inherit | .13em | uppercase | index.html:891 | .sr-kicker
+2 | .57rem | inherit | .11em | uppercase | index.html:824 | .ai-log-copy .meta
+2 | .57rem | inherit | .13em | uppercase | index.html:787 | .ai-mini-chip .k
+2 | .58rem | inherit | .12em | uppercase | index.html:10301 | .sr-bubble .who
+2 | .58rem | inherit | .15em | uppercase | assets/shelf_fix_v10.js:396 | #page-homes .alpha-home-field label
+2 | .58rem | inherit | .16em | uppercase | assets/shelf_fix_v10.css:132 | #page-settings .alpha-settings-stat .k
+2 | .58rem | inherit | .1em | uppercase | index.html:10320 | .sr-statbox .l
+2 | .61rem | inherit | inherit | inherit | index.html:871 | .cc-quickasks button
+2 | .62rem | 900 | .08em | uppercase | assets/prompt_generator_v3.css:7141 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-smart-mode-pill
+2 | .62rem | inherit | .08em | uppercase | index.html:332 | #page-library .icon-btn
+2 | .63rem | inherit | .12em | uppercase | assets/v399_legacy_polish_pass3.css:82 | .mode-effect-note .label
+2 | .64rem | 800 | .08em | uppercase | assets/prompt_generator_v3.css:6818 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-prompt-anatomy-quality span
+2 | .68rem | inherit | .08em | uppercase | assets/v398_cleanup_patch5.css:126 | #sidebar .nav-item[data-page="vanya"] .nav-label-box
+2 | .6rem | inherit | inherit | inherit | index.html:973 | .room-note code
+2 | .73rem !important | inherit | inherit | inherit | assets/v399_polish_final.css:92 | #page-homes .alpha-home-fixed-tab-copy span
+2 | .76rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:3066 | #page-generator .pg52-link-btn
+2 | .77rem | inherit | inherit | inherit | index.html:867 | .cc-bubble .text
+2 | .82rem | 700 | inherit | inherit | index.html:813 | .ai-surface-title
+2 | .92rem | inherit | -.02em | inherit | assets/prompt_generator_v3.css:7126 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-smart-randomize-head strong
+2 | 0!important | inherit | inherit | inherit | index.html:1016 | .logo-sub
+2 | 0.55rem | inherit | inherit | inherit | index.html:403 | .never-list li::before
+2 | 0.58rem | inherit | 0.22em | uppercase | assets/prompt_generator_v3.css:231 | #page-generator .pg3-kicker
+2 | 0.83rem | 600 | inherit | inherit | index.html:599 | .broll-title
+2 | 0.88rem | 700 | inherit | inherit | index.html:659 | .asset-title
+2 | 0.8rem | inherit | inherit | inherit | index.html:442 | .caption-text
+2 | 1.1rem | 700 | inherit | inherit | index.html:462 | .char-name
+2 | 1.1rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:4737 | #page-generator .pg52-scene-ref-plus
+2 | 1.2rem | 700 | inherit | inherit | index.html:5578 | .team-stat .n
+2 | 1.2rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:5906 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-wardrobe-empty-icon
+2 | 1rem | 700 | inherit | inherit | index.html:845 | .cc-avatar
+2 | 1rem | inherit | -.03em | inherit | assets/prompt_generator_v3.css:4558 | #page-generator .pg52-concept-blast-card header strong
+2 | 2rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:3754 | #page-generator .pg52-wardrobe-empty-icon
+2 | inherit | inherit | -0.03em | inherit | assets/prompt_generator_v3.css:9637 | #page-generator.pg52-generator-owned .pg52-quick-config-open strong
+2 | inherit | inherit | .08em | inherit | assets/v398_refine_patch.css:248 | .preset-chip
+2 | inherit | inherit | .12em | inherit | assets/v398_stability_patch.css:15 | .logo-sub
+2 | inherit | inherit | 0.04em | inherit | assets/prompt_generator_v3.css:9359 | #page-generator.pg52-generator-owned .pg52-sa-moment-banner
+2 | inherit | inherit | 0.11em | uppercase | assets/prompt_generator_v3.css:9400 | #page-generator.pg52-generator-owned .pg52-social-finish-head strong
+2 | inherit | inherit | 0.12em | uppercase | assets/prompt_generator_v3.css:113 | #page-generator .pg3-snapshot-pill span
+2 | inherit | inherit | 0.1em | uppercase | assets/prompt_generator_v3.css:198 | #page-generator .pg3-model-details summary
+1 | .48rem | 760 | .06em | uppercase | assets/prompt_generator_v3.css:5131 | #page-generator .pg52-dock-ref-thumb::after
+1 | .48rem | 800 | inherit | uppercase | assets/prompt_generator_v3.css:6305 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-result-ref span
+1 | .48rem | inherit | .06em | uppercase | assets/prompt_generator_v3.css:4670 | #page-generator .pg52-ref-candidate-label
+1 | .48rem | inherit | .08em | uppercase | assets/v399_legacy_polish_pass3.css:50 | .char-avatar.clickable-avatar::after
+1 | .52rem | 900 | .08em | uppercase | assets/prompt_generator_v3.css:7764 | #page-generator .pg52-platform-preview-subject
+1 | .53rem | inherit | .05em | uppercase | index.html:11457 | .v396-minirow span
+1 | .53rem | inherit | .08em | uppercase | index.html:928 | .cc-bubble .emotion
+1 | .53rem | inherit | .24em | inherit | assets/v398_refine_patch.css:77 | .nav-label
+1 | .54rem | inherit | .12em | uppercase | studio_pulse_v400.js:236 | #page-home .sp-reply-clear
+1 | .54rem | inherit | .15em | inherit | studio_pulse_v400.js:227 | #page-home .sp-voice-card.is-spark .who
+1 | .55rem | 800 | .1em | uppercase | assets/prompt_generator_v3.css:4120 | #page-generator .pg52-action-card span
+1 | .55rem | inherit | .06em | uppercase | index.html:852 | .cc-mini span
+1 | .55rem | inherit | .09em | uppercase | index.html:885 | .cc-session-item .m
+1 | .55rem | inherit | .13em | uppercase | index.html:866 | .cc-bubble .who
+1 | .55rem | inherit | .16em | uppercase | studio_pulse_v400.js:81 | #page-home .sp-provider-field label
+1 | .55rem | inherit | inherit | inherit | index.html:868 | .cc-bubble .meta
+1 | .56rem | 500 | .12em | uppercase | index.html:922 | .cc-bubble .who
+1 | .56rem | 700 | .08em | uppercase | assets/prompt_generator_v3.css:3545 | #page-generator .pg52-ref-tile-label
+1 | .56rem | 800 | .10em | uppercase | assets/prompt_generator_v3.css:7494 | #page-generator .pg52-model-compare-grid > div > span:first-child
+1 | .56rem | 900 | .08em | uppercase | assets/prompt_generator_v3.css:7081 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-axis-lock
+1 | .56rem | 900 | .09em | uppercase | assets/prompt_generator_v3.css:7425 | #page-generator .pg52-model-badge
+1 | .56rem | 900 | .12em | uppercase | assets/prompt_generator_v3.css:6952 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-pop-rank
+1 | .56rem | inherit | .08em | inherit | index.html:927 | .cc-bubble .meta
+1 | .56rem | inherit | .16em | uppercase | index.html:11437 | .v396-kicker
+1 | .56rem | inherit | .1em | uppercase | index.html:11502 | .v396-score .l
+1 | .56rem !important | inherit | inherit | inherit | assets/calendar_fullscreen_fix.css:145 | #page-planner .planner-event-chip em
+1 | .57rem | 800 | .1em | uppercase | assets/prompt_generator_v3.css:3912 | #page-generator .pg52-location-option-kicker
+1 | .57rem | inherit | .07em | inherit | index.html:716 | .status-bar
+1 | .57rem | inherit | .16em | uppercase | assets/shelf_fix_v10.js:243 | #page-homes .alpha-home-summary-pill .k
+1 | .58rem | 700 | inherit | inherit | assets/prompt_generator_v3.css:6895 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-final-text-details > summary span:las
+1 | .58rem | 800 | .08em | uppercase | assets/prompt_generator_v3.css:6780 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-prompt-anatomy-negative summary em
+1 | .58rem | 800 | .09em | uppercase | assets/prompt_generator_v3.css:4021 | #page-generator .pg52-custom-tag
+1 | .58rem | 800 | .10em | uppercase | assets/prompt_generator_v3.css:7363 | #page-generator .pg52-model-history span
+1 | .58rem | 800 | .14em | uppercase | assets/prompt_generator_v3.css:3953 | #page-generator .pg52-action-mode-label
+1 | .58rem | 850 | .13em | uppercase | assets/prompt_generator_v3.css:3883 | #page-generator .pg52-location-group-label
+1 | .58rem | 900 | .04em | uppercase | assets/prompt_generator_v3.css:8406 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-concept-blast-badges span
+1 | .58rem | 900 | .08em | uppercase | assets/prompt_generator_v3.css:8680 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-identity-payload-preview em
+1 | .58rem | 900 | .1em | uppercase | assets/identity_vault_rescue_v1.css:131 | .identity-vault-slot-head span
+1 | .58rem | inherit | .05em | uppercase | index.html:10290 | .sr-badge
+1 | .58rem | inherit | .06em | uppercase | assets/prompt_generator_v3.css:8720 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-identity-payload-preview li b
+1 | .58rem | inherit | .07em | uppercase | index.html:11444 | .v396-chip
+1 | .58rem | inherit | .18em | uppercase | index.html:835 | .cc-sub
+1 | .58rem !important | 500 !important | .06em !important | inherit | assets/calendar_fullscreen_fix.css:199 | #page-planner .planner-week-day .day-label strong
+1 | .59rem | inherit | .07em | uppercase | index.html:803 | .ai-pill
+1 | .5rem !important | inherit | inherit | inherit | assets/v399_stable_hotfix.css:101 | #aisha-avatar-slot .silva-avatar-edit-label
+1 | .60rem | 760 | .08em | uppercase | assets/prompt_generator_v3.css:3504 | #page-generator .pg52-badge
+1 | .60rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:4058 | #page-generator .pg52-override-counter
+1 | .61rem | 900 | .09em | uppercase | assets/prompt_generator_v3.css:8618 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-identity-lock-qa span
+1 | .61rem | inherit | .07em | uppercase | index.html:749 | #page-homes .home-key
+1 | .61rem | inherit | .08em | uppercase | index.html:11508 | .v396-review-grid label
+1 | .61rem | inherit | .11em | uppercase | index.html:811 | .ai-learn-item .t
+1 | .62rem | 560 | .08em | uppercase | assets/prompt_generator_v3.css:3275 | #page-generator .pg52-t-micro
+1 | .62rem | 650 | .07em | uppercase | assets/prompt_generator_v3.css:3492 | #page-generator .pg52-route-tags span
+1 | .62rem | 650 | .08em | uppercase | assets/prompt_generator_v3.css:3850 | #page-generator .pg52-location-context-tag
+1 | .62rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:3691 | #page-generator .pg52-tile-label
+1 | .62rem | 800 | .04em | inherit | assets/prompt_generator_v3.css:7686 | #page-generator .pg52-platform-preview-tags span
+1 | .62rem | 800 | .10em | uppercase | assets/prompt_generator_v3.css:6737 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-live-segment span
+1 | .62rem | 800 | .11em | uppercase | assets/identity_vault_rescue_v1.css:8 | .identity-vault-status
+1 | .62rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:3702 | #page-generator .pg52-wardrobe-tile.selected::after
+1 | .62rem | 850 | .12em | uppercase | assets/prompt_generator_v3.css:4550 | #page-generator .pg52-concept-blast-card header span
+1 | .62rem | 900 | .12em | uppercase | assets/identity_vault_rescue_v1.css:75 | .identity-vault-notes span
+1 | .62rem | inherit | .12em | uppercase | studio_pulse_v400.js:185 | #page-home .sp-tuning-row label
+1 | .62rem | inherit | .13em | inherit | assets/prompt_generator_v3.css:2846 | #page-generator .pg52-command-controls .pg38-field span
+1 | .62rem | inherit | .14em | uppercase | studio_pulse_v400.js:126 | #page-home .sp-workflow-commit-dismiss
+1 | .62rem | inherit | .18em | uppercase | assets/shelf_fix_v10.js:183 | #page-homes .alpha-home-kicker
+1 | .62rem | inherit | .1em | uppercase | index.html:10314 | .sr-presencecard .t,.sr-learncard .t,.sr-memorycard .t
+1 | .62rem !important | inherit | .14em !important | uppercase !important | assets/calendar_fullscreen_fix.css:42 | #page-planner .month-head
+1 | .63rem | 800 | .03em | inherit | assets/prompt_generator_v3.css:7619 | #page-generator .pg52-director-hints span
+1 | .63rem | inherit | .07em | uppercase | index.html:801 | .ai-char-role
+1 | .63rem | inherit | .09em | uppercase | index.html:856 | .cc-target
+1 | .63rem | inherit | .1em | uppercase | index.html:729 | .mock-preview .mp-title
+1 | .64rem | 760 | .06em | uppercase | assets/prompt_generator_v3.css:3729 | #page-generator .pg52-tile-action
+1 | .64rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:7200 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-smart-seed button
+1 | .64rem | 900 | .07em | uppercase | assets/prompt_generator_v3.css:8773 | .pg52-result-identity-card strong
+1 | .64rem | inherit | .06em | inherit | index.html:10274 | .sr-chip
+1 | .64rem | inherit | .14em | uppercase | assets/prompt_generator_v3.css:1254 | #page-generator .pg38-advanced summary
+1 | .64rem !important | inherit | .18em !important | inherit | assets/v398_cleanup_patch4.css:41 | .logo-sub
+1 | .64rem !important | inherit | inherit | inherit | assets/calendar_fullscreen_fix.css:140 | #page-planner .planner-event-chip span
+1 | .65rem | 820 | .12em | inherit | assets/prompt_generator_v3.css:3646 | #page-generator .pg52-step-num
+1 | .66rem | 700 | -.02em | inherit | assets/prompt_generator_v3.css:6687 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-live-preview-head strong
+1 | .66rem | 700 | .02em | inherit | assets/prompt_generator_v3.css:6529 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-compat-main small
+1 | .66rem | 700 | .08em | uppercase | assets/prompt_generator_v3.css:5062 | #page-generator .pg52-aesthetic-ref-mods span
+1 | .66rem | 800 | .08em | uppercase | assets/prompt_generator_v3.css:8253 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-creative-tools-summary em
+1 | .66rem | 800 | .12em | uppercase | assets/prompt_generator_v3.css:7310 | #page-generator .pg52-model-intel-head
+1 | .66rem | 900 | .06em | uppercase | assets/prompt_generator_v3.css:8307 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-creative-tab
+1 | .66rem | 900 | .10em | uppercase | assets/prompt_generator_v3.css:6554 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-compat-score
+1 | .66rem | inherit | .08em | uppercase | assets/v399_legacy_solidify.css:134 | .solid-field label
+1 | .66rem | inherit | .13em | uppercase | index.html:780 | .ai-shell-sub
+1 | .67rem | 650 | .10em | uppercase | assets/prompt_generator_v3.css:3274 | #page-generator .pg52-t-label
+1 | .67rem !important | inherit | .16em | uppercase | assets/v398_cleanup_patch3.css:84 | .section-title
+1 | .68rem | 700 | .03em | inherit | assets/prompt_generator_v3.css:4007 | #page-generator .pg52-override-back
+1 | .68rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:7328 | #page-generator .pg52-model-use-recommended
+1 | .68rem | inherit | .06em | uppercase | assets/prompt_generator_v3.css:935 | #page-generator .pg3-ref-meta strong
+1 | .68rem | inherit | .12em | uppercase | assets/prompt_generator_v3.css:2569 | #page-generator .pg51-ref-group-title
+1 | .68rem | inherit | .16em | uppercase | assets/prompt_generator_v3.css:2300 | #page-generator .pg50-concept-card span
+1 | .68rem !important | inherit | .18em !important | inherit | assets/v398_cleanup_patch3.css:43 | .logo-sub
+1 | .69rem | inherit | .08em | uppercase | index.html:11463 | .v396-thread-sub
+1 | .69rem | inherit | .09em | uppercase | index.html:877 | .cc-state-item .t
+1 | .69rem | inherit | inherit | inherit | assets/shelf_fix_v10.css:22 | .alpha-home-fixed-tab-copy span
+1 | .6rem | 800 | .10em | uppercase | assets/prompt_generator_v3.css:6917 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-raw-prompt-block span
+1 | .6rem | 800 | .12em | uppercase | assets/prompt_generator_v3.css:6498 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-compat-title
+1 | .6rem | inherit | .06em | uppercase | index.html:5608 | .api-badge
+1 | .6rem | inherit | .07em | uppercase | index.html:839 | .cc-chip
+1 | .6rem | inherit | .08em | uppercase | index.html:5600 | .analytics-item .a-title
+1 | .6rem | inherit | .12em | uppercase | assets/v398_cleanup_patch4.css:229 | #aisha-avatar-slot::after
+1 | .71rem !important | inherit | inherit | inherit | assets/v399_touchup_pass3.css:114 | #page-homes .alpha-home-fixed-tab-copy span
+1 | .72rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:4638 | #page-generator .pg52-source-tab
+1 | .72rem | 700 | inherit | inherit | assets/prompt_generator_v3.css:4872 | #page-generator .pg52-scene-ref-remove
+1 | .72rem | 750 | inherit | inherit | assets/prompt_generator_v3.css:4493 | #page-generator .pg52-concept-blast-pill
+1 | .72rem | 760 | inherit | inherit | assets/prompt_generator_v3.css:5120 | #page-generator .pg52-ref-dock-counts
+1 | .72rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:8108 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-workflow-strip a
+1 | .72rem | 850 | .08em | inherit | assets/prompt_generator_v3.css:4620 | #page-generator .pg52-concept-blast-load
+1 | .72rem | 850 | .12em | inherit | assets/prompt_generator_v3.css:4239 | #page-generator .pg52-cinematic-toggle span
+1 | .72rem | inherit | .05em | uppercase | studio_pulse_v400.js:89 | #page-home .sp-sequence-note
+1 | .72rem | inherit | .18em | uppercase | assets/prompt_generator_v3.css:1768 | #page-generator .pg40-drawer-note
+1 | .72rem | inherit | .24em | uppercase | assets/prompt_generator_v3.css:1720 | #page-generator .pg40-console .pg38-toggle span
+1 | .72rem !important | inherit | .135em !important | inherit | assets/v398_stability_patch.css:4 | .logo-text
+1 | .72rem !important | inherit | .22em !important | uppercase !important | assets/v398_cleanup_patch3.css:379 | #page-crosschar .grid3 > .card > .section-title
+1 | .72rem !important | inherit | inherit | inherit | assets/v399_polish_pass4.css:126 | #page-homes .alpha-home-fixed-tab-copy span
+1 | .73rem | inherit | .025em | inherit | assets/v399_toast_elite.css:22 | #toast
+1 | .74rem | 560 | inherit | inherit | assets/prompt_generator_v3.css:5344 | #page-generator .pg52-kind-pill
+1 | .74rem | 700 | inherit | inherit | assets/prompt_generator_v3.css:6193 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-result-action
+1 | .74rem | 800 | .05em | uppercase | assets/prompt_generator_v3.css:6258 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-result-details summary
+1 | .74rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:6598 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-quality-summary summary
+1 | .74rem | inherit | .01em | inherit | assets/v399_legacy_solidify.css:125 | .solid-editor-btn
+1 | .74rem !important | inherit | inherit | inherit | assets/v398_cleanup_patch3.css:327 | #page-home .cc-quickasks button
+1 | .75rem!important | inherit | inherit | inherit | index.html:1025 | .page-sub
+1 | .76rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:5179 | #page-generator .pg52-route-details-btn
+1 | .76rem | 800 | -.01em | inherit | assets/prompt_generator_v3.css:6803 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-prompt-anatomy-quality
+1 | .76rem | 900 | .04em | inherit | assets/prompt_generator_v3.css:7559 | #page-generator .pg52-director-brief-btn
+1 | .76rem !important | inherit | inherit | inherit | assets/calendar_fullscreen_fix.css:85 | #page-planner .month-date.planner-date-btn
+1 | .78rem | 800 | -.01em | inherit | assets/prompt_generator_v3.css:6518 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-compat-main strong
+1 | .78rem | inherit | -.02em | inherit | assets/prompt_generator_v3.css:5931 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-wardrobe-empty p strong
+1 | .78rem !important | inherit | inherit | inherit | assets/v398_cleanup_patch3.css:360 | #page-home .cc-state-item .b
+1 | .79rem | 700 | inherit | inherit | index.html:12037 | (inline style)
+1 | .7rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:4347 | #page-generator .pg52-cinematic-tag span
+1 | .7rem | 800 | .10em | uppercase | assets/prompt_generator_v3.css:6875 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-final-text-details > summary
+1 | .7rem | inherit | .12em | uppercase | assets/prompt_generator_v3.css:3117 | #page-generator .pg52-seeded-closet summary
+1 | .80rem | 520 | inherit | inherit | assets/prompt_generator_v3.css:3804 | #page-generator .pg52-chip-value
+1 | .80rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:5211 | #page-generator .pg52-accordion-head
+1 | .81rem | inherit | inherit | inherit | index.html:925 | .cc-bubble .text
+1 | .82rem | 520 | inherit | inherit | assets/prompt_generator_v3.css:3328 | #page-generator .pg52-input
+1 | .82rem | 560 | inherit | inherit | assets/prompt_generator_v3.css:3403 | #page-generator .pg52-btn-ghost
+1 | .82rem | 900 | inherit | inherit | assets/prompt_generator_v3.css:6636 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-quality-score
+1 | .84rem | 600 | inherit | inherit | index.html:11454 | .v396-name
+1 | .84rem !important | inherit | .1em !important | inherit | assets/v398_cleanup_patch4.css:37 | .logo-wordmark
+1 | .85rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:3041 | #page-generator .pg52-wardrobe-select strong
+1 | .86rem | 900 | .02em | inherit | index.html:1014 | #sidebar .logo-text::after
+1 | .86rem !important | inherit | .12em !important | inherit | assets/v398_cleanup_patch4.css:32 | .logo-text
+1 | .87rem | 600 | inherit | inherit | index.html:849 | .cc-name
+1 | .88rem | 600 | inherit | inherit | index.html:10286 | .sr-name
+1 | .88rem | 700 | inherit | inherit | index.html:5582 | .provider-card .p-title
+1 | .88rem | 740 | -.01em | inherit | assets/prompt_generator_v3.css:3365 | #page-generator .pg52-btn
+1 | .88rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:3273 | #page-generator .pg52-t-body
+1 | .8rem | 700 | inherit | inherit | index.html:712 | .ref-quickview .rq-title
+1 | .8rem !important | inherit | .15em !important | inherit | assets/v398_refine_patch.css:63 | .logo-text
+1 | .92rem | 700 | inherit | inherit | index.html:5571 | #page-team .team-name
+1 | .92rem | 760 | -.02em | inherit | assets/prompt_generator_v3.css:3357 | #page-generator .pg52-cmd-cost
+1 | .93rem | 700 | inherit | inherit | index.html:745 | #page-homes .home-title
+1 | .93rem | inherit | -.02em | inherit | assets/shelf_fix_v10.js:343 | #page-homes .alpha-home-section-head strong
+1 | .95rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:2967 | #page-generator .pg52-form-head strong
+1 | .95rem !important | inherit | inherit | inherit | assets/v399_polish_pass4.css:151 | #page-vanya .char-tab
+1 | .96rem | 700 | inherit | inherit | index.html:800 | .ai-char-name
+1 | .96rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:1728 | #page-generator .pg40-console input[type="number"]
+1 | .96rem !important | inherit | -.01em | inherit | assets/v399_touchup_pass3.css:103 | #page-homes .alpha-home-fixed-tab-copy strong
+1 | .98rem | inherit | -.03em | inherit | assets/prompt_generator_v3.css:7663 | #page-generator .pg52-platform-preview-copy strong
+1 | .98rem | inherit | inherit | inherit | assets/shelf_fix_v10.css:21 | .alpha-home-fixed-tab-copy strong
+1 | .98rem !important | inherit | inherit | inherit | assets/v399_polish_pass4.css:113 | #page-homes .alpha-home-fixed-tab-copy strong
+1 | 0!important | inherit | 0!important | inherit | index.html:1013 | #sidebar .logo-text
+1 | 0.54rem | inherit | 0.22em | uppercase | index.html:82 | .nav-label
+1 | 0.56rem | inherit | 0.11em | uppercase | index.html:411 | .day-label
+1 | 0.57rem | inherit | 0.07em | uppercase | index.html:594 | .loc-char-tag
+1 | 0.57rem | inherit | 0.13em | uppercase | index.html:77 | .logo-sub
+1 | 0.57rem | inherit | 0.17em | uppercase | index.html:379 | .output-label
+1 | 0.57rem | inherit | 0.18em | uppercase | index.html:121 | .label-xs
+1 | 0.57rem | inherit | inherit | inherit | index.html:104 | .sidebar-footer
+1 | 0.58rem | inherit | 0.13em | uppercase | assets/prompt_generator_v3.css:284 | #page-generator .pg3-check
+1 | 0.58rem | inherit | 0.14em | uppercase | assets/provider_control_center_v1.css:300 | #page-settings .pvc-field-grid label
+1 | 0.58rem | inherit | 0.18em | uppercase | assets/prompt_generator_v3.css:639 | #page-generator .pg3-output-label
+1 | 0.59rem | 500 | 0.06em | uppercase | index.html:136 | .tag
+1 | 0.59rem | inherit | 0.07em | uppercase | index.html:706 | .mode-indicator
+1 | 0.59rem | inherit | 0.13em | uppercase | index.html:572 | .brief-char-tag
+1 | 0.59rem | inherit | 0.18em | uppercase | index.html:638 | .wr-panel-title
+1 | 0.61rem | 500 | inherit | inherit | index.html:694 | .drift-score-badge
+1 | 0.61rem | inherit | 0.05em | uppercase | index.html:591 | .loc-key
+1 | 0.63rem | 500 | 0.13em | uppercase | index.html:165 | .gen-label,.field-label
+1 | 0.64rem | inherit | 0.06em | uppercase | index.html:398 | .identity-key
+1 | 0.67rem | inherit | 0.07em | inherit | index.html:95 | .nav-war-btn
+1 | 0.6rem | inherit | 0.09em | uppercase | index.html:492 | .stat-label
+1 | 0.75rem | 500 | 0.015em | inherit | index.html:154 | .btn
+1 | 0.76rem | 400 | 0.01em | inherit | index.html:83 | .nav-item
+1 | 0.76rem | 600 | inherit | inherit | index.html:4923 | (inline style)
+1 | 0.77rem | 600 | 0.06em | inherit | index.html:646 | .wr-gen-btn
+1 | 0.77rem | 700 | 0.09em | uppercase | index.html:119 | .section-title
+1 | 0.78rem | 600 | inherit | inherit | index.html:4349 | (inline style)
+1 | 0.78rem | 700 | 0.09em | uppercase | index.html:634 | .wr-title
+1 | 0.78rem | 800 | 0.17em | uppercase | index.html:76 | .logo-text
+1 | 0.78rem">No prompts yet — generate some in the Prompt Generator.</div>' | inherit | inherit | inherit | index.html:4690 | -prompts-grid">$
+1 | 0.7rem | 650 | inherit | inherit | assets/prompt_generator_v3.css:176 | #page-generator .pg3-cockpit-item strong
+1 | 0.7rem | 700 | 0.09em | uppercase | index.html:680 | .profile-block-title
+1 | 0.82rem | 500 | inherit | inherit | index.html:553 | .palette-item-title
+1 | 0.82rem | 600 | inherit | inherit | index.html:189 | .prompt-card-title
+1 | 0.82rem | inherit | inherit | inherit | index.html:1231 | (inline style)
+1 | 0.86rem | inherit | inherit | inherit | index.html:578 | .brief-body
+1 | 0.87rem | 700 | inherit | inherit | index.html:587 | .loc-name
+1 | 0.92rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:9520 | #page-generator.pg52-generator-owned .pg52-authenticity-toggle span
+1 | 0.95rem">V</div><div><div class="syne fw-700 text-white" style="font-size:0.88rem">Vanya K | inherit | inherit | inherit | index.html:5777 | if(grid && !document.getElementById('vanya-count'))
+1 | 0.9rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:120 | #page-generator .pg3-snapshot-pill strong
+1 | 1.02rem | inherit | inherit | inherit | studio_pulse_v400.js:1980 | (inline style)
+1 | 1.04rem | 700 | -.015em | inherit | index.html:779 | .ai-shell-title
+1 | 1.05rem | 750 | -0.02em | inherit | assets/prompt_generator_v3.css:249 | #page-generator .pg3-route-title
+1 | 1.05rem | 800 | -.035em | inherit | assets/prompt_generator_v3.css:2554 | #page-generator .pg51-shot-title
+1 | 1.05rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:1996 | #page-generator .pg40-review-head strong
+1 | 1.06rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:5801 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-char-name
+1 | 1.12rem | 700 | inherit | inherit | index.html:10319 | .sr-statbox .n
+1 | 1.12rem | inherit | -.03em | inherit | assets/shelf_fix_v10.js:540 | #page-homes .alpha-home-fixed-slide-name
+1 | 1.12rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:6039 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-route-model
+1 | 1.15rem | 700 | inherit | inherit | assets/shelf_fix_v10.css:31 | .alpha-home-fixed-slide-name
+1 | 1.15rem | 800 | inherit | inherit | assets/prompt_generator_v3.css:588 | #page-generator .pg3-score
+1 | 1.18rem | 700 | inherit | inherit | index.html:11501 | .v396-score .n
+1 | 1.1rem | inherit | inherit | inherit | studio_pulse_v400.js:173 | #page-home .sp-metric strong
+1 | 1.24rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:9319 | #page-generator.pg52-generator-owned .pg52-sa-moment-icon
+1 | 1.25rem | 700 | inherit | inherit | index.html:881 | .cc-metric .n
+1 | 1.25rem | inherit | inherit | inherit | assets/calendar_fullscreen_fix.css:269 | .planner-drawer-head h3
+1 | 1.28rem | 700 | -.02em | inherit | index.html:10271 | .sr-title
+1 | 1.28rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:5666 | #page-generator.pg52-generator-owned .pg52-cost-num
+1 | 1.2rem | 700 | -.025em | inherit | index.html:836 | .cc-title
+1 | 1.32rem | 700 | -.03em | inherit | index.html:11438 | .v396-title
+1 | 1.32rem | 700 | -0.02em | inherit | index.html:577 | .brief-title
+1 | 1.35rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:5631 | #page-generator.pg52-generator-owned .pg52-wardrobe-empty-icon
+1 | 1.38rem | inherit | inherit | inherit | assets/prompt_generator_v3.css:6043 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-cost-num
+1 | 1.3rem | 700 | inherit | inherit | index.html:458 | .char-avatar
+1 | 1.42rem!important | inherit | inherit | inherit | index.html:1024 | .page-title
+1 | 1.5rem | 840 | -.04em | inherit | assets/prompt_generator_v3.css:5158 | #page-generator .pg52-cost-num
+1 | 1.7rem | 700 | -0.035em | inherit | index.html:115 | .page-title
+1 | 1.7rem | 700 | inherit | inherit | index.html:491 | .stat-num
+1 | 1.82rem | inherit | inherit | inherit | assets/v398_refine_patch.css:118 | .page-title
+1 | 1.88rem !important | inherit | -.03em !important | inherit | assets/v398_cleanup_patch3.css:81 | .page-title
+1 | 10px | inherit | inherit | inherit | assets/prompt_generator_v3.css:9037 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-hint
+1 | 11px | 800 | .14em | uppercase | assets/prompt_generator_v3.css:8942 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-head span
+1 | 11px | inherit | inherit | inherit | assets/prompt_generator_v3.css:8962 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-head small
+1 | 12px | 900 | .12em | uppercase | assets/prompt_generator_v3.css:9027 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-label
+1 | 15px | inherit | -.01em | inherit | assets/prompt_generator_v3.css:8951 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-head strong
+1 | 19px | inherit | inherit | inherit | assets/prompt_generator_v3.css:9021 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-mode-icon
+1 | 1rem | 700 | -.02em | inherit | index.html:11462 | .v396-thread-title
+1 | 1rem | 900 | inherit | inherit | assets/prompt_generator_v3.css:6630 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-quality-grade
+1 | 1rem | inherit | -.035em | inherit | index.html:278 | #page-library .prompt-card-title
+1 | 1rem | inherit | -0.02em | inherit | assets/prompt_generator_v3.css:9251 | #page-generator.pg52-generator-owned .pg52-sa-moment-head strong
+1 | 1rem!important | inherit | inherit | inherit | index.html:1020 | .nav-item .nav-icon,.nav-item .nav-char-dot,.nav-item > span
+1 | clamp(.98rem, 1.35vw, 1.26rem) | 700 | -0.035em | inherit | assets/prompt_generator_v3.css:1341 | #page-generator .pg38-route-sentence
+1 | clamp(1.05rem, 2vw, 1.75rem) | inherit | -0.04em | inherit | assets/prompt_generator_v3.css:1152 | #page-generator .pg38-preview-head h3
+1 | clamp(1.12rem, 1.35vw, 1.38rem) | inherit | inherit | inherit | assets/prompt_generator_v3.css:5853 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-t-title
+1 | clamp(1.15rem, 1.55vw, 1.85rem) | inherit | -.06em | inherit | assets/prompt_generator_v3.css:2898 | #page-generator .pg52-section-head h3
+1 | clamp(1.15rem, 1.5vw, 1.75rem) | inherit | -.06em | inherit | assets/prompt_generator_v3.css:3141 | #page-generator .pg52-output-stage .pg40-preview-head h3
+1 | clamp(1.18rem, 1.35vw, 1.55rem) | inherit | inherit | inherit | assets/prompt_generator_v3.css:8186 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-section-title-group h3
+1 | clamp(1.18rem, 1.45vw, 1.48rem) | inherit | -.052em | inherit | assets/prompt_generator_v3.css:5558 | #page-generator.pg52-generator-owned .pg52-t-title
+1 | clamp(1.25rem, 1.55vw, 1.9rem) | inherit | -.075em | inherit | assets/prompt_generator_v3.css:2827 | #page-generator .pg52-title-stack h2
+1 | clamp(1.25rem, 2vw, 1.75rem) | 800 | -0.03em | inherit | assets/prompt_generator_v3.css:750 | #page-generator .pg3-empty-title
+1 | clamp(1.35rem, 2.3vw, 2.05rem) | inherit | -.055em | inherit | assets/prompt_generator_v3.css:2223 | #page-generator .pg50-card h3
+1 | clamp(1.35rem, 2vw, 2.05rem) | inherit | -.04em | inherit | assets/prompt_generator_v3.css:1845 | #page-generator .pg3-route-title
+1 | clamp(1.35rem, 2vw, 2.25rem) | inherit | inherit | inherit | assets/prompt_generator_v3.css:2737 | #page-generator .pg51-output-stage .pg40-preview-head h3
+1 | clamp(1.35rem, 2vw, 2rem) | inherit | -.055em | inherit | assets/prompt_generator_v3.css:2538 | #page-generator .pg51-canvas-hero h3
+1 | clamp(1.3rem, 2.2vw, 1.9rem) | 760 | -.055em | inherit | assets/prompt_generator_v3.css:3270 | #page-generator .pg52-t-title
+1 | clamp(1.45rem, 2vw, 2.15rem) | inherit | inherit | inherit | assets/provider_control_center_v1.css:341 | #page-settings .pvc-hero-compact h2
+1 | clamp(1.55rem, 2.2vw, 2.45rem) | inherit | inherit | inherit | assets/prompt_generator_v3.css:1696 | #page-generator .pg40-card h2
+1 | clamp(1.55rem, 2.5vw, 2.65rem) | inherit | inherit | inherit | assets/provider_control_center_v1.css:65 | #page-settings .pvc-hero h2
+1 | clamp(1.5rem,4.8vw,2.3rem) | inherit | inherit | inherit | studio_pulse_v400.js:265 | #page-home .sp-headline
+1 | clamp(1.75rem, 2.8vw, 3rem) | inherit | inherit | inherit | assets/prompt_generator_v3.css:2374 | #page-generator .pg50-output-stage .pg40-preview-head h3
+1 | clamp(1.75rem, 3vw, 3.2rem) | inherit | -.055em | inherit | assets/prompt_generator_v3.css:1924 | #page-generator .pg40-preview-head h3
+1 | clamp(1.7rem,3vw,2.8rem) | 700 | -.03em | inherit | studio_pulse_v400.js:56 | #page-home .sp-headline
+1 | clamp(1.8rem, 2.3vw, 2.45rem) | inherit | -.05em | inherit | assets/shelf_fix_v10.js:202 | #page-homes .home-title
+1 | clamp(1rem, 1.4vw, 1.2rem) | 680 | -.03em | inherit | assets/prompt_generator_v3.css:3272 | #page-generator .pg52-t-subtitle
+1 | clamp(1rem,1.8vw,1.35rem) | inherit | -.035em | inherit | studio_pulse_v400.js:16 | #page-home .sp-studio-mark .sp-headline
+1 | clamp(2.25rem, 5vw, 5.6rem) | inherit | -.075em | inherit | assets/prompt_generator_v3.css:2175 | #page-generator .pg50-hero h2
+1 | clamp(2.6rem, 5vw, 6rem) | inherit | -.08em | inherit | assets/prompt_generator_v3.css:2488 | #page-generator .pg51-brand h2
+1 | clamp(2rem, 3vw, 2.8rem) | inherit | -.04em | inherit | assets/shelf_fix_v10.js:50 | #page-homes .page-title
+1 | clamp(2rem, 4vw, 4.2rem) | inherit | -.055em | inherit | assets/prompt_generator_v3.css:1611 | #page-generator .pg40-command-copy h2
+1 | inherit | 500 | inherit | inherit | index.html:682 | .profile-item strong
+1 | inherit | 600 !important | .01em !important | inherit | assets/v398_cleanup_patch5.css:40 | #page-home .cc-quickasks button
+1 | inherit | 700 | -.015em | inherit | assets/prompt_generator_v3.css:7538 | #page-generator .pg52-director-brief-input
+1 | inherit | 800 | .02em | inherit | assets/prompt_generator_v3.css:6435 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-shot-avatar
+1 | inherit | inherit | -.03em !important | inherit | assets/v398_cleanup_patch4.css:190 | #page-aisha .char-name
+1 | inherit | inherit | -.04em | inherit | assets/prompt_generator_v3.css:1688 | #page-generator .pg40-card h3
+1 | inherit | inherit | -0.04em | inherit | assets/provider_control_center_v1.css:55 | #page-settings .pvc-card h3
+1 | inherit | inherit | -0.06em | inherit | assets/prompt_generator_v3.css:9712 | .pg52-quick-config-picker-head h2
+1 | inherit | inherit | .01em | inherit | assets/v399_legacy_solidify.css:114 | #page-aisha .char-role,.nav-item[data-page="aisha"]
+1 | inherit | inherit | .02em | none | assets/prompt_generator_v3.css:7322 | #page-generator .pg52-model-intel-head strong
+1 | inherit | inherit | .04em | uppercase | index.html:237 | .library-health-chip
+1 | inherit | inherit | .08em | uppercase | assets/prompt_generator_v3.css:7998 | #page-generator.pg52-generator-owned .pg52-director-desk .pg52-preflight-fixes span
+1 | inherit | inherit | .11em | inherit | assets/v398_cleanup_patch5.css:464 | #page-crosschar .grid3 > .card .section-title.silva-text-sheen
+1 | inherit | inherit | .12em | uppercase | index.html:307 | .prompt-expand-btn
+1 | inherit | inherit | .16em | inherit | assets/v398_refine_patch.css:70 | .logo-sub
+1 | inherit | inherit | .16em | uppercase | index.html:272 | .prompt-card-kicker
+1 | inherit | inherit | .24em !important | inherit | assets/v398_cleanup_patch5.css:81 | #sidebar .nav-label
+1 | inherit | inherit | 0 | inherit | assets/v398_cleanup_patch4.css:11 | body
+1 | inherit | inherit | 0.05em | inherit | assets/prompt_generator_v3.css:9532 | #page-generator.pg52-generator-owned .pg52-authenticity-toggle em
+1 | inherit | inherit | 0.07em | uppercase | assets/prompt_generator_v3.css:9525 | #page-generator.pg52-generator-owned .pg52-authenticity-toggle strong
+1 | inherit | inherit | 0.14em | uppercase | assets/prompt_generator_v3.css:426 | #page-generator .pg3-model-group-title
+1 | inherit | inherit | inherit | capitalize | assets/prompt_generator_v3.css:5048 | #page-generator .pg52-aesthetic-ref-result-head strong
+*/
+:root {
+  /* Type scale - strict. Use nothing outside this scale. */
+  --type-2xs:  0.625rem;   /* 10px - status dots, micro labels */
+  --type-xs:   0.6875rem;  /* 11px - section headers, nav labels */
+  --type-sm:   0.75rem;    /* 12px - captions, helper text, tags */
+  --type-base: 0.875rem;   /* 14px - body, dropdown options, field values */
+  --type-md:   1rem;       /* 16px - primary labels, card titles */
+  --type-lg:   1.125rem;   /* 18px - section titles (Dress the shot etc) */
+  --type-xl:   1.375rem;   /* 22px - character name, major headings */
+  --type-2xl:  1.75rem;    /* 28px - cost display, key numbers */
+  --type-3xl:  2.25rem;    /* 36px - hero/splash numbers only */
+
+  /* Weight - only three. Nothing in between. */
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-bold:    700;
+
+  /* Tracking (letter-spacing) */
+  --tracking-tight:  -0.01em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.06em;
+  --tracking-wider:   0.12em;
+  --tracking-widest:  0.18em;
+
+  /* Line height */
+  --leading-tight:  1.2;
+  --leading-normal: 1.5;
+  --leading-loose:  1.75;
+
+  /* Compatibility aliases for older Silva surfaces. */
+  --text-primary: var(--white);
+  --text-secondary: var(--silver);
+  --text-muted: var(--muted);
+  --color-brand: var(--red);
+}
+
+/* TYPE ROLES - semantic names for use in components */
+.type-label,
+.nav-label,
+#page-generator .pg3-kicker,
+#page-generator .pg52-kicker,
+#page-generator .pg52-tool-kicker {
+  font-size: var(--type-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: var(--leading-tight);
+}
+
+.type-field-label,
+.gen-label,
+.field-label,
+#page-generator .pg52-field-label,
+#page-generator .pg52-control-label,
+#page-generator .pg52-prompt-anatomy-label {
+  font-size: var(--type-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  line-height: var(--leading-tight);
+}
+
+.type-field-value,
+.gen-select,
+.gen-input,
+.field-input,
+.field-textarea,
+.filter-select,
+.search-input,
+#page-generator select,
+#page-generator input,
+#page-generator textarea {
+  font-size: var(--type-base);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
+  color: var(--text-primary);
+}
+
+.type-section-number,
+.workflow-step-num,
+#page-generator .pg52-section-number,
+#page-generator .pg52-sa-moment-index {
+  font-size: var(--type-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+  line-height: var(--leading-tight);
+}
+
+.type-section-title,
+.section-title,
+#page-generator .pg52-section-title,
+#page-generator .pg52-card-title,
+#page-generator .pg52-tool-title {
+  font-size: var(--type-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
+
+.type-character-name,
+.char-name,
+#page-generator .pg52-character-name,
+#page-generator .pg52-identity-name {
+  font-size: var(--type-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+  line-height: var(--leading-tight);
+}
+
+.type-cost-primary,
+#page-generator .pg52-cost-primary,
+#page-generator .pg52-route-price,
+#page-generator .pg52-model-cost,
+.stat-num {
+  font-size: var(--type-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-brand);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+}
+
+.type-prompt-text,
+.output-text,
+#page-generator .pg52-prompt-text,
+#page-generator .pg52-prompt-anatomy-text,
+#page-generator #out-main,
+#page-generator #out-neg {
+  font-size: var(--type-sm);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-loose);
+  font-family: 'DM Mono', monospace;
+}
+
+.type-dna,
+#page-generator .pg52-dna,
+#page-generator .pg52-smart-history-chip,
+#page-generator .pg52-concept-dna {
+  font-size: var(--type-sm);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wide);
+  font-family: 'DM Mono', monospace;
+  color: var(--text-secondary);
+}
+
+.type-status-bar,
+.status-bar {
+  font-size: var(--type-2xs);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.type-body,
+body,
+.page-sub,
+.profile-item,
+.caption-text,
+#page-generator .pg52-copy,
+#page-generator .pg52-help,
+#page-generator .pg52-muted-copy {
+  font-size: var(--type-base);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-normal);
+}
+
+.type-helper,
+.prompt-meta,
+.caption-meta,
+.asset-sub,
+.palette-item-sub,
+#page-generator .pg52-helper,
+#page-generator .pg52-subcopy,
+#page-generator .pg52-caption {
+  font-size: var(--type-sm);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+}
+
+.type-card-title,
+.prompt-card-title,
+.asset-title,
+.loc-name,
+.broll-title,
+.event-title,
+.palette-item-title,
+#page-generator .pg52-card strong,
+#page-generator .pg52-quick-config-name {
+  font-size: var(--type-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+.type-button,
+.btn,
+.copy-btn,
+.icon-btn,
+#page-generator button {
+  font-size: var(--type-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-tight);
+}
+
+.type-nav-item,
+.nav-item {
+  font-size: var(--type-base);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-tight);
+}
+
+.type-micro,
+.tag,
+.mode-indicator,
+.preset-chip,
+.drift-score-badge,
+.api-badge,
+#page-generator .pg52-chip,
+#page-generator .pg52-badge {
+  font-size: var(--type-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  line-height: var(--leading-tight);
+}
+
+.type-hero,
+.page-title,
+.brief-title,
+#page-generator .pg52-hero-title,
+#page-generator .pg52-route-title {
+  font-size: var(--type-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  color: var(--text-primary);
+}
+
+.type-mono-label,
+.label-xs,
+.output-label,
+.identity-key,
+.day-label,
+.loc-key,
+.stat-label,
+#page-generator .pg52-meta-label {
+  font-size: var(--type-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  line-height: var(--leading-tight);
+  font-family: 'DM Mono', monospace;
+  color: var(--text-muted);
+}

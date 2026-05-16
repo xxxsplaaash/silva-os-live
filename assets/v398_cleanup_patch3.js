@@ -61,7 +61,7 @@
     qsa(':scope > .card', grid).forEach(card => {
       card.classList.add('silva-aura-card');
       card.style.borderImage = 'none';
-      card.style.borderTop = '1px solid rgba(255,255,255,.06)';
+      card.style.borderTop = '1px solid var(--color-white-a6)';
     });
     if(grid.dataset.aishaInjected === '1') return;
     const extras = [
@@ -72,7 +72,7 @@
     extras.forEach(({a,b,title,desc}) => {
       const card = document.createElement('div');
       card.className = 'card card-sm silva-aura-card';
-      card.innerHTML = `<div class="section-title" style="font-size:0.75rem;margin-bottom:8px">${esc(title)}</div><div style="font-size:0.72rem;color:var(--muted);margin-bottom:10px">${esc(desc)}</div><button class="btn btn-ghost btn-sm">Generate Kit</button>`;
+      card.innerHTML = `<div class="section-title" style="font-size:var(--type-sm);margin-bottom:8px">${esc(title)}</div><div style="font-size:var(--type-xs);color:var(--muted);margin-bottom:8px">${esc(desc)}</div><button class="btn btn-ghost btn-sm">Generate Kit</button>`;
       const btn = qs('button', card);
       if(btn) btn.onclick = function(){ window.generateCrossChar && window.generateCrossChar(a,b); };
       grid.appendChild(card);
@@ -99,8 +99,17 @@
     polishCharacterPage();
     polishCards();
   }
+  function shouldRepeatRun(){
+    var active = document.querySelector('.page.active');
+    var id = active && active.id ? active.id : '';
+    return /page-(homes|aisha|leah|claudia|grok|vanya|crosschar|assets|gallery)/.test(id);
+  }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-  window.addEventListener('load', function(){ setTimeout(run, 80); setTimeout(run, 260); setTimeout(run, 750); });
+  window.addEventListener('load', function(){
+    [80, 260, 750].forEach(function(delay){
+      setTimeout(function(){ if (shouldRepeatRun()) run(); }, delay);
+    });
+  });
 })();
