@@ -172,9 +172,10 @@ test('everyone_opinion_answers_user_topic', () => {
 
 test('presence questions are deterministic and reference active plus quiet room state', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-presence' });
-  const perception = perceiveRoomMessage('where is everyone else', state);
+  const perception = perceiveRoomMessage('who is online?', state);
   const plan = planRoomTurn({ perception, roomState: state });
   assert.equal(perception.asksAboutRoomState, true);
+  assert.equal(perception.asksRollCall, false);
   assert.equal(plan.deterministic, true);
   assert.equal(plan.requiresProvider, false);
   assert.deepEqual(plan.responseOrder, ['aisha']);
@@ -185,6 +186,47 @@ test('presence questions are deterministic and reference active plus quiet room 
   assert.doesNotMatch(plan.steps[0].deterministicText, FORBIDDEN_ARCHITECTURE_RX);
 });
 
+test('role call returns a concise room roll call instead of only Vanya', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-roll-call' });
+  const perception = perceiveRoomMessage('role call!!!', state);
+  const plan = planRoomTurn({ perception, roomState: state });
+  const text = plannedTexts(plan);
+  assert.equal(perception.asksRollCall, true);
+  assert.equal(perception.taskType, 'roll_call');
+  assert.equal(perception.socialIntent, 'calling_room');
+  assert.equal(plan.intentFamily, 'room-roll-call');
+  assert.deepEqual(plan.responseOrder, ['aisha']);
+  assert.notDeepEqual(plan.responseOrder, ['vanya']);
+  assert.match(text, /Aisha Motsepe/i);
+  assert.match(text, /Vanya Khumalo/i);
+  assert.match(text, /Leah Mokoena/i);
+  assert.match(text, /Claudia Naidoo/i);
+  assert.match(text, /Grok \/ Gerhard/i);
+  assert.match(text, /quiet\/listening/i);
+  assert.doesNotMatch(text, /On that:/i);
+  assert.doesNotMatch(text, FORBIDDEN_ARCHITECTURE_RX);
+});
+
+test('everyone else calls in quiet members naturally without generic critique copy', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-everyone-else' });
+  const perception = perceiveRoomMessage('everyone else?', state);
+  const plan = planRoomTurn({ perception, roomState: state });
+  const turns = plan.steps.map(deterministicTurnFromStep);
+  const text = turns.map(turn => turn.content).join('\n');
+  assert.equal(perception.asksRollCall, true);
+  assert.equal(perception.asksEveryone, false);
+  assert.equal(plan.intentFamily, 'room-call-in');
+  assert.deepEqual(plan.responseOrder, ['leah', 'claudia', 'grok']);
+  assert.ok(turns.length >= 2 && turns.length <= 3);
+  turns.forEach(turn => {
+    assert.equal(turn.responseIntent, 'room-call-in');
+    assert.doesNotMatch(turn.content, /^On that:/i);
+    assert.doesNotMatch(turn.content, /\blogo\b/i);
+  });
+  assert.match(text, /\b(quiet|listening|present|tracking|pattern)\b/i);
+  assert.doesNotMatch(text, FORBIDDEN_ARCHITECTURE_RX);
+});
+
 test('everyone honest opinion produces distinct planned speakers', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-everyone' });
   const perception = perceiveRoomMessage('everyone give me your honest opinion on this logo', state);
@@ -193,6 +235,7 @@ test('everyone honest opinion produces distinct planned speakers', () => {
   assert.equal(plan.steps.length, 5);
   assert.deepEqual(plan.steps.map(item => item.speakerId), ['aisha', 'leah', 'claudia', 'grok', 'vanya']);
   assert.equal(new Set(plan.steps.map(item => item.deterministicText)).size, 5);
+  assert.doesNotMatch(plannedTexts(plan), /^On that:/im);
   assert.doesNotMatch(plannedTexts(plan), FORBIDDEN_ARCHITECTURE_RX);
 });
 
@@ -220,12 +263,14 @@ test('normal_help_request_one_speaker', () => {
 
 test('quiet characters do not become active only because they spoke', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-quiet-stays-quiet' });
-  const perception = perceiveRoomMessage('Leah, are you ignoring me?', state);
+  const perception = perceiveRoomMessage('everyone else?', state);
   const plan = planRoomTurn({ perception, roomState: state });
   const turns = plan.steps.map(deterministicTurnFromStep);
   const next = reduceRoomState({ previous: state, perception, plan, turns, threadId: 'room-test-quiet-stays-quiet' });
   assert.equal(state.knownPresenceStatus.leah, 'quiet');
   assert.equal(next.knownPresenceStatus.leah, 'quiet');
+  assert.equal(next.knownPresenceStatus.claudia, 'quiet');
+  assert.equal(next.knownPresenceStatus.grok, 'quiet');
 });
 
 test('insults produce differentiated reactions and update room tension', () => {
@@ -270,7 +315,7 @@ test('Pulse route answers presence from room intelligence without provider calls
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          question: 'where is everyone else',
+          question: 'role call!!!',
           providerConfig: {
             textPrimary: { provider: 'gemini', model: '', apiKey: '' },
             pulseApiKeys: []
@@ -285,7 +330,8 @@ test('Pulse route answers presence from room intelligence without provider calls
       assert.equal(data.provider, 'studio-room-intelligence-v0');
       assert.equal(data.providerCallCount, 0);
       assert.equal(data.response.messageEvents[0].speakerId, 'aisha');
-      assert.match(data.response.messageEvents[0].text, /Active right now/i);
+      assert.match(data.response.messageEvents[0].text, /Roll call/i);
+      assert.match(data.response.messageEvents[0].text, /Leah Mokoena/i);
       assert.ok(data.roomRuntime.roomIntelligenceV0);
       assert.equal(data.roomRuntime.roomIntelligenceV0.knownPresenceStatus.leah, 'quiet');
     });

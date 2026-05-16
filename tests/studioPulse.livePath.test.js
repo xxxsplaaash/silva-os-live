@@ -589,6 +589,56 @@ test('character continuity persists in thread metadata and visible messages hide
   });
 });
 
+test('Studio Pulse roll-call and call-in polish keeps presence humanized', async () => {
+  await withAishaFlag(null, async () => {
+    const uiSource = read('studio_pulse_v400.js');
+    assert.match(uiSource, /humanSpeakingPresenceLabel/);
+    assert.match(uiSource, /room-call-in['"]:\s*['"]Called in/);
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for roll-call polish smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const greeting = await pulsePost(baseUrl, 'hi team');
+        const threadId = greeting.thread?.id || greeting.response?.threadMeta?.id;
+        assert.equal(greeting.response.messageEvents[0].speakerId, 'vanya');
+        assert.match(greeting.response.messageEvents[0].text, /\b(Hey|here|room)\b/i);
+
+        const wellbeing = await pulsePost(baseUrl, 'how is everyone?', { threadId });
+        assert.equal(wellbeing.response.messageEvents[0].speakerId, 'vanya');
+        assert.match(wellbeing.response.messageEvents[0].text, /\b(present|quiet|call them in)\b/i);
+
+        const rollCall = await pulsePost(baseUrl, 'role call!!!', { threadId });
+        assert.equal(rollCall.response.messageEvents.length, 1);
+        assert.equal(rollCall.response.messageEvents[0].speakerId, 'aisha');
+        assert.match(rollCall.response.messageEvents[0].text, /Roll call/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Aisha Motsepe/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Vanya Khumalo/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Leah Mokoena/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Claudia Naidoo/i);
+        assert.match(rollCall.response.messageEvents[0].text, /Grok \/ Gerhard/i);
+
+        const others = await pulsePost(baseUrl, 'everyone else?', { threadId });
+        const events = others.response.messageEvents || [];
+        assert.deepEqual(events.map(event => event.speakerId), ['leah', 'claudia', 'grok']);
+        events.forEach(event => {
+          assert.equal(event.presence, 'quiet');
+          assert.equal(event.roomIntent, 'room-call-in');
+          assert.doesNotMatch(event.text, /^On that:/i);
+          assert.doesNotMatch(event.text, /\blogo\b/i);
+        });
+        assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.leah, 'quiet');
+        assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.claudia, 'quiet');
+        assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.grok, 'quiet');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
 test('Studio Pulse falls back locally when A.I.S.H.A returns no responses', async () => {
   await withAishaFlag('true', async () => {
     __setAishaRuntimeImporterForTests(async () => ({

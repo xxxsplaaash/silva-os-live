@@ -1976,13 +1976,23 @@
 	    const presence = String(meta?.presence || '').trim();
 	    const intent = String(meta?.roomIntent || meta?.responseIntent || '').trim();
 	    const emotional = String(meta?.emotionalState || '').trim();
-	    const humanPresence = humanRoomChipLabel(presence, 'presence');
+	    const humanPresence = humanSpeakingPresenceLabel(presence, intent);
 	    const humanIntent = humanRoomChipLabel(intent, 'intent');
 	    const humanEmotional = humanRoomChipLabel(emotional, 'mood');
 	    if (humanPresence) bits.push(`<span>${esc(humanPresence)}</span>`);
 	    if (humanIntent) bits.push(`<span>${esc(humanIntent)}</span>`);
 	    if (humanEmotional && humanEmotional !== humanIntent) bits.push(`<span>${esc(humanEmotional)}</span>`);
 	    return bits.length ? `<div class="sp-room-msg-meta">${bits.join('')}</div>` : '';
+	  }
+	  function humanSpeakingPresenceLabel(presence, intent){
+	    const presenceKey = String(presence || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+	    const intentKey = String(intent || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
+	    if (presenceKey === 'quiet') {
+	      if (intentKey === 'room-call-in') return 'Called in';
+	      if (intentKey === 'roll-call' || intentKey === 'presence-summary' || intentKey === 'wellbeing-check') return 'Listening';
+	      if (intentKey) return 'Responding';
+	    }
+	    return humanRoomChipLabel(presence, 'presence');
 	  }
 	  function humanRoomChipLabel(value, kind){
 	    const raw = String(value || '').trim();
@@ -1998,6 +2008,8 @@
 	      'greeting': 'Warm',
 	      'wellbeing-check': 'Playful',
 	      'presence-summary': 'Listening',
+	      'roll-call': 'Listening',
+	      'room-call-in': 'Called in',
 	      'direct-acknowledgement': 'Leaning in',
 	      'host-presence-explain': 'Listening',
 	      'honest-opinion': 'Candid',
