@@ -3,6 +3,7 @@
   function qs(s,r=document){return r.querySelector(s)}
   function qsa(s,r=document){return Array.from(r.querySelectorAll(s))}
   function raf(cb){return window.requestAnimationFrame ? window.requestAnimationFrame(cb) : setTimeout(cb,16)}
+  function homeOwnerActive(){ return window.__SILVA_HOME_RENDERER_OWNER === 'renderHomesV12' || (window.renderHomes && window.renderHomes.__shelfFixV14); }
 
   function unwrapPulse(el){
     if(!el) return;
@@ -16,6 +17,7 @@
   }
 
   function bindHomeTabs(){
+    if(homeOwnerActive()) return;
     var page = qs('#page-homes');
     if(!page) return;
     var tabs = qs('#alpha-home-fixed-tabs', page);
@@ -60,6 +62,7 @@
   }
 
   function wrapNav(){
+    if(homeOwnerActive()) return;
     if(typeof window.nav !== 'function' || window.nav.__v399FinalPolish) return;
     var original = window.nav;
     var wrapped = function(){

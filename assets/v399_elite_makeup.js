@@ -63,10 +63,30 @@
     }, { passive:true });
   }
 
-  function ensureGlareLayers(root=document){ return; });
+  function ensureGlareLayers(root=document){
+    qsa('.card,.prompt-card,.gallery-card,.cc-roster-card,.asset-card,.home-card', root).forEach(el=>{
+      if(qs(':scope > .silva-elite-glare', el)) return;
+      const glare = document.createElement('span');
+      glare.className = 'silva-elite-glare';
+      el.appendChild(glare);
+    });
   }
 
-  function bindGlare(root=document){ return; }, { passive:true });
+  function bindGlare(root=document){
+    if(!hasFinePointer || prefersReduced) return;
+    qsa('.card,.prompt-card,.gallery-card,.cc-roster-card,.asset-card,.home-card', root).forEach(el=>{
+      if(el.dataset.v399GlareBound === '1') return;
+      el.dataset.v399GlareBound = '1';
+      const glare = qs(':scope > .silva-elite-glare', el);
+      if(!glare) return;
+      let rect = null; let ticking = false; let mx = 0; let my = 0;
+      const draw = ()=>{ ticking = false; glare.style.setProperty('--glare-x', mx + 'px'); glare.style.setProperty('--glare-y', my + 'px'); };
+      el.addEventListener('mouseenter', ()=>{ rect = el.getBoundingClientRect(); });
+      el.addEventListener('mousemove', e=>{
+        if(!rect) rect = el.getBoundingClientRect();
+        mx = e.clientX - rect.left; my = e.clientY - rect.top;
+        if(!ticking){ ticking = true; raf(draw); }
+      }, { passive:true });
     });
   }
 
@@ -145,7 +165,7 @@
 
   function applyLiveTextPulse(){
     qsa('.silva-text-pulse').forEach(el=>el.classList.remove('silva-text-pulse'));
-    qsa('#page-crosschar .grid3 > .card .section-title').forEach(el=>el && el.classList.add('silva-text-pulse'));
+    qsa('.char-mode-pill.active-mode,#page-crosschar .grid3 > .card .section-title,.thinking,.thinking-text').forEach(el=>el && el.classList.add('silva-text-pulse'));
   }
 
   function observeAiText(){
@@ -211,7 +231,7 @@
     let queued = false;
     const run = ()=>{
       queued = false;
-      ensureStateLayers(); ensureChipGlyphs(); bindPhysics(main); bindSidebarHoverCard(); patchAishaAvatar(); applyLiveTextPulse(); interceptNav(); ensureVersionText();
+      ensureStateLayers(); ensureChipGlyphs(); ensureGlareLayers(main); bindGlare(main); bindPhysics(main); bindSidebarHoverCard(); patchAishaAvatar(); applyLiveTextPulse(); interceptNav(); ensureVersionText();
     };
     run();
     const observer = new MutationObserver(()=>{ if(queued) return; queued = true; raf(run); });
@@ -220,7 +240,7 @@
   }
 
   function boot(){
-    ensureVersionText(); ensureStateLayers(); ensureChipGlyphs(); bindRipple(); bindPhysics(); bindSidebarHoverCard(); patchAishaAvatar(); interceptNav(); observeAiText(); bindDomObserver();
+    ensureVersionText(); ensureStateLayers(); ensureChipGlyphs(); bindRipple(); ensureGlareLayers(); bindGlare(); bindPhysics(); bindSidebarHoverCard(); patchAishaAvatar(); applyLiveTextPulse(); interceptNav(); observeAiText(); bindDomObserver();
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });

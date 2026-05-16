@@ -1,0 +1,35 @@
+I am handing you only the Prompt Generator portion of my Silva OS project.
+
+Do not do a cosmetic version-label patch. Redesign the Prompt Generator properly.
+
+The current problem:
+- It looks like blocks/cards stacked together.
+- It does not feel like one designed production workflow.
+- It does not support the main thing I need: uploading clothes/clothing sets/separate clothing items, saving them into the selected character wardrobe, and reusing those uploaded images as visual references when generating final images.
+
+The core product goal:
+I want to select a character, lock their identity refs, choose or upload wardrobe, optionally select Home System / Assets / item refs, shape the shot, and generate one final image.
+
+The wardrobe system must let me:
+- upload a full outfit image
+- upload separate clothing item images
+- name/tag/edit those wardrobe items
+- save them to that character
+- select them later
+- use them as actual reference images in the generation payload
+- also type a custom outfit when I do not have a reference image
+
+The redesign must:
+- stay vanilla HTML/CSS/JS
+- preserve the current backend route: POST /api/image-generation/generate
+- preserve compatibility IDs listed in README_HANDOFF.md
+- keep Google Credits as the default for referenced character images
+- keep fal.ai optional
+- keep Imagen only for no-reference images
+- use one primary CTA: Generate Final Image
+- avoid duplicate route cards, debug panels, repeated prompt-kit messages, and stacked-card clutter
+- feel like a premium Studio Pulse style production console
+
+Please read README_HANDOFF.md, DESIGN_REQUIREMENTS.md, and CLAUDE_TASK_PROMPT.md first.
+
+The screenshot in reference/current-generator-failure.png shows what I do not want.

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Silva Sync Probe</title>
+</head>
+<body>
+  <iframe id="app" src="/" style="width:1400px;height:2400px;border:0"></iframe>
+  <pre id="out">loading</pre>
+  <script>
+    const out = document.getElementById('out');
+    const frame = document.getElementById('app');
+
+    function snapshot(label) {
+      try {
+        const w = frame.contentWindow;
+        out.textContent += '\n' + JSON.stringify({
+          label,
+          sync: w.__SILVA_BACKEND_STATE__ || null,
+          syncType: typeof w.syncStateToBackend,
+          scheduleType: typeof w.scheduleStateToBackend,
+          buildType: typeof w.buildBackendStatePayload,
+          prompts: ((w.STATE || {}).prompts || []).length,
+          gallery: ((w.STATE || {}).gallery || []).length,
+          planner: ((w.STATE || {}).plannerPosts || []).length,
+          reviews: ((w.STATE || {}).reviewEvents || []).length
+        }, null, 2);
+      } catch (err) {
+        out.textContent += '\nERR ' + label + ': ' + (err && err.stack ? err.stack : err);
+      }
+    }
+
+    frame.addEventListener('load', async () => {
+      snapshot('load');
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      snapshot('after 2.5s');
+      try {
+        if (typeof frame.contentWindow.syncStateToBackend === 'function') {
+          frame.contentWindow.syncStateToBackend('diagnostic');
+        }
+      } catch (err) {}
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      snapshot('after manual sync');
+    });
+  </script>
+</body>
+</html>

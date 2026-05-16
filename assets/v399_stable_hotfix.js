@@ -18,7 +18,7 @@
   function applyLivePulse(){
     qsa('.silva-stable-pulse').forEach(el=>el.classList.remove('silva-stable-pulse'));
     qsa('#page-crosschar .grid3 > .card .section-title').forEach(el=>el.classList.add('silva-stable-pulse'));
-    qsa('#page-crosschar .grid3 > .card .section-title').forEach(el=>el.classList.add('silva-stable-pulse'));
+    qsa('.char-mode-pill.active-mode .silva-text-sheen,.thinking,.thinking-text').forEach(el=>el.classList.add('silva-stable-pulse'));
   }
 
   function fixAishaSidebarHover(){

@@ -8,6 +8,7 @@ const {
 const {
   callAishaEngine,
   isUsableAishaResponse,
+  getAishaResponseUsability,
   __setAishaRuntimeImporterForTests
 } = require('../lib/aisha/aishaAdapter');
 
@@ -47,11 +48,15 @@ test('A.I.S.H.A local contract copy keeps the Antigravity host shape', () => {
   assert.equal(request.roomId, 'room-1');
   assert.equal(request.activeCharacterId, 'vanya');
   assert.equal(request.activeSpeakerId, 'vanya');
+  assert.equal(request.messageText, 'hi team');
   assert.equal(request.message, 'hi team');
   assert.equal(request.recentMessages[0].content, 'hello');
   assert.equal(request.projectContext.mode, 'direction');
   assert.equal(request.localRoomState.roomMood, 'steady');
   assert.equal(request.characterStates.vanya.presence, 'active');
+  assert.equal(request.characterStates.vanya.personId, 'vanya');
+  assert.equal(request.modalityMetadata.sourceModality, 'text');
+  assert.equal(request.modalityMetadata.sourceChannel, 'chat');
   assert.equal(request.modality.surface, 'studio-pulse');
   assert.equal(request.modality.channel, 'text');
   assert.equal(request.hostContract.wrapper, 'processAishaRequest(request, { deps, engineMode })');
@@ -79,6 +84,8 @@ test('callAishaEngine returns disconnected mock metadata only when flag is off',
     assert.deepEqual(response.relationshipDeltas, []);
     assert.equal(response.responses[0].content, '[Mock A.I.S.H.A]');
     assert.equal(isUsableAishaResponse(response), false);
+    assert.equal(response.diagnostics.requestShapeSummary.hasMessageText, true);
+    assert.equal(response.diagnostics.rejectionReason, 'aisha-not-connected');
   });
 });
 
@@ -97,6 +104,8 @@ test('callAishaEngine returns unavailable when linked package is missing', async
     assert.equal(response.fallbackReason, 'aisha-runtime-unavailable');
     assert.deepEqual(response.responses, []);
     assert.equal(isUsableAishaResponse(response), false);
+    assert.equal(response.diagnostics.packageImportOk, false);
+    assert.equal(response.diagnostics.rejectionReason, 'aisha-runtime-unavailable');
   });
 });
 
@@ -109,6 +118,9 @@ test('callAishaEngine rejects linked package without public processAishaRequest'
     assert.equal(response.aishaEngineConnected, false);
     assert.equal(response.fallbackReason, 'aisha-runtime-missing-public-surface');
     assert.equal(isUsableAishaResponse(response), false);
+    assert.equal(response.diagnostics.packageImportOk, true);
+    assert.equal(response.diagnostics.processAishaRequestType, 'undefined');
+    assert.equal(response.diagnostics.rejectionReason, 'aisha-runtime-missing-public-surface');
   });
 });
 
@@ -126,6 +138,7 @@ test('callAishaEngine safely falls back when processAishaRequest throws', async 
     assert.equal(response.fallbackReason, 'aisha-runtime-failed');
     assert.equal(JSON.stringify(response), JSON.stringify(response).replace(/GEMINI_API_KEY/g, ''));
     assert.equal(isUsableAishaResponse(response), false);
+    assert.equal(response.diagnostics.rejectionReason, 'aisha-runtime-failed');
   });
 });
 
@@ -135,11 +148,12 @@ test('callAishaEngine accepts mocked public host production response', async () 
       assert.equal(specifier, 'aisha-runtime-pack1');
       return {
         processAishaRequest: async (request, options) => {
-          assert.equal(request.message, 'hi team');
+          assert.equal(request.messageText, 'hi team');
           assert.equal(options.engineMode, 'production');
-          assert.deepEqual(options.deps, {});
+          assert.equal(Object.prototype.hasOwnProperty.call(options, 'deps'), false);
           return {
-            responses: [{ speakerId: 'vanya', content: 'A.I.S.H.A host accepted this turn cleanly.' }],
+            ok: true,
+            responses: [{ speakerId: 'vanya', content: 'A.I.S.H.A live response' }],
             memorySummary: {
               activeTruths: [],
               supersededTruths: [],
@@ -163,7 +177,78 @@ test('callAishaEngine accepts mocked public host production response', async () 
     assert.equal(response.aishaEngineConnected, true);
     assert.equal(response.confidence, 0.91);
     assert.equal(response.sourcePackage, 'aisha-runtime-pack1');
-    assert.equal(response.responses[0].content, 'A.I.S.H.A host accepted this turn cleanly.');
+    assert.equal(response.responses[0].content, 'A.I.S.H.A live response');
     assert.equal(isUsableAishaResponse(response), true);
+    assert.deepEqual(getAishaResponseUsability(response), { usable: true, reason: '' });
+    assert.equal(response.diagnostics.packageImportOk, true);
+    assert.equal(response.diagnostics.processAishaRequestType, 'function');
+    assert.equal(response.diagnostics.requestShapeSummary.hasMessageText, true);
+    assert.equal(response.diagnostics.responseOk, true);
+    assert.equal(response.diagnostics.responseEngineMode, 'production');
+    assert.equal(response.diagnostics.responseConnected, true);
+    assert.equal(response.diagnostics.responseCount, 1);
+    assert.equal(response.diagnostics.firstResponseHasContent, true);
+    assert.equal(response.diagnostics.rejectionReason, '');
+  });
+});
+
+test('callAishaEngine rejects connected production response with no responses', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async () => ({
+        ok: true,
+        responses: [],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: 'session-empty' },
+        stateEnvelope: { mood: 0.1 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.9
+      })
+    }));
+    const response = await callAishaEngine({ sessionId: 'session-empty', message: 'hi team' });
+
+    assert.equal(response.engineMode, 'unavailable');
+    assert.equal(response.aishaEngineConnected, false);
+    assert.equal(response.fallbackReason, 'no-responses');
+    assert.equal(response.diagnostics.responseOk, true);
+    assert.equal(response.diagnostics.responseConnected, true);
+    assert.equal(response.diagnostics.responseCount, 0);
+    assert.equal(response.diagnostics.firstResponseHasContent, false);
+    assert.equal(response.diagnostics.rejectionReason, 'no-responses');
+    assert.equal(isUsableAishaResponse(response), false);
+  });
+});
+
+test('callAishaEngine rejects contentful response when engine is disconnected', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async () => ({
+        ok: true,
+        responses: [{ content: 'Should not be shown' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: 'session-disconnected' },
+        stateEnvelope: { mood: 0.1 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: false,
+        confidence: 0.9
+      })
+    }));
+    const response = await callAishaEngine({ sessionId: 'session-disconnected', message: 'hi team' });
+
+    assert.equal(response.engineMode, 'unavailable');
+    assert.equal(response.aishaEngineConnected, false);
+    assert.equal(response.fallbackReason, 'not-connected');
+    assert.equal(response.diagnostics.responseOk, false);
+    assert.equal(response.diagnostics.responseConnected, false);
+    assert.equal(response.diagnostics.responseCount, 1);
+    assert.equal(response.diagnostics.firstResponseHasContent, true);
+    assert.equal(response.diagnostics.rejectionReason, 'not-connected');
+    assert.deepEqual(getAishaResponseUsability({ engineMode: 'production', aishaEngineConnected: false, responses: [{ content: 'x' }] }), {
+      usable: false,
+      reason: 'not-connected'
+    });
   });
 });

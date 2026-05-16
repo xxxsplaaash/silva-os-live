@@ -1,0 +1,225 @@
+/* Silva OS 3.9.9 — touchup pass 3
+   Final cleanup: home system selection reliability, profile tab fit, cross-page consistency. */
+
+:root{
+  --silva-pass3-ring: rgba(214,196,238,.14);
+  --silva-pass3-shadow: 0 12px 26px rgba(0,0,0,.14);
+}
+
+/* keep shell from opening clipped after route switches */
+#main{
+  scroll-padding-top: 24px !important;
+  overflow-x: hidden !important;
+}
+.page{
+  padding-top: 16px !important;
+}
+#page-aisha,
+#page-leah,
+#page-claudia,
+#page-grok,
+#page-vanya,
+#page-planner,
+#page-homes{
+  padding-top: 12px !important;
+}
+#page-aisha .char-hero,
+#page-leah .char-hero,
+#page-claudia .char-hero,
+#page-grok .char-hero,
+#page-vanya .char-hero,
+#page-planner .page-title,
+#page-homes .page-title{
+  margin-top: 0 !important;
+}
+
+/* unified quiet hover language */
+.char-tab,
+.char-mode-pill,
+.alpha-home-fixed-tab,
+#sidebar .nav-item,
+#page-home .quick-modes .btn,
+#page-home .cc-quickasks button,
+#page-crosschar .grid3 > .card,
+.home-card,
+.team-card,
+.btn.btn-ghost,
+.btn.btn-sm,
+.filter-select,
+.search-input{
+  transition:
+    background-color var(--motion-base) ease,
+    border-color var(--motion-base) ease,
+    box-shadow var(--motion-base) ease,
+    color var(--motion-base) ease,
+    opacity var(--motion-base) ease !important;
+}
+
+.char-tab:hover,
+.char-mode-pill:hover,
+.alpha-home-fixed-tab:hover,
+#sidebar .nav-item:hover,
+#page-home .quick-modes .btn:hover,
+#page-home .cc-quickasks button:hover,
+#page-crosschar .grid3 > .card:hover,
+.home-card:hover,
+.team-card:hover,
+.btn.btn-ghost:hover,
+.btn.btn-sm:hover,
+.filter-select:focus,
+.search-input:focus{
+  background: linear-gradient(180deg, var(--color-white-a4_5), var(--color-white-a2)) !important;
+  border-color: var(--silva-pass3-ring) !important;
+  box-shadow:
+    inset 0 0 0 1px var(--color-white-a5),
+    0 0 0 1px var(--color-rgba-214-196-238-05),
+    var(--silva-pass3-shadow) !important;
+}
+
+/* Home System top cards: auto-fit, clean wrapping, reliable tap area */
+#page-homes .alpha-home-fixed-tabs{
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+#page-homes .alpha-home-fixed-tab{
+  min-width: 0 !important;
+  width: 100% !important;
+  min-height: 96px !important;
+  padding: 16px 16px 12px !important;
+  border-radius: 18px !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: var(--color-transparent);
+}
+#page-homes .alpha-home-fixed-tab-copy{
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 4px !important;
+}
+#page-homes .alpha-home-fixed-tab-copy strong{
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  font-size: var(--type-md) !important;
+  line-height: var(--leading-tight) !important;
+  letter-spacing: var(--tracking-tight);
+}
+#page-homes .alpha-home-fixed-tab-copy span{
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden !important;
+  white-space: normal !important;
+  font-size: var(--type-xs) !important;
+  line-height: var(--leading-tight) !important;
+}
+#page-homes .alpha-home-fixed-tab::before,
+#page-homes .alpha-home-fixed-tab::after,
+#page-homes .alpha-home-slot::before,
+#page-homes .alpha-home-slot::after{
+  pointer-events: none !important;
+}
+@media (max-width: 1360px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns: repeat(3, minmax(0,1fr)) !important;}
+}
+@media (max-width: 1040px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns: repeat(2, minmax(0,1fr)) !important;}
+}
+@media (max-width: 720px){
+  #page-homes .alpha-home-fixed-tabs{grid-template-columns: 1fr !important;}
+}
+
+/* profile pages: let tabs wrap instead of clipping */
+.char-tabs{
+  display: flex !important;
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+  gap: 8px 12px !important;
+  padding-bottom: 8px !important;
+  align-items: center !important;
+}
+.char-tab{
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  padding: 12px 16px !important;
+  border-radius: 18px !important;
+}
+
+/* mode pills: no clipping, more balanced widths */
+.char-mode-bar{
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+.char-mode-pill{
+  min-width: 98px !important;
+  min-height: 40px !important;
+  padding: 8px 16px !important;
+  line-height: var(--leading-tight) !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+.char-mode-pill .silva-text-sheen,
+.char-mode-pill span,
+.char-mode-pill strong{
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* profile content fit */
+.profile-wide-grid{
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.12fr) minmax(320px, .88fr) !important;
+  gap: 16px !important;
+  align-items: start !important;
+}
+.profile-subgrid{
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  gap: 12px !important;
+}
+.profile-wide-grid > div,
+.profile-subgrid > div,
+.profile-block{
+  min-width: 0 !important;
+}
+@media (max-width: 1320px){
+  .profile-wide-grid{grid-template-columns: 1fr !important;}
+}
+@media (max-width: 900px){
+  .profile-subgrid{grid-template-columns: 1fr !important;}
+}
+
+/* sidebar character hover consistency */
+#sidebar .nav-item[data-page="aisha"],
+#sidebar .nav-item[data-page="leah"],
+#sidebar .nav-item[data-page="claudia"],
+#sidebar .nav-item[data-page="grok"],
+#sidebar .nav-item[data-page="vanya"],
+#sidebar .nav-item[data-page="crosschar"]{
+  position: relative;
+}
+
+/* safer text density inside character sections */
+.profile-block .profile-item,
+.profile-block .identity-row,
+.profile-block .identity-val,
+.profile-block .identity-key{
+  min-width: 0 !important;
+}
+
+/* planner fit */
+#page-planner .month-grid,
+#page-planner .month-cell,
+#page-planner .planner-card,
+#page-planner .card{
+  min-width: 0 !important;
+}

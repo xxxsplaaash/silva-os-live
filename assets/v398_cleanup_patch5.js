@@ -6,11 +6,11 @@
   function writeJSON(key, value){ try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){} }
 
   const CHAR_META = {
-    aisha:{label:'Aisha', color:'rgba(184,168,216,.98)', role:'Chief Creative Officer'},
-    leah:{label:'Leah', color:'rgba(208,165,82,.96)', role:'Trend & Content'},
-    claudia:{label:'Claudia', color:'rgba(143,184,220,.98)', role:'Client Systems'},
-    grok:{label:'Grok', color:'rgba(130,166,127,.98)', role:'Systems'},
-    vanya:{label:'Vanya', color:'rgba(226,140,204,.98)', role:'People & Culture'}
+    aisha:{label:'Aisha', color:'var(--color-rgba-184-168-216-98)', role:'Chief Creative Officer'},
+    leah:{label:'Leah', color:'var(--color-rgba-208-165-82-96)', role:'Trend & Content'},
+    claudia:{label:'Claudia', color:'var(--color-rgba-143-184-220-98)', role:'Client Systems'},
+    grok:{label:'Grok', color:'var(--color-rgba-130-166-127-98)', role:'Systems'},
+    vanya:{label:'Vanya', color:'var(--color-rgba-226-140-204-98)', role:'People & Culture'}
   };
 
   function ensureButtonTypes(){
@@ -176,7 +176,7 @@
     polishCrossChar();
     alignCards();
     softenLegacyTitles();
-    if(!document.body || !document.querySelector('#page-studio.active')) applySelectiveTextPulse();
+    applySelectiveTextPulse();
   }
 
   function bootOnce(){

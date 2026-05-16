@@ -1,0 +1,441 @@
+/*
+  Silva OS Live Component Consistency System
+  Scope: live graph loaded by root index.html.
+  Purpose: identical visible component jobs share one visual contract.
+*/
+
+:root {
+  --component-select-height: 36px;
+  --component-select-radius: 6px;
+  --component-select-focus-ring: 0 0 0 3px rgba(var(--blue-rgb), 0.15);
+
+  --component-button-primary-height: 44px;
+  --component-button-secondary-height: 36px;
+  --component-button-ghost-height: 32px;
+  --component-button-primary-radius: 8px;
+  --component-button-secondary-radius: 6px;
+
+  --component-tag-height: 24px;
+  --component-tag-radius: 4px;
+  --component-status-dot-size: 7px;
+  --component-score-dot-size: 6px;
+  --component-score-dot-gap: 4px;
+}
+
+/* 01. Visible selects */
+:where(
+  select,
+  .gen-select,
+  .filter-select,
+  .pg3-select,
+  .pg38-select,
+  .pg52-cmd-select,
+  .pg52-action-select,
+  .pg52-cinematic-select,
+  .identity-vault-actions select,
+  .pvc-field-grid select,
+  #page-generator.pg52-generator-owned .pg52-director-desk select
+):not(.pg52-hidden-select):not([hidden]) {
+  height: var(--component-select-height) !important;
+  min-height: var(--component-select-height) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--component-select-radius) !important;
+  background: var(--bg-card) !important;
+  padding: 0 var(--space-3) !important;
+  color: var(--text-primary) !important;
+  font-size: var(--type-base) !important;
+  font-weight: var(--weight-medium) !important;
+  letter-spacing: var(--tracking-normal) !important;
+  line-height: var(--leading-tight) !important;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out) !important;
+}
+
+:where(
+  select,
+  .gen-select,
+  .filter-select,
+  .pg3-select,
+  .pg38-select,
+  .pg52-cmd-select,
+  .pg52-action-select,
+  .pg52-cinematic-select,
+  .identity-vault-actions select,
+  .pvc-field-grid select,
+  #page-generator.pg52-generator-owned .pg52-director-desk select
+):not(.pg52-hidden-select):not([hidden]):hover {
+  border-color: var(--border-active) !important;
+}
+
+:where(
+  select,
+  .gen-select,
+  .filter-select,
+  .pg3-select,
+  .pg38-select,
+  .pg52-cmd-select,
+  .pg52-action-select,
+  .pg52-cinematic-select,
+  .identity-vault-actions select,
+  .pvc-field-grid select,
+  #page-generator.pg52-generator-owned .pg52-director-desk select
+):not(.pg52-hidden-select):not([hidden]):focus,
+:where(
+  select,
+  .gen-select,
+  .filter-select,
+  .pg3-select,
+  .pg38-select,
+  .pg52-cmd-select,
+  .pg52-action-select,
+  .pg52-cinematic-select,
+  .identity-vault-actions select,
+  .pvc-field-grid select,
+  #page-generator.pg52-generator-owned .pg52-director-desk select
+):not(.pg52-hidden-select):not([hidden]):focus-visible {
+  outline: none !important;
+  border-color: var(--border-focus) !important;
+  box-shadow: var(--component-select-focus-ring) !important;
+}
+
+/* 02. Numbered section headings */
+:where(.ui-section-heading, .pg52-section-heading, .pg52-step-heading, .pg51-section-head, .pg50-card-head) {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+:where(.ui-section-number, .pg52-step-number, .pg52-section-number, .pg51-section-num, .pg50-section-num) {
+  flex: 0 0 auto;
+  color: var(--text-muted) !important;
+  font-size: var(--type-xs) !important;
+  font-weight: var(--weight-bold) !important;
+  letter-spacing: var(--tracking-wide) !important;
+  line-height: var(--leading-tight) !important;
+}
+
+:where(.ui-section-title, .pg52-step-title, .pg52-section-title, .pg51-section-title) {
+  color: var(--text-primary) !important;
+  font-size: var(--type-lg) !important;
+  font-weight: var(--weight-bold) !important;
+  letter-spacing: var(--tracking-tight) !important;
+  line-height: var(--leading-tight) !important;
+}
+
+/* 03. Metadata/status tags. Interactive pills are styled as buttons below. */
+:where(
+  .ui-tag,
+  .tag,
+  .provider-chip,
+  .pvc-chip,
+  .pg3-chip,
+  .pg3-cost-pill,
+  .pg3-support-pill,
+  .pg3-readiness-pill,
+  .pg38-pill,
+  .pg40-pill,
+  .pg40-meta-pill,
+  .pg50-pill,
+  .pg52-pill,
+  .pg52-mini-pill,
+  .pg52-char-tags span,
+  .pg52-route-tags span,
+  .pg51-shot-tags span,
+  .pg52-model-badge,
+  .pg52-platform-preview-tags span,
+  .pg52-concept-blast-badges span,
+  .pg52-identity-lock-pill,
+  .alpha-home-fixed-slide-badge
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: var(--component-tag-height) !important;
+  height: var(--component-tag-height) !important;
+  max-width: 100%;
+  padding: 0 var(--space-2) !important;
+  border: 1px solid var(--border-1) !important;
+  border-radius: var(--component-tag-radius) !important;
+  background: var(--bg-4) !important;
+  color: var(--text-secondary) !important;
+  font-size: var(--type-xs) !important;
+  font-weight: var(--weight-medium) !important;
+  letter-spacing: var(--tracking-wider) !important;
+  line-height: var(--leading-tight) !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+}
+
+:where(.ui-tag--approved, .pvc-chip.ready, .pg3-readiness-pill.ready, .pg3-support-pill.ok, .pg52-identity-lock-pill.ready) {
+  border-color: var(--green-500) !important;
+  background: var(--green-100) !important;
+  color: var(--green-400) !important;
+}
+
+:where(.ui-tag--pending, .pg3-readiness-pill.caution, .pg52-identity-lock-pill.review) {
+  border-color: var(--amber-500) !important;
+  background: var(--amber-100) !important;
+  color: var(--amber-400) !important;
+}
+
+:where(.ui-tag--rejected, .pvc-chip.missing, .pg3-readiness-pill.missing, .pg3-support-pill.no, .pg52-identity-lock-pill.blocked) {
+  border-color: var(--crimson-500) !important;
+  background: var(--crimson-100) !important;
+  color: var(--crimson-500) !important;
+}
+
+/* 04-05. Nav headers and character dots */
+#sidebar .nav-section {
+  margin: 0 0 var(--space-6) !important;
+}
+
+#sidebar .nav-label {
+  margin: 0 0 var(--space-3) !important;
+  color: var(--text-muted) !important;
+  font-size: var(--type-xs) !important;
+  font-weight: var(--weight-medium) !important;
+  letter-spacing: var(--tracking-widest) !important;
+  line-height: var(--leading-tight) !important;
+  text-transform: uppercase !important;
+}
+
+#sidebar .nav-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--space-3) !important;
+}
+
+#sidebar .nav-char-dot {
+  width: var(--component-status-dot-size) !important;
+  height: var(--component-status-dot-size) !important;
+  min-width: var(--component-status-dot-size) !important;
+  border-radius: var(--radius-circle) !important;
+  align-self: center !important;
+}
+
+#sidebar .nav-item[data-status="approved"] .nav-char-dot { background: var(--green-500) !important; }
+#sidebar .nav-item[data-status="pending"] .nav-char-dot { background: var(--amber-500) !important; }
+#sidebar .nav-item[data-status="inactive"] .nav-char-dot { background: var(--text-muted) !important; }
+
+/* 06. Button categories */
+:where(
+  button,
+  .btn,
+  .wr-gen-btn,
+  .copy-btn,
+  .pg52-btn,
+  .pg52-btn-ghost,
+  .pg52-generate-btn,
+  .pg52-director-brief-btn,
+  .pg52-result-action,
+  .pg52-quick-config-open,
+  .identity-vault-actions button,
+  [role="button"]
+) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--space-2) !important;
+  font-size: var(--type-base) !important;
+  letter-spacing: var(--tracking-normal) !important;
+  line-height: var(--leading-tight) !important;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-instant) var(--ease-spring) !important;
+}
+
+:where(.ui-btn--primary, .btn.btn-primary, .btn.btn-red, .wr-gen-btn, .pg52-generate-btn, .pg40-primary-generate, .pg51-generate) {
+  min-height: var(--component-button-primary-height) !important;
+  height: var(--component-button-primary-height) !important;
+  padding: 0 var(--space-4) !important;
+  border: 1px solid var(--color-brand) !important;
+  border-radius: var(--component-button-primary-radius) !important;
+  background: var(--color-brand) !important;
+  color: var(--white) !important;
+  font-weight: var(--weight-bold) !important;
+  box-shadow: none !important;
+}
+
+:where(.ui-btn--primary, .btn.btn-primary, .btn.btn-red, .wr-gen-btn, .pg52-generate-btn, .pg40-primary-generate, .pg51-generate):hover {
+  background: var(--color-brand-hover) !important;
+  border-color: var(--color-brand-hover) !important;
+}
+
+:where(.ui-btn--secondary, .btn.btn-ghost, .btn:not(.btn-primary):not(.btn-red), .copy-btn, .pg52-btn, .pg52-btn-ghost, .pg52-director-brief-btn, .pg52-result-action, .pg52-quick-config-open, .identity-vault-actions button) {
+  min-height: var(--component-button-secondary-height) !important;
+  height: var(--component-button-secondary-height) !important;
+  padding: 0 var(--space-4) !important;
+  border: 1px solid var(--border-1) !important;
+  border-radius: var(--component-button-secondary-radius) !important;
+  background: var(--bg-4) !important;
+  color: var(--text-primary) !important;
+  font-weight: var(--weight-medium) !important;
+  box-shadow: none !important;
+}
+
+:where(.ui-btn--secondary, .btn.btn-ghost, .btn:not(.btn-primary):not(.btn-red), .copy-btn, .pg52-btn, .pg52-btn-ghost, .pg52-director-brief-btn, .pg52-result-action, .pg52-quick-config-open, .identity-vault-actions button):hover {
+  background: var(--bg-5) !important;
+  border-color: var(--border-2) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(.ui-btn--ghost, .modal-close, .pg52-route-details-btn, .pg52-override-back, .pg52-override-edit, .pg52-axis-lock, .pg52-smart-history-chip, .planner-more-btn, .nav-war-btn) {
+  min-height: var(--component-button-ghost-height) !important;
+  height: var(--component-button-ghost-height) !important;
+  padding: 0 var(--space-3) !important;
+  border: 0 !important;
+  border-radius: var(--component-button-secondary-radius) !important;
+  background: var(--color-transparent) !important;
+  color: var(--text-secondary) !important;
+  font-weight: var(--weight-medium) !important;
+  box-shadow: none !important;
+}
+
+:where(.ui-btn--ghost, .modal-close, .pg52-route-details-btn, .pg52-override-back, .pg52-override-edit, .pg52-axis-lock, .pg52-smart-history-chip, .planner-more-btn, .nav-war-btn):hover {
+  background: var(--bg-3) !important;
+  color: var(--text-primary) !important;
+}
+
+:where(.pg3-ai-row .btn[onclick*="generateImageAndSaveFromGenerator"]) {
+  min-height: var(--component-button-secondary-height) !important;
+  height: var(--component-button-secondary-height) !important;
+  border: 1px solid var(--border-1) !important;
+  border-radius: var(--component-button-secondary-radius) !important;
+  background: var(--bg-4) !important;
+  color: var(--text-primary) !important;
+  font-weight: var(--weight-medium) !important;
+}
+
+:where(button, .btn, .wr-gen-btn, .copy-btn, .pg52-btn, .pg52-btn-ghost, .pg52-generate-btn, .pg52-result-action):disabled,
+:where(button, .btn, .wr-gen-btn, .copy-btn, .pg52-btn, .pg52-btn-ghost, .pg52-generate-btn, .pg52-result-action)[aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: .55 !important;
+}
+
+/* 07. Dividers */
+:where(hr.divider, .divider) {
+  height: 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--border-1) !important;
+}
+
+:where(
+  #sidebar,
+  .pg52-identity-rail,
+  .pg52-shot-canvas,
+  .pg52-output-rail,
+  .pg52-right-rail,
+  .planner-drawer-panel
+) {
+  border-color: var(--border-0) !important;
+}
+
+:where(
+  .pg52-accordion,
+  .pg52-route-details,
+  .pg52-quality-summary,
+  .pg52-output-accordions,
+  .pvc-card-head,
+  .identity-vault-card,
+  .planner-drawer-head
+) {
+  border-color: var(--border-1) !important;
+}
+
+/* 08. Compatibility and score indicators */
+:where(.pg52-compat-score, .pg52-model-metric strong) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--space-2) !important;
+  color: var(--text-secondary);
+  font-size: var(--type-xs) !important;
+  font-weight: var(--weight-bold) !important;
+  letter-spacing: var(--tracking-wider) !important;
+  line-height: var(--leading-tight) !important;
+  text-transform: uppercase !important;
+}
+
+:where(.pg52-compat-dots, .pg52-model-rating-dots) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--component-score-dot-gap) !important;
+  color: inherit !important;
+  white-space: nowrap !important;
+}
+
+:where(.pg52-compat-dots i, .pg52-model-rating-dots span) {
+  width: var(--component-score-dot-size) !important;
+  height: var(--component-score-dot-size) !important;
+  border-radius: var(--radius-circle) !important;
+  background: var(--text-ghost) !important;
+  box-shadow: none !important;
+}
+
+:where(.pg52-compat-dots i.on, .pg52-model-rating-dots span.on) {
+  background: var(--color-current) !important;
+}
+
+:where(.pg52-compat-meter--excellent .pg52-compat-score, .pg52-model-metric:has(strong):has(.pg52-model-rating-dots)) {
+  color: var(--green-400);
+}
+
+:where(.pg52-compat-meter--good .pg52-compat-score) {
+  color: var(--green-500);
+}
+
+:where(.pg52-compat-meter--moderate .pg52-compat-score) {
+  color: var(--amber-500);
+}
+
+:where(.pg52-compat-meter--tension .pg52-compat-score, .pg52-compat-meter--avoid .pg52-compat-score) {
+  color: var(--crimson-500);
+}
+
+/* High-specificity PG52 overrides are required because older generator layers use !important. */
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-generate-btn--compact {
+  display: none !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-generate-btn--full,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-generate-btn {
+  min-height: var(--component-button-primary-height) !important;
+  height: var(--component-button-primary-height) !important;
+  padding: 0 var(--space-4) !important;
+  border: 1px solid var(--color-brand) !important;
+  border-radius: var(--component-button-primary-radius) !important;
+  background: var(--color-brand) !important;
+  color: var(--white) !important;
+  font-size: var(--type-base) !important;
+  font-weight: var(--weight-bold) !important;
+  letter-spacing: var(--tracking-normal) !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-generate-btn:hover:not(:disabled) {
+  background: var(--color-brand-hover) !important;
+  border-color: var(--color-brand-hover) !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk :is(.pg52-btn, .pg52-btn-ghost, .pg52-result-action, .pg52-director-brief-btn, .pg52-action-suggest-btn) {
+  min-height: var(--component-button-secondary-height) !important;
+  height: var(--component-button-secondary-height) !important;
+  padding: 0 var(--space-4) !important;
+  border: 1px solid var(--border-1) !important;
+  border-radius: var(--component-button-secondary-radius) !important;
+  background: var(--bg-4) !important;
+  color: var(--text-primary) !important;
+  font-size: var(--type-base) !important;
+  font-weight: var(--weight-medium) !important;
+  letter-spacing: var(--tracking-normal) !important;
+  box-shadow: none !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk :is(.pg52-btn, .pg52-btn-ghost, .pg52-result-action, .pg52-director-brief-btn, .pg52-action-suggest-btn):hover {
+  background: var(--bg-5) !important;
+  border-color: var(--border-2) !important;
+}

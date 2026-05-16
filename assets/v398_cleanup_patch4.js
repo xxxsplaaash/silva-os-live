@@ -81,8 +81,8 @@
     qsa('.grid3 > .card', page).forEach(function(card){
       card.classList.add('silva-aura-card');
       card.style.borderImage = 'none';
-      card.style.borderLeft = '1px solid rgba(255,255,255,.06)';
-      card.style.borderTop = '1px solid rgba(255,255,255,.06)';
+      card.style.borderLeft = '1px solid var(--color-white-a6)';
+      card.style.borderTop = '1px solid var(--color-white-a6)';
     });
   }
 
@@ -101,8 +101,17 @@
     normalizeCrossChar();
     normalizeButtonsAndTabs();
   }
+  function shouldRepeatRun(){
+    var active = document.querySelector('.page.active');
+    var id = active && active.id ? active.id : '';
+    return /page-(homes|aisha|leah|claudia|grok|vanya|crosschar|assets)/.test(id);
+  }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-  window.addEventListener('load', function(){ setTimeout(run, 80); setTimeout(run, 260); setTimeout(run, 900); });
+  window.addEventListener('load', function(){
+    [80, 260, 900].forEach(function(delay){
+      setTimeout(function(){ if(shouldRepeatRun()) run(); }, delay);
+    });
+  });
 })();

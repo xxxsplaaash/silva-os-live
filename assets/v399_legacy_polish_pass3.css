@@ -1,0 +1,111 @@
+:root{--silva-locked-version:'v3.9.9';}
+
+/* contain weird edge slivers / overhangs without replacing the live shell */
+.char-hero,
+.home-card,
+.cc-glass,
+.card,
+.asset-card,
+.team-card,
+.analytics-card,
+.provider-card,
+.loc-card,
+.broll-card,
+.event-card,
+.prompt-card,
+.gallery-card{
+  overflow:hidden !important;
+  isolation:isolate;
+  backface-visibility:hidden;
+}
+
+.char-hero,
+.cc-side-card,
+.cc-lounge{
+  transform:translateZ(0);
+}
+
+/* cleaner avatar behavior */
+.char-avatar.clickable-avatar{
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+  border:1px solid var(--color-white-a8);
+}
+.char-avatar.clickable-avatar:hover{
+  border-color:var(--color-white-a18);
+  box-shadow:0 0 0 1px var(--color-white-a4) inset;
+}
+.char-avatar.clickable-avatar.has-face-img{
+  padding:0 !important;
+  color:var(--color-transparent) !important;
+  background:var(--color-white-a4) !important;
+}
+.char-avatar.clickable-avatar.has-face-img img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+  display:block;
+}
+.char-avatar.clickable-avatar::after{
+  content:'Change';
+  position:absolute;
+  left:50%;
+  bottom:4px;
+  transform:translateX(-50%);
+  font-size:var(--type-2xs);
+  font-family:'DM Mono',monospace;
+  letter-spacing:var(--tracking-wide);
+  text-transform:uppercase;
+  padding:2px 4px;
+  border-radius:999px;
+  background:var(--color-black-a56);
+  color:var(--color-white-a78);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity var(--motion-fast) ease;
+}
+.char-avatar.clickable-avatar:hover::after{opacity:1;}
+
+/* mode note under character controls */
+.mode-effect-note{
+  margin-top:8px;
+  padding:8px 12px;
+  border:1px solid var(--color-white-a7);
+  border-radius:14px;
+  background:linear-gradient(180deg,var(--color-white-a3),var(--color-white-a1_5));
+  color:var(--muted2);
+  font-size:var(--type-xs);
+  line-height:var(--leading-normal);
+}
+.mode-effect-note strong{color:var(--white);font-weight:var(--weight-bold);}
+.mode-effect-note .label{color:var(--muted);font-family:'DM Mono',monospace;font-size:var(--type-xs);letter-spacing:var(--tracking-wider);text-transform:uppercase;display:block;margin-bottom:4px;}
+
+/* small performance / consistency touch-ups */
+#page-homes img,
+.home-card img,
+.asset-slot img,
+.home-slot img{
+  image-rendering:auto;
+}
+#page-homes .home-grid.fast-home-grid .home-slot,
+#page-homes .home-grid.fast-home-grid .home-card{
+  contain:layout paint style;
+}
+
+/* make top character cards / hero cards less likely to show weird clipped edge */
+.char-hero::before,
+.home-head,
+.asset-card-head,
+.team-card-head{
+  background-clip:padding-box;
+}
+
+/* keep version chrome visually consistent */
+.logo-sub,
+.sidebar-footer,
+.cc-chip,
+.mode-indicator{
+  text-wrap:pretty;
+}

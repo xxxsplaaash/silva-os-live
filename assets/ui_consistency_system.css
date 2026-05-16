@@ -1,0 +1,560 @@
+/*
+  Silva OS Live UI Consistency System
+  Scope: root index.html and the styles/scripts it loads.
+  Purpose: normalize visual rhythm, containment, focus, motion, and layer usage
+  without replacing existing feature CSS or changing behavior.
+
+  Generated spacing audit before this hardening pass:
+  - Live graph scanned: root index.html, 20 linked stylesheets, 19 linked scripts.
+  - Broad spacing/dimension px values before normalization: 205 distinct values.
+  - True rhythm values normalized included: -60, -14, -2, -1, 1, 2, 2.5, 3, 5, 6,
+    7, 9, 11, 13, 14, 15, 17, 18, 19, 22, 26, 28, 30, 34, 36, 38, 39, 42,
+    44, 46, 54, 58, 60, 66, 74, 75, 76, 78, 86, 88, 90, 91, 92, and 94px.
+  - Protected geometry: major layout widths, breakpoints, and column minmax values.
+*/
+
+:root {
+  /* Spacing */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+
+  /* Component-specific spacing */
+  --panel-padding:         var(--space-6);
+  --section-gap:           var(--space-8);
+  --field-gap:             var(--space-4);
+  --inline-gap:            var(--space-3);
+  --card-padding:          var(--space-4);
+  --card-gap:              var(--space-3);
+  --ref-card-size:         72px;
+  --ref-card-gap:          var(--space-2);
+  --command-bar-height:    52px;
+  --session-strip-height:  56px;
+  --nav-width:             200px;
+  --character-panel-width: 220px;
+  --route-panel-width:     240px;
+  --control-padding-block: 10px;
+  --button-padding-block:  10px;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  /* Motion */
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-medium: 220ms;
+  --duration-slow: 350ms;
+  --duration-crawl: 500ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-inout: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-linear: linear;
+  --stagger-option: 15ms;
+  --motion-instant: var(--duration-instant);
+  --motion-fast: var(--duration-fast);
+  --motion-base: var(--duration-medium);
+  --motion-slow: var(--duration-slow);
+  --ease-standard: var(--ease-out);
+  --brand-rgb: 232, 0, 30;
+  --identity-rgb: 92, 170, 255;
+  --color-identity: var(--pg52-blue, #5caaff);
+  --bg-elevated: var(--surface3, rgba(255,255,255,.06));
+
+  /* Layers */
+  --z-sticky: 20;
+  --z-popover: 300;
+  --z-drawer: 1000;
+  --z-modal: 13000;
+  --z-critical: 32000;
+
+  /* Shared surfaces */
+  --ui-border-soft: rgba(255,255,255,.08);
+  --ui-border-medium: rgba(255,255,255,.12);
+  --ui-border-strong: rgba(255,255,255,.18);
+  --ui-surface-soft: rgba(255,255,255,.025);
+  --ui-surface-raised: rgba(255,255,255,.045);
+  --ui-surface-strong: rgba(255,255,255,.07);
+  --ui-focus-ring: 0 0 0 3px rgba(255,45,86,.18), 0 0 0 1px rgba(255,255,255,.14);
+  --ui-focus-border: rgba(255,45,86,.62);
+  --ui-card-shadow: 0 18px 48px rgba(0,0,0,.26);
+  --ui-card-shadow-hover: 0 24px 64px rgba(0,0,0,.34);
+  --ui-scrollbar-track: rgba(255,255,255,.025);
+  --ui-scrollbar-thumb: rgba(255,255,255,.14);
+}
+
+/* Shared interaction and focus language */
+:where(
+  .btn,
+  .btn-sm,
+  .btn-ghost,
+  .btn-primary,
+  .icon-btn,
+  .nav-item,
+  .char-tab,
+  .preset-chip,
+  .prompt-card,
+  .gallery-card,
+  .loc-card,
+  .broll-card,
+  .event-card,
+  .provider-card,
+  .pvc-card,
+  .pvc-status-card,
+  .pg52-btn,
+  .pg52-generate-btn,
+  .pg52-btn-ghost,
+  .pg52-chip,
+  .pg52-source-tab,
+  .pg52-shot-mode-card,
+  .pg52-sa-moment-tile,
+  .pg52-quick-config-open,
+  .pg52-quick-config-card,
+  .pg52-social-finish-pill,
+  .pg52-authenticity-toggle,
+  .pg52-concept-card,
+  .pg52-action-card,
+  .pg52-model-use-recommended
+) {
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-standard);
+}
+
+:where(
+  button,
+  [role="button"],
+  .btn,
+  .btn-sm,
+  .btn-ghost,
+  .btn-primary,
+  .icon-btn,
+  .nav-item,
+  .prompt-card,
+  .gallery-card,
+  .provider-card,
+  .pg52-generate-btn,
+  .pg52-btn,
+  .pg52-btn-ghost,
+  .pg52-shot-mode-card,
+  .pg52-sa-moment-tile,
+  .pg52-quick-config-card,
+  .pg52-social-finish-pill,
+  .pg52-authenticity-toggle
+) {
+  position: relative;
+  transition-timing-function: var(--ease-out);
+  -webkit-tap-highlight-color: var(--color-transparent);
+}
+
+:where(
+  button,
+  [role="button"],
+  .btn,
+  .btn-sm,
+  .btn-ghost,
+  .btn-primary,
+  .icon-btn,
+  .nav-item,
+  .prompt-card,
+  .gallery-card,
+  .provider-card,
+  .pg52-generate-btn,
+  .pg52-btn,
+  .pg52-btn-ghost,
+  .pg52-shot-mode-card,
+  .pg52-sa-moment-tile,
+  .pg52-quick-config-card,
+  .pg52-social-finish-pill,
+  .pg52-authenticity-toggle
+):active {
+  transform: scale(.97);
+  transition-duration: var(--duration-instant);
+  transition-timing-function: var(--ease-spring);
+}
+
+:where(button, [role="button"], .btn, .pg52-generate-btn, .pg52-btn, .pg52-btn-ghost).is-pressed::after {
+  animation: silvaButtonFlash var(--duration-instant) var(--ease-out);
+  background: var(--color-white-a16);
+  border-radius: inherit;
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+:where(button, [role="button"], .btn, .pg52-btn, .pg52-btn-ghost).is-complete {
+  animation: silvaGenericComplete calc(var(--duration-crawl) * 4) var(--ease-out) both;
+}
+
+:where(
+  button,
+  [role="button"],
+  a[href],
+  input,
+  select,
+  textarea,
+  summary,
+  .nav-item,
+  .prompt-card,
+  .gallery-card,
+  .loc-card,
+  .broll-card,
+  .event-card,
+  .provider-card,
+  .pvc-card,
+  .pg52-shot-mode-card,
+  .pg52-sa-moment-tile,
+  .pg52-quick-config-card,
+  .pg52-authenticity-toggle
+):focus-visible {
+  border-color: var(--ui-focus-border) !important;
+  box-shadow: var(--ui-focus-ring) !important;
+  outline: none !important;
+}
+
+:where(input, select, textarea, [contenteditable="true"]):focus,
+:where(input, select, textarea, [contenteditable="true"]):focus-visible {
+  border-color: var(--color-identity) !important;
+  box-shadow: 0 0 0 3px var(--color-identity-a15) !important;
+  transition-duration: var(--duration-fast);
+  transition-property: border-color, box-shadow, background;
+  transition-timing-function: var(--ease-out);
+}
+
+:where(.pg52-cmd-select, .pg52-action-select, select).is-value-pulsing {
+  animation: silvaValuePulse var(--duration-fast) var(--ease-spring);
+}
+
+:where(.pg52-cmd-select, .pg52-action-select, select).is-repopulating {
+  animation: silvaDropdownRepopulate var(--duration-medium) var(--ease-out);
+}
+
+:where(.pg52-pop-menu, .pg52-pop-options, .pg52-location-menu, .pg52-location-results, .pg52-model-comparison-grid) {
+  transform-origin: top center;
+}
+
+:where(.pg52-pop-menu, .pg52-pop-options, .pg52-location-menu, .pg52-location-results).open,
+:where(.pg52-pop-menu, .pg52-pop-options, .pg52-location-menu, .pg52-location-results):not([hidden]) {
+  animation: silvaDropdownOpen var(--duration-fast) var(--ease-out);
+}
+
+:where(.pg52-pop-option, .pg52-action-card, .pg52-location-option) {
+  transition: background var(--duration-instant) var(--ease-out), border-color var(--duration-instant) var(--ease-out);
+}
+
+:where(.pg52-pop-option, .pg52-action-card, .pg52-location-option):hover {
+  background: var(--bg-elevated);
+}
+
+:where(.pg52-pop-option, .pg52-action-card, .pg52-location-option).selected::after {
+  animation: silvaCheckPop var(--duration-instant) var(--ease-spring);
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: var(--motion-instant) !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: var(--motion-instant) !important;
+  }
+}
+
+@keyframes silvaButtonFlash {
+  from { opacity: .85; }
+  to { opacity: 0; }
+}
+
+@keyframes silvaValuePulse {
+  0% { transform: scale(1); }
+  44% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@keyframes silvaDropdownRepopulate {
+  from { opacity: .6; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes silvaDropdownOpen {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes silvaCheckPop {
+  from { opacity: 0; transform: scale(0); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes silvaGenericComplete {
+  0%, 72% { background-color: var(--color-rgba-61-214-140-22); border-color: var(--color-rgba-61-214-140-6); color: var(--white, var(--color-white)); }
+  100% { background-color: inherit; }
+}
+
+/* Shared shell and cards */
+:where(.card, .prompt-card, .gallery-card, .loc-card, .broll-card, .event-card, .provider-card, .pvc-card) {
+  border-color: var(--ui-border-soft);
+  border-radius: var(--radius-xl);
+  padding: var(--card-padding);
+}
+
+:where(
+  .modal-box,
+  .modal-body,
+  .drawer,
+  .panel,
+  .pg52-card,
+  .pg52-panel,
+  .pg52-route-card,
+  .pg52-intelligence-card,
+  .pg52-identity-lock-card,
+  .pg52-creative-panel,
+  .pg52-quick-config-picker,
+  .planner-day-drawer,
+  .pvc-status-card,
+  .pvc-main-stack,
+  .pvc-side-stack
+) {
+  padding: var(--panel-padding);
+}
+
+:where(
+  .grid,
+  .cards-grid,
+  .prompt-grid,
+  .gallery-grid,
+  .planner-month-grid,
+  .pg52-concept-blast-grid,
+  .pg52-quick-config-grid,
+  .pg52-scene-ref-grid,
+  .pvc-card-grid
+) {
+  gap: var(--card-gap);
+}
+
+:where(
+  .btn,
+  .btn-sm,
+  .btn-ghost,
+  .btn-primary,
+  .pg52-btn,
+  .pg52-btn-ghost,
+  .pg52-generate-btn,
+  .pg52-quick-config-open,
+  .pvc-btn
+) {
+  gap: var(--inline-gap);
+  min-height: var(--space-10);
+  padding: var(--button-padding-block) var(--space-4);
+}
+
+:where(
+  input,
+  select,
+  textarea,
+  .gen-select,
+  .gen-input,
+  .field-input,
+  .field-textarea,
+  .filter-select,
+  .search-input,
+  .pg52-input,
+  .pg52-select,
+  .pg52-textarea
+) {
+  padding: var(--control-padding-block) var(--space-3);
+}
+
+:where(.nav-item, .provider-chip, .pvc-chip, .pg52-chip, .pg52-source-tab, .pg52-social-finish-pill) {
+  gap: var(--inline-gap);
+}
+
+:where(.prompt-card, .gallery-card, .loc-card, .broll-card, .event-card, .provider-card, .pvc-card):hover {
+  border-color: var(--ui-border-medium);
+  box-shadow: var(--ui-card-shadow-hover);
+}
+
+:where(.tag, .provider-chip, .pvc-chip, .pg52-chip, .pg52-source-tab, .pg52-social-finish-pill) {
+  border-radius: var(--radius-pill);
+}
+
+:where(.btn, .btn-sm, .btn-ghost, .btn-primary, .icon-btn, .gen-select, .gen-input, .field-input, .field-textarea, .filter-select, .search-input) {
+  border-radius: var(--radius-md);
+}
+
+:where(.btn, .btn-sm, .btn-ghost, .btn-primary, .icon-btn) {
+  min-height: var(--space-10);
+}
+
+/* Scroll containment */
+:where(
+  #sidebar,
+  #main,
+  .page,
+  .modal-body,
+  .pg52-scroll,
+  .pg52-result-rail,
+  .pg52-creative-panel,
+  .pg52-creative-body,
+  .pg52-right-rail,
+  .pg52-drawer,
+  #pg50-model-drawer,
+  .pg52-model-drawer,
+  .pg52-quick-config-grid,
+  .pg52-quick-config-picker,
+  .pg52-shot-history-list,
+  .pg52-concept-blast-grid,
+  .pg52-scene-ref-grid,
+  .planner-day-drawer,
+  .planner-week-day,
+  .planner-week-scroll,
+  .planner-month-cell,
+  .pvc-side-stack,
+  .pvc-main-stack
+) {
+  min-width: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+:where(
+  #sidebar,
+  .modal-body,
+  .pg52-result-rail,
+  .pg52-creative-body,
+  #pg50-model-drawer,
+  .pg52-quick-config-grid,
+  .pg52-shot-history-list,
+  .planner-day-drawer,
+  .planner-week-scroll,
+  .pvc-side-stack
+) {
+  scrollbar-color: var(--ui-scrollbar-thumb) var(--ui-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+:where(
+  #sidebar,
+  .modal-body,
+  .pg52-result-rail,
+  .pg52-creative-body,
+  #pg50-model-drawer,
+  .pg52-quick-config-grid,
+  .pg52-shot-history-list,
+  .planner-day-drawer,
+  .planner-week-scroll,
+  .pvc-side-stack
+)::-webkit-scrollbar {
+  width: var(--space-2);
+  height: var(--space-2);
+}
+
+:where(
+  #sidebar,
+  .modal-body,
+  .pg52-result-rail,
+  .pg52-creative-body,
+  #pg50-model-drawer,
+  .pg52-quick-config-grid,
+  .pg52-shot-history-list,
+  .planner-day-drawer,
+  .planner-week-scroll,
+  .pvc-side-stack
+)::-webkit-scrollbar-track {
+  background: var(--ui-scrollbar-track);
+}
+
+:where(
+  #sidebar,
+  .modal-body,
+  .pg52-result-rail,
+  .pg52-creative-body,
+  #pg50-model-drawer,
+  .pg52-quick-config-grid,
+  .pg52-shot-history-list,
+  .planner-day-drawer,
+  .planner-week-scroll,
+  .pvc-side-stack
+)::-webkit-scrollbar-thumb {
+  background: var(--ui-scrollbar-thumb);
+  border: 2px solid var(--color-transparent);
+  border-radius: var(--radius-pill);
+  background-clip: padding-box;
+}
+
+/* Generator containment polish */
+body:has(#page-generator.active.pg52-generator-owned) #main {
+  isolation: isolate;
+}
+
+#page-generator.pg52-generator-owned :where(.pg52-director-desk, .pg52-shell, .pg52-workspace) {
+  min-width: 0;
+}
+
+#page-generator.pg52-generator-owned :where(.pg52-creative-panel, .pg52-result-rail, .pg52-route-card, .pg52-identity-card) {
+  contain: layout paint;
+}
+
+#page-generator.pg52-generator-owned :where(.pg52-quick-config-picker, .pg52-drawer, #pg50-model-drawer) {
+  z-index: var(--z-modal);
+}
+
+#page-generator.pg52-generator-owned :where(.pg52-shot-mode-strip, .pg52-sa-moment-strip, .pg52-social-finish-pills) {
+  scroll-padding-inline: var(--space-3);
+}
+
+/* Planner and library containment polish */
+#page-planner :where(.planner-month-board, .planner-week-agenda, .planner-day-drawer) {
+  min-width: 0;
+}
+
+#page-planner :where(.planner-month-cell, .planner-week-day) {
+  border-radius: var(--radius-xl);
+}
+
+#page-library :where(.prompt-card, .library-health-strip) {
+  border-radius: var(--radius-2xl);
+}
+
+/* Provider surface containment */
+#page-providers :where(.pvc-shell, .pvc-grid, .pvc-card),
+#page-settings :where(.pvc-shell, .pvc-grid, .pvc-card) {
+  min-width: 0;
+}
+
+#page-providers :where(.pvc-card, .pvc-status-card),
+#page-settings :where(.pvc-card, .pvc-status-card) {
+  border-radius: var(--radius-xl);
+}
+
+/* Layer normalization for common live overlays */
+#sidebar { z-index: var(--z-sticky); }
+.filter-bar { z-index: var(--z-sticky); }
+#toast { z-index: var(--z-popover); }
+#modal-overlay,
+#war-room-overlay,
+.ref-quickview,
+#page-generator .pg52-drawer,
+#page-generator #pg50-model-drawer {
+  z-index: var(--z-modal);
+}
+.status-bar { z-index: var(--z-popover); }

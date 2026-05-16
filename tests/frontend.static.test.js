@@ -1256,7 +1256,7 @@ test('Provider Control Center is loaded and does not persist raw provider keys c
   const css = fs.readFileSync(PROVIDER_CONTROL_CENTER_CSS, 'utf8');
 
   const readinessStore = fs.readFileSync(PROVIDER_READINESS_STORE, 'utf8');
-  assert.match(html, /assets\/provider_control_center_v1\.js\?v=3507/);
+  assert.match(html, /assets\/provider_control_center_v1\.js\?v=3508/);
   assert.match(html, /assets\/provider_control_center_v1\.css\?v=3500/);
   assert.match(readinessStore, /window\.SilvaProviderReadiness/);
   assert.match(readinessStore, /fetchFresh/);
