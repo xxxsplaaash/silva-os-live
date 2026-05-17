@@ -65,6 +65,11 @@ function providerTurn(speakerId, content, responseIntent = 'direct-answer') {
   });
 }
 
+function countMemory(items = [], value = '') {
+  const key = String(value || '').toLowerCase();
+  return (Array.isArray(items) ? items : []).filter(item => String(item || '').toLowerCase() === key).length;
+}
+
 async function withMockProvider(output, fn) {
   const originalFetch = global.fetch;
   const outputFn = typeof output === 'function' ? output : () => output;
@@ -578,7 +583,15 @@ test('aisha_context_request_contains_room_state', async () => {
         assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.voicePressureProfile?.function, 'people temperature, social read, morale, human landing');
         assert.ok(capturedRequest.projectContext?.dialogueQualityV02?.qualityRules?.some(rule => /generic assistant filler/i.test(rule)));
         assert.ok(capturedRequest.projectContext?.characterContinuityV0);
-        assert.ok(capturedRequest.projectContext.characterContinuityV0.characterMemories?.vanya);
+        const vanyaMemory = capturedRequest.projectContext.characterContinuityV0.characterMemories?.vanya;
+        assert.ok(vanyaMemory);
+        assert.equal(countMemory(vanyaMemory.stableTraits, 'social pulse'), 1);
+        assert.equal(countMemory(vanyaMemory.stableTraits, 'morale reader'), 1);
+        assert.equal(Object.prototype.hasOwnProperty.call(vanyaMemory, 'seedTraits'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(vanyaMemory, 'learnedTraits'), false);
+        assert.equal(vanyaMemory.stableTraits.length <= 12, true);
+        assert.equal(vanyaMemory.preferences.length <= 12, true);
+        assert.equal(vanyaMemory.dislikes.length <= 12, true);
         assert.ok(capturedRequest.projectContext.characterContinuityV0.relationshipStates?.vanya__user);
         assert.equal(capturedRequest.projectContext.characterContinuityV0.socialImpulses?.[0]?.characterId, 'aisha');
       });
@@ -702,11 +715,33 @@ test('character continuity persists in thread metadata and visible messages hide
         assert.equal(secondContinuity?.schemaVersion, 'studio-pulse.character-continuity.v0');
         assert.ok(Object.keys(secondContinuity.relationshipStates || {}).includes('vanya__user'));
         const visibleText = JSON.stringify(second.response?.messageEvents || []);
-        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|socialImpulses|suppressedSpeakers|aishaDiagnostics)\b/i);
+        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|socialImpulses|suppressedSpeakers|aishaDiagnostics|stableTraits|preferences|dislikes|learnedTraits|seedTraits|relationshipStates|continuityEvents|memoryImportance|relationshipDeltas)\b/i);
       });
     } finally {
       global.fetch = originalFetch;
     }
+  });
+});
+
+test('thread-scoped continuity memory does not leak across Studio Pulse threads', async () => {
+  const output = providerTurn(
+    'grok',
+    'Same pattern again. Isolate the last changed dependency before adding another decorative fix.',
+    'pattern-diagnosis'
+  );
+  await withAishaFlag(null, async () => {
+    await withMockProvider(output, async () => {
+      await withStudioServer(async baseUrl => {
+        const threadA = await pulsePost(baseUrl, 'the provider save failed again with the same error', { threadId: 'thread-a-memory' });
+        const continuityA = threadA.roomRuntime?.roomIntelligenceV0?.characterContinuityV0;
+        assert.match(JSON.stringify(continuityA.characterMemories.grok.projectAttachments), /failed again/i);
+
+        const threadB = await pulsePost(baseUrl, 'hi team', { threadId: 'thread-b-memory' });
+        const continuityB = threadB.roomRuntime?.roomIntelligenceV0?.characterContinuityV0;
+        assert.doesNotMatch(JSON.stringify(continuityB.characterMemories.grok.projectAttachments), /failed again/i);
+        assert.notEqual(threadA.roomRuntime?.roomIntelligenceV0?.threadId, threadB.roomRuntime?.roomIntelligenceV0?.threadId);
+      });
+    });
   });
 });
 

@@ -14,6 +14,9 @@ const {
   fallbackTurnFromStep,
   calculateSocialImpulses,
   normalizeCharacterContinuityState,
+  normalizeMemoryList,
+  continuityPayloadForAisha,
+  MEMORY_CAPS,
   relationshipKey
 } = require('../lib/studio/roomIntelligence');
 
@@ -21,6 +24,11 @@ const FORBIDDEN_ARCHITECTURE_RX = /\b(labels are not presence|assistant cosplay|
 
 function plannedTexts(plan) {
   return plan.steps.map(deterministicTurnFromStep).map(item => item.content).join('\n');
+}
+
+function countMemory(items = [], value = '') {
+  const key = String(value || '').toLowerCase();
+  return (Array.isArray(items) ? items : []).filter(item => String(item || '').toLowerCase() === key).length;
 }
 
 async function withStudioServer(fn) {
@@ -74,9 +82,66 @@ test('character continuity defaults include memory, relationships, and room soci
   assert.equal(continuity.schemaVersion, 'studio-pulse.character-continuity.v0');
   assert.ok(Array.isArray(continuity.characterMemories.vanya.runningJokes));
   assert.ok(continuity.characterMemories.leah.stableTraits.includes('taste reader'));
+  assert.ok(continuity.characterMemories.leah.seedTraits.includes('taste reader'));
+  assert.deepEqual(continuity.characterMemories.leah.learnedTraits, []);
+  assert.equal(countMemory(continuity.characterMemories.leah.stableTraits, 'taste reader'), 1);
   assert.equal(continuity.relationshipStates[relationshipKey('vanya', 'user')].fromCharacterId, 'vanya');
   assert.equal(continuity.relationshipStates[relationshipKey('leah', 'claudia')].toEntityId, 'claudia');
   assert.equal(continuity.roomSocialState.dominantMood, 'steady');
+});
+
+test('continuity memory normalization is idempotent and keeps seeds out of learned memory', () => {
+  const duplicated = normalizeCharacterContinuityState({
+    threadId: 'room-test-memory-normalize',
+    characterMemories: {
+      aisha: {
+        stableTraits: ['room lead', 'standards keeper', 'Room lead', 'standards-keeper', 'earned calm authority'],
+        preferences: ['clear asks', 'Clear asks', 'earned confidence', 'clean briefs'],
+        dislikes: ['generic assistant tone', 'Generic assistant tone', 'vague performance', 'performative urgency']
+      }
+    }
+  });
+  const once = duplicated.characterMemories.aisha;
+  assert.deepEqual(once.seedTraits, ['room lead', 'standards keeper']);
+  assert.deepEqual(once.learnedTraits, ['earned calm authority']);
+  assert.deepEqual(once.learnedPreferences, ['clean briefs']);
+  assert.deepEqual(once.learnedDislikes, ['performative urgency']);
+  assert.equal(countMemory(once.stableTraits, 'room lead'), 1);
+  assert.equal(countMemory(once.preferences, 'clear asks'), 1);
+  assert.equal(countMemory(once.dislikes, 'generic assistant tone'), 1);
+
+  const normalizedThreeTimes = normalizeCharacterContinuityState(
+    normalizeCharacterContinuityState(
+      normalizeCharacterContinuityState(duplicated)
+    )
+  );
+  assert.deepEqual(normalizedThreeTimes.characterMemories.aisha.stableTraits, once.stableTraits);
+  assert.deepEqual(normalizedThreeTimes.characterMemories.aisha.learnedTraits, once.learnedTraits);
+});
+
+test('normalizeMemoryList dedupes safely while preserving readable casing and bounds', () => {
+  const normalized = normalizeMemoryList(
+    [' Room lead ', 'room   lead', 'ROOM-LEAD', 'Clean brief', 'Clean brief!', 'Another item'],
+    { maxItems: 3, canonicalAliases: { 'room lead': 'room lead', 'clean brief': 'clean brief' } }
+  );
+  assert.deepEqual(normalized, ['Room lead', 'Clean brief', 'Another item']);
+  assert.equal(normalized.length <= 3, true);
+});
+
+test('relationship state keys remain stable and directional after normalization', () => {
+  const state = normalizeCharacterContinuityState({
+    relationshipStates: {
+      [relationshipKey('leah', 'user')]: { fromCharacterId: 'leah', toEntityId: 'user', respect: 1.4, irritation: -0.2 },
+      [relationshipKey('user', 'leah')]: { fromCharacterId: 'user', toEntityId: 'leah', respect: 0.9 }
+    }
+  });
+  const keys = Object.keys(state.relationshipStates);
+  assert.equal(keys.length, 25);
+  assert.ok(keys.includes(relationshipKey('leah', 'user')));
+  assert.ok(keys.includes(relationshipKey('vanya', 'leah')));
+  assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].respect, 1);
+  assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].irritation, 0);
+  assert.equal(state.relationshipStates[relationshipKey('user', 'leah')], undefined);
 });
 
 test('tense greeting lets Aisha hold the room without activating everyone', () => {
@@ -118,6 +183,28 @@ test('repeated failure raises Grok and records a pattern continuity event', () =
   assert.match(next.characterContinuityV0.characterMemories.grok.projectAttachments.at(-1), /failed again/i);
 });
 
+test('continuity reducer is idempotent for the same meaningful event', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-reducer-idempotency' });
+  const perception = perceiveRoomMessage('the provider save failed again with the same error', state);
+  const socialImpulses = calculateSocialImpulses({ perception, roomState: state });
+  const plan = planRoomTurn({ perception, roomState: state, socialImpulses });
+  const turns = plan.steps.map(step => fallbackTurnFromStep(step, perception));
+  const first = reduceRoomState({ previous: state, perception, plan, turns, socialImpulses, threadId: 'room-test-reducer-idempotency' });
+  const second = reduceRoomState({ previous: first, perception, plan, turns, socialImpulses, threadId: 'room-test-reducer-idempotency' });
+  const firstContinuity = first.characterContinuityV0;
+  const secondContinuity = second.characterContinuityV0;
+  assert.equal(secondContinuity.continuityEvents.length, firstContinuity.continuityEvents.length);
+  assert.equal(
+    secondContinuity.characterMemories.grok.projectAttachments.length,
+    firstContinuity.characterMemories.grok.projectAttachments.length
+  );
+  assert.deepEqual(
+    secondContinuity.relationshipStates[relationshipKey('grok', 'user')],
+    firstContinuity.relationshipStates[relationshipKey('grok', 'user')]
+  );
+  assert.equal(countMemory(secondContinuity.characterMemories.grok.stableTraits, 'diagnostic pattern reader'), 1);
+});
+
 test('warm emotional check-in raises Vanya and lets Aisha hold if room tension is high', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-warm-check-in' });
   state.characterContinuityV0 = normalizeCharacterContinuityState({
@@ -155,6 +242,67 @@ test('critique and support turns update relationship deltas', () => {
   const supportAfter = supportNext.characterContinuityV0.relationshipStates[relationshipKey('vanya', 'user')];
   assert.ok(supportAfter.warmth > supportBefore.warmth);
   assert.ok(supportAfter.protectiveness > supportBefore.protectiveness);
+});
+
+test('casual social prompts do not create permanent preferences or relationship spam', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-casual-memory-quality' });
+  const perception = perceiveRoomMessage('who likes pizza?', state);
+  const socialImpulses = calculateSocialImpulses({ perception, roomState: state });
+  const plan = planRoomTurn({ perception, roomState: state, socialImpulses });
+  const turns = plan.steps.map(step => fallbackTurnFromStep(step, perception));
+  const before = state.characterContinuityV0.relationshipStates[relationshipKey('vanya', 'user')];
+  const next = reduceRoomState({ previous: state, perception, plan, turns, socialImpulses, threadId: 'room-test-casual-memory-quality' });
+  const after = next.characterContinuityV0.relationshipStates[relationshipKey('vanya', 'user')];
+  const vanyaMemory = next.characterContinuityV0.characterMemories.vanya;
+  assert.equal(vanyaMemory.learnedPreferences.some(item => /pizza/i.test(item)), false);
+  assert.equal(vanyaMemory.preferences.some(item => /pizza/i.test(item)), false);
+  assert.deepEqual(after, before);
+  assert.equal(next.characterContinuityV0.continuityEvents.at(-1).shouldPersist, false);
+});
+
+test('explicit repeated running jokes become one bounded continuity memory', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-running-joke' });
+  const perception = perceiveRoomMessage('Grok stealing the last slice is officially a running joke', state);
+  const socialImpulses = calculateSocialImpulses({ perception, roomState: state });
+  const plan = planRoomTurn({ perception, roomState: state, socialImpulses });
+  const turns = plan.steps.map(step => fallbackTurnFromStep(step, perception));
+  const first = reduceRoomState({ previous: state, perception, plan, turns, socialImpulses, threadId: 'room-test-running-joke' });
+  const second = reduceRoomState({ previous: first, perception, plan, turns, socialImpulses, threadId: 'room-test-running-joke' });
+  assert.equal(first.characterContinuityV0.characterMemories.grok.runningJokes.length, 1);
+  assert.equal(second.characterContinuityV0.characterMemories.grok.runningJokes.length, 1);
+  assert.match(second.characterContinuityV0.characterMemories.grok.runningJokes[0], /last slice|running joke/i);
+});
+
+test('A.I.S.H.A continuity payload is clean, bounded, and seed traits appear once', () => {
+  const noisy = normalizeCharacterContinuityState({
+    threadId: 'room-test-aisha-continuity-clean',
+    characterMemories: {
+      aisha: {
+        stableTraits: ['room lead', 'standards keeper', 'room lead', 'standards keeper', 'earned calm authority'],
+        learnedTraits: ['earned calm authority', 'earned calm authority'],
+        preferences: ['clear asks', 'clear asks', 'clean briefs'],
+        runningJokes: Array.from({ length: 20 }, (_, index) => `joke ${index}`)
+      }
+    },
+    continuityEvents: Array.from({ length: 40 }, (_, index) => ({
+      id: `event-${index}`,
+      timestamp: `2026-05-17T00:00:${String(index).padStart(2, '0')}.000Z`,
+      type: index % 2 ? 'room-turn' : 'design-critique',
+      characters: ['aisha'],
+      userVisibleSummary: `event summary ${index}`,
+      memoryImportance: index % 2 ? 0.2 : 0.7,
+      shouldPersist: index % 2 === 0
+    }))
+  });
+  const payload = continuityPayloadForAisha(noisy);
+  const aishaMemory = payload.characterMemories.aisha;
+  assert.equal(countMemory(aishaMemory.stableTraits, 'room lead'), 1);
+  assert.equal(countMemory(aishaMemory.stableTraits, 'standards keeper'), 1);
+  assert.equal(countMemory(aishaMemory.stableTraits, 'earned calm authority'), 1);
+  assert.equal(aishaMemory.runningJokes.length <= MEMORY_CAPS.runningJokes, true);
+  assert.equal(payload.continuityEvents.length <= MEMORY_CAPS.recentContinuityEventsForAisha, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(aishaMemory, 'seedTraits'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(aishaMemory, 'learnedTraits'), false);
 });
 
 test('everyone_opinion_answers_user_topic', () => {
