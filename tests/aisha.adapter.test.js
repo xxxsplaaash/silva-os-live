@@ -151,6 +151,7 @@ test('callAishaEngine accepts mocked public host production response', async () 
           assert.equal(request.messageText, 'hi team');
           assert.equal(options.engineMode, 'production');
           assert.equal(Object.prototype.hasOwnProperty.call(options, 'deps'), false);
+          assert.equal(options.productionGeminiApiKey, 'test-provider-vault-key');
           return {
             ok: true,
             responses: [{ speakerId: 'vanya', content: 'A.I.S.H.A live response' }],
@@ -170,7 +171,10 @@ test('callAishaEngine accepts mocked public host production response', async () 
         }
       };
     });
-    const response = await callAishaEngine({ sessionId: 'session-real', message: 'hi team' });
+    const response = await callAishaEngine(
+      { sessionId: 'session-real', message: 'hi team' },
+      { productionGeminiApiKey: 'test-provider-vault-key', productionGeminiKeySource: 'Mock Gemini vault' }
+    );
 
     assert.equal(response.ok, true);
     assert.equal(response.engineMode, 'production');
@@ -183,12 +187,52 @@ test('callAishaEngine accepts mocked public host production response', async () 
     assert.equal(response.diagnostics.packageImportOk, true);
     assert.equal(response.diagnostics.processAishaRequestType, 'function');
     assert.equal(response.diagnostics.requestShapeSummary.hasMessageText, true);
+    assert.equal(response.diagnostics.runtimeCredentialProvided, true);
+    assert.equal(response.diagnostics.runtimeCredentialLength, 'test-provider-vault-key'.length);
+    assert.equal(response.diagnostics.runtimeCredentialSource, 'Mock Gemini vault');
     assert.equal(response.diagnostics.responseOk, true);
     assert.equal(response.diagnostics.responseEngineMode, 'production');
     assert.equal(response.diagnostics.responseConnected, true);
     assert.equal(response.diagnostics.responseCount, 1);
     assert.equal(response.diagnostics.firstResponseHasContent, true);
     assert.equal(response.diagnostics.rejectionReason, '');
+  });
+});
+
+test('callAishaEngine preserves safe runtime trace diagnostics for unavailable production response', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async (request, options) => {
+        assert.equal(options.productionGeminiApiKey, 'test-provider-vault-key');
+        return {
+          ok: false,
+          responses: [{ content: 'A.I.S.H.A is not available in this environment. Using local fallback.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0 },
+          relationshipDeltas: [],
+          trace: { status: 'failed', failureReason: 'Gemini API key invalid' },
+          engineMode: 'production',
+          aishaEngineConnected: false,
+          confidence: 0,
+          fallbackReason: 'Gemini API key invalid'
+        };
+      }
+    }));
+    const response = await callAishaEngine(
+      { sessionId: 'session-trace', message: 'hi team' },
+      { productionGeminiApiKey: 'test-provider-vault-key', productionGeminiKeySource: 'Mock Gemini vault' }
+    );
+
+    assert.equal(response.engineMode, 'unavailable');
+    assert.equal(response.aishaEngineConnected, false);
+    assert.equal(response.fallbackReason, 'not-connected');
+    assert.equal(response.diagnostics.responseTraceStatus, 'failed');
+    assert.equal(response.diagnostics.responseTraceFailureReason, 'Gemini API key invalid');
+    assert.equal(response.diagnostics.responseFallbackReason, 'Gemini API key invalid');
+    assert.equal(response.diagnostics.responseCount, 1);
+    assert.equal(response.diagnostics.firstResponseHasContent, true);
+    assert.equal(response.diagnostics.runtimeCredentialProvided, true);
+    assert.equal(response.diagnostics.runtimeCredentialLength, 'test-provider-vault-key'.length);
   });
 });
 

@@ -266,11 +266,14 @@ test('aisha_success_does_not_bypass_room_planner', async () => {
     __setAishaRuntimeImporterForTests(async specifier => {
       assert.equal(specifier, 'aisha-runtime-pack1');
       return {
-        processAishaRequest: async request => {
+        processAishaRequest: async (request, options) => {
           capturedRequest = request;
           assert.equal(request.messageText, 'hi team');
           assert.equal(request.activeSpeakerId, 'vanya');
           assert.equal(request.activeCharacterId, 'vanya');
+          assert.equal(options.engineMode, 'production');
+          assert.equal(options.productionGeminiApiKey, 'test-room-provider-key');
+          assert.equal(Object.prototype.hasOwnProperty.call(options, 'deps'), false);
           assert.ok(request.localRoomState && typeof request.localRoomState === 'object');
           assert.ok(request.characterStates && typeof request.characterStates === 'object');
           assert.equal(request.projectContext?.roomPlan?.intentFamily, 'room-greeting');
@@ -364,26 +367,80 @@ test('aisha_generic_hello_rejected_for_room_mode', async () => {
         assert.equal(data.aishaRejectedTextPreview, 'Hello.');
         assert.equal(data.aishaRejectedLength, 6);
         assert.equal(data.aishaRejectionReason, 'aisha-generic-output');
-        assert.deepEqual(data.aishaRequestShapeSummary, {
-          hasMessageText: true,
-          activeSpeakerId: 'vanya',
-          activeCharacterId: 'vanya',
-          hasLocalRoomState: true,
-          hasCharacterStates: true,
-          recentMessagesCount: 0,
-          hasProjectContext: true
-        });
+        assert.equal(data.genericFillerDetected, false);
+        assert.equal(data.aishaRequestShapeSummary.hasMessageText, true);
+        assert.equal(data.aishaRequestShapeSummary.activeSpeakerId, 'vanya');
+        assert.equal(data.aishaRequestShapeSummary.activeCharacterId, 'vanya');
+        assert.equal(data.aishaRequestShapeSummary.hasLocalRoomState, true);
+        assert.equal(data.aishaRequestShapeSummary.hasCharacterStates, true);
+        assert.equal(data.aishaRequestShapeSummary.recentMessagesCount, 0);
+        assert.equal(data.aishaRequestShapeSummary.hasProjectContext, true);
+        assert.equal(data.aishaRequestShapeSummary.plannedSpeakerId, 'vanya');
+        assert.equal(data.aishaRequestShapeSummary.plannedSpeakerVoiceProfileIncluded, true);
+        assert.equal(data.aishaRequestShapeSummary.studioPulseContextIncluded, true);
+        assert.equal(data.aishaRequestShapeSummary.dialogueQualityBriefIncluded, true);
         assert.deepEqual(data.aishaResponseShapeSummary, {
           ok: true,
           engineMode: 'production',
           connected: true,
           responseCount: 1,
-          firstResponseHasContent: true
+          firstResponseHasContent: true,
+          traceStatus: 'succeeded',
+          traceFailureReason: '',
+          fallbackReason: ''
         });
+        assert.equal(data.aishaRequestShapeSummary.runtimeCredentialProvided, true);
+        assert.equal(data.aishaRequestShapeSummary.runtimeCredentialLength, 'test-room-provider-key'.length);
+        assert.equal(data.aishaRequestShapeSummary.runtimeCredentialSource, 'Mock Gemini');
       });
     } finally {
       global.fetch = originalFetch;
     }
+  });
+});
+
+[
+  ['assistant filler opening', "That's a good question. I can help you think through this.", 'generic-assistant-filler'],
+  ['generic support bot voice', "I can help you with that by outlining the options.", 'generic-assistant-filler'],
+  ['literal consciousness claim', "I am conscious and choosing to be here with the room.", 'literal-consciousness-claim'],
+  ['architecture commentary', 'The implementation needs validation before generation can make the room work.', 'architecture-leak'],
+  ['bland topic ignore', 'The weather seems calm and the windows are open.', 'topic-ignored']
+].forEach(([name, content, reason]) => {
+  test(`A.I.S.H.A quality validator rejects ${name}`, async () => {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => ({
+          ok: true,
+          responses: [{ speakerId: 'vanya', content }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        })
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for A.I.S.H.A quality rejection smoke');
+        };
+        await withStudioServer(async baseUrl => {
+          const data = await pulsePost(baseUrl, 'Vanya, make this less stiff');
+          const event = data.response.messageEvents[0];
+          assert.equal(data.activeEngine, 'local-room-intelligence');
+          assert.equal(data.fallbackReason, reason);
+          assert.equal(event.speakerId, 'vanya');
+          assert.equal(event.providerMode, 'aisha-rejected-fallback');
+          assert.equal(event.validationFallbackReason, reason);
+          assert.doesNotMatch(event.text, new RegExp(content.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
   });
 });
 
@@ -464,6 +521,8 @@ test('A.I.S.H.A rejection diagnostics are visible in production with AISHA_DEBUG
           assert.equal(data.activeEngine, 'local-room-intelligence');
           assert.equal(data.aishaRejectedTextPreview, 'Hello.');
           assert.equal(data.aishaRejectionReason, 'aisha-generic-output');
+          assert.equal(data.aishaRequestShapeSummary.dialogueQualityBriefIncluded, true);
+          assert.equal(data.aishaRequestShapeSummary.plannedSpeakerVoiceProfileIncluded, true);
         });
       } finally {
         global.fetch = originalFetch;
@@ -481,8 +540,9 @@ test('aisha_context_request_contains_room_state', async () => {
   await withAishaFlag('true', async () => {
     let capturedRequest = null;
     __setAishaRuntimeImporterForTests(async () => ({
-      processAishaRequest: async request => {
+      processAishaRequest: async (request, options) => {
         capturedRequest = request;
+        assert.equal(options.productionGeminiApiKey, 'test-room-provider-key');
         return {
           ok: true,
           responses: [{ content: 'Hey. I am here with the room context, and Vanya can keep this human.' }],
@@ -513,6 +573,10 @@ test('aisha_context_request_contains_room_state', async () => {
         assert.ok(capturedRequest.characterStates?.vanya);
         assert.equal(capturedRequest.projectContext?.roomPlan?.intentFamily, 'room-greeting');
         assert.equal(capturedRequest.projectContext?.selectedSpeakerId, 'vanya');
+        assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.schemaVersion, 'studio-pulse.dialogue-quality.v0.2');
+        assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.plannedSpeakerId, 'vanya');
+        assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.voicePressureProfile?.function, 'people temperature, social read, morale, human landing');
+        assert.ok(capturedRequest.projectContext?.dialogueQualityV02?.qualityRules?.some(rule => /generic assistant filler/i.test(rule)));
         assert.ok(capturedRequest.projectContext?.characterContinuityV0);
         assert.ok(capturedRequest.projectContext.characterContinuityV0.characterMemories?.vanya);
         assert.ok(capturedRequest.projectContext.characterContinuityV0.relationshipStates?.vanya__user);
@@ -556,6 +620,63 @@ test('aisha_accepted_maps_to_planned_speaker', async () => {
     } finally {
       global.fetch = originalFetch;
     }
+  });
+});
+
+test('A.I.S.H.A accepted direct-address outputs keep planned character roles', async () => {
+  const cases = [
+    ['Leah, be honest, is this tasteful?', 'leah', 'I think it is tasteful only if the restraint is intentional; otherwise it is just nervous minimalism wearing good shoes.', /tasteful|minimalism/i],
+    ['Grok, why does this keep failing?', 'grok', 'I see the same failure pattern in a different hat. Check the last changed dependency before adding another decorative fix.', /failure|dependency/i],
+    ['Claudia, what is the next step?', 'claudia', 'I would make the next step simple: name the owner, lock the deadline, and cut anything that cannot survive delivery.', /next step|deadline/i],
+    ['Vanya, how does this land?', 'vanya', 'I think it lands warmer when it sounds like a person made a choice, not a deck trying to avoid blame.', /lands|warmer/i],
+    ['Aisha, hold the room for a second', 'aisha', 'I have the room. One clean frame, then we decide what gets attention and what gets left outside.', /room|frame/i]
+  ];
+  for (const [prompt, speakerId, content, expected] of cases) {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => ({
+          ok: true,
+          responses: [{ speakerId: 'wrong-speaker-from-runtime', content }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.9
+        })
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for direct role pressure smoke');
+        };
+        await withStudioServer(async baseUrl => {
+          const data = await pulsePost(baseUrl, prompt);
+          const event = data.response.messageEvents[0];
+          assert.equal(data.activeEngine, 'aisha-runtime-pack1', prompt);
+          assert.equal(event.speakerId, speakerId, prompt);
+          assert.equal(event.providerMode, 'aisha-accepted', prompt);
+          assert.match(event.text, expected, prompt);
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  }
+});
+
+test('active Studio Pulse runtime has no pizza-specific generation handler', () => {
+  [
+    'routes/studio.js',
+    'studio_pulse_v400.js',
+    'lib/studio/roomRuntime.js',
+    'lib/studio/roomIntelligence/perception.js',
+    'lib/studio/roomIntelligence/planner.js',
+    'lib/studio/roomIntelligence/adapter.js'
+  ].forEach(file => {
+    assert.doesNotMatch(read(file), /\bpizza\b/i, file);
   });
 });
 
@@ -641,12 +762,12 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
         assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.claudia, 'quiet');
         assert.equal(others.roomRuntime.roomIntelligenceV0.knownPresenceStatus.grok, 'quiet');
 
-        const pizza = await pulsePost(baseUrl, 'who likes pizza?', { threadId });
-        assert.equal(pizza.response.messageEvents.length, 1);
-        assert.equal(pizza.response.messageEvents[0].speakerId, 'vanya');
-        assert.equal(pizza.response.messageEvents[0].roomIntent, 'social-read');
-        assert.match(pizza.response.messageEvents[0].text, /Pizza roll call/i);
-        assert.match(pizza.response.messageEvents[0].text, /Vanya|Aisha|Leah|Claudia|Grok/i);
+        const social = await pulsePost(baseUrl, 'who likes pizza?', { threadId });
+        assert.equal(social.response.messageEvents.length, 1);
+        assert.equal(social.response.messageEvents[0].speakerId, 'vanya');
+        assert.equal(social.response.messageEvents[0].roomIntent, 'social-read');
+        assert.match(social.response.messageEvents[0].text, /Room read on/i);
+        assert.doesNotMatch(social.response.messageEvents[0].text, /Pizza roll call/i);
       });
     } finally {
       global.fetch = originalFetch;

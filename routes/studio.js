@@ -55,7 +55,9 @@ const {
   parseRoomCharacterOutput,
   validateRoomCharacterTurn,
   fallbackTurnFromStep,
-  buildRoomStudioResponse
+  buildRoomStudioResponse,
+  dialogueQualityPayloadFor,
+  assistantFillerReason
 } = require('../lib/studio/roomIntelligence');
 const {
   callAishaEngine,
@@ -121,7 +123,7 @@ const IMAGE_IDENTITY_RX = /\b(who(?:'s| is)\s+(?:this|that|the person|the woman|
 const BARE_THOUGHT_RX = /^(so\s+)?(any\s+)?(thoughts|ideas)\??$/i;
 const COLLECTIVE_ROOM_RX = /\b(team|everyone|everybody|you all|all of you|each other)\b|\b(real check-?in|check in|be honest|room right now|what(?:'s| is) broken here|wrong with this chat)\b/i;
 const SOCIAL_COLLECTIVE_RX = /\b(hi team|hello team|hey team|how('?s| is)\s+everyone feeling|everyone('?s|s)? mood|who('?s| is)\s+(online|here)|reading the room|can you all share|all share)\b/i;
-const CASUAL_BANTER_RX = /\b(lol|haha|lmao|funniest|smartest|coolest|slowest|joke|funny|laugh|pizza|hungry|crush)\b/i;
+const CASUAL_BANTER_RX = /\b(lol|haha|lmao|funniest|smartest|coolest|slowest|joke|funny|laugh|hungry|crush)\b/i;
 const GENERIC_HOST_RX = /\b(let'?s dive in|make some magic happen|let'?s make some magic|let'?s get into it|let'?s unpack|let'?s explore|start wherever you want and i('| a)ll meet you properly|what magic we('| a)ll create together)\b/i;
 const LIGHT_STRATEGY_DRIFT_RX = /\b(demographic|resonance|interpretation|stakeholder|positioning|consumer|market fit|funnel|broader emotional|co-creation|narrative|user role|users?)\b/i;
 const PRESENCE_FILLER_RX = /\b(i('| a)m (here|with you|listening|around|present|online)\b|keep going\b|i can work with that\b|paying attention\b)\b/i;
@@ -673,7 +675,7 @@ function looksIncompleteQuestion(q = '') {
   if (/^(hi|hey|hello|yo)\b|hi team|hello team|hey team|lol\b|haha\b|lmao\b/.test(s)) return false;
   if (/\b(who('?s| is)\s+(online|here|around)|how('?s| is)\s+everyone feeling|how is everyone feeling|how are you all|everyone('?s|s)? mood)\b/.test(s)) return false;
   if (/\b(aisha|leah|claudia|grok|gerhard|vanya)\b/.test(s)) return false;
-  if (/(hungry|pizza|food|lunch|dinner|coffee|tea|snack)/.test(s)) return false;
+  if (/(hungry|food|lunch|dinner|coffee|tea|snack)/.test(s)) return false;
   if (s.length < 8) return true;
   return /^(who|what|which|how|why|where|when)\s+is\s+the$/.test(s)
     || /\b(the|a|an|most|best|coolest|smartest|funniest|strongest|trendiest)\s*$/.test(s)
@@ -986,10 +988,10 @@ function repairSparseGeneratedTurn(question = '', intentFamily = '', speakerId =
     if (speaker === 'vanya') return `Here's one: "we're aligned." Nobody had spoken to each other.`;
   }
   if (intent === 'food-room') {
-    if (speaker === 'aisha') return `I can do pizza. I just refuse to pretend bland is a personality.`;
-    if (speaker === 'leah') return `Pizza works. I only start judging when the toppings get insecure.`;
-    if (speaker === 'claudia') return `Pizza is efficient. Just order properly the first time.`;
-    if (speaker === 'grok') return `Pizza is fine. Fewer meetings should come with it.`;
+    if (speaker === 'aisha') return `I can do food talk. I just refuse to pretend bland is a personality.`;
+    if (speaker === 'leah') return `Food works. I only start judging when the choices get insecure.`;
+    if (speaker === 'claudia') return `Food is efficient when someone orders properly the first time.`;
+    if (speaker === 'grok') return `Food is fine. Fewer meetings should come with it.`;
     if (speaker === 'vanya') return `Feed the room and suddenly everyone remembers how to flirt with life again.`;
   }
   if (intent === 'direct-answer') {
@@ -1553,7 +1555,7 @@ function shouldInheritThreadTarget(question = '') {
   if (detectDirectTarget(q)) return false;
   if (/^(hi|hey|hello|yo|sup|hiya)\b|hi team|hello team|hey team/.test(q)) return false;
   if (/\b(joke|funny|laugh|make me laugh|humour|humor)\b/.test(q)) return false;
-  if (/\b(hungry|food|lunch|dinner|eat|drink|coffee|tea|snack|pizza|burger|fries|salad)\b/.test(q)) return false;
+  if (/\b(hungry|food|lunch|dinner|eat|drink|coffee|tea|snack|burger|fries|salad)\b/.test(q)) return false;
   if (/^(what|why|how|who)\??$/.test(q)) return true;
   if (/^(and|but|so|also|wait|okay|ok|right|nah|no|yes)\b/.test(q)) return true;
   if (/^(what about|how about|go on|continue|tell me more|keep going|and you)\b/.test(q)) return true;
@@ -1595,7 +1597,7 @@ function requiredSpeakerLine(target = '', question = '') {
   const q = String(question || '').toLowerCase();
   switch (String(target || '').toLowerCase()) {
     case 'aisha':
-      if (/(pizza|food|hungry|lunch|dinner|eat|drink|coffee|tea|snack)/.test(q)) return `Yes, and if we are doing pizza, I want better taste than panic-order energy.`;
+      if (/(food|hungry|lunch|dinner|eat|drink|coffee|tea|snack)/.test(q)) return `Yes, and if we are talking food, I want better taste than panic-order energy.`;
       if (/(where|here|online|present|around)/.test(q)) return `I'm in the room. Continue.`;
       if (/\b(advice|help)\b/.test(q)) return `You have me. Give me the actual decision and I'll answer it cleanly.`;
       return `Ask it plainly and I'll answer it plainly.`;
@@ -1706,7 +1708,7 @@ function looksLightRoomPrompt(question = '') {
   if (/\b(aisha|leah|claudia|grok|gerhard|vanya)\b/.test(q)) return true;
   if (/^(hi|hey|hello|yo|sup|hiya)\b|hi team|hello team|hey team/.test(q)) return true;
   if (/\b(joke|funny|laugh|make me laugh|humour|humor)\b/.test(q)) return true;
-  if (/\b(hungry|food|lunch|dinner|eat|drink|coffee|tea|snack|pizza|burger|fries|salad)\b/.test(q)) return true;
+  if (/\b(hungry|food|lunch|dinner|eat|drink|coffee|tea|snack|burger|fries|salad)\b/.test(q)) return true;
   if (/\b(advice|need advice|need help|help me|what should i do|what would you do|should i)\b/.test(q)) return true;
   return q.split(/\s+/).length <= 8;
 }
@@ -1741,7 +1743,7 @@ function shouldRecoverAliveRoom(question = '', response = {}, system = {}) {
   const pattern = String(response?.threadMeta?.responsePattern || '').trim().toLowerCase();
   const lightPrompt = looksLightRoomPrompt(question);
   const advicePrompt = /\b(advice|need advice|need help|help me|what should i do|what would you do|should i)\b/i.test(question);
-  const socialPrompt = /^(hi|hey|hello|yo|sup|hiya)\b|hi team|hello team|hey team|\b(how is everyone|how's everyone|who's online|who is online|who's here|who is here|joke|funny|laugh|hungry|food|pizza)\b/i.test(question);
+  const socialPrompt = /^(hi|hey|hello|yo|sup|hiya)\b|hi team|hello team|hey team|\b(how is everyone|how's everyone|who's online|who is online|who's here|who is here|joke|funny|laugh|hungry|food)\b/i.test(question);
   const pulsePrompt = ROOM_PULSE_PROMPT_RX.test(question);
 
   if (lightPrompt && staleCount >= 1) return true;
@@ -2312,7 +2314,7 @@ router.post('/pulse', async (req, res) => {
 
   async function attemptAishaBoundary(messageText = '', overrides = {}) {
     try {
-      return await callAishaEngine(buildAishaBoundaryRequest(messageText, overrides));
+      return await callAishaEngine(buildAishaBoundaryRequest(messageText, overrides), aishaRuntimeCredentialOptions());
     } catch (err) {
       return {
         ok: false,
@@ -2346,6 +2348,16 @@ router.post('/pulse', async (req, res) => {
     }
   }
 
+  function aishaRuntimeCredentialOptions() {
+    const keyChain = resolveStudioKeyChain(providerConfig);
+    const primary = keyChain.find(item => String(item?.apiKey || '').trim());
+    if (!primary) return {};
+    return {
+      productionGeminiApiKey: String(primary.apiKey || '').trim(),
+      productionGeminiKeySource: String(primary.label || primary.provider || 'Studio Pulse Gemini key chain').trim()
+    };
+  }
+
   function aishaHostMetadata(base = {}) {
     const connected = aishaAttempt?.aishaEngineConnected === true;
     const activeEngine = String(base.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')).trim();
@@ -2368,6 +2380,7 @@ router.post('/pulse', async (req, res) => {
   function summarizeAishaRequestShape(request = {}) {
     const recentMessages = Array.isArray(request.recentMessages) ? request.recentMessages : [];
     const characterStates = request.characterStates && typeof request.characterStates === 'object' ? request.characterStates : {};
+    const dialogueQuality = request.projectContext?.dialogueQualityV02 || {};
     return {
       hasMessageText: !!String(request.messageText || '').trim(),
       activeSpeakerId: String(request.activeSpeakerId || '').trim(),
@@ -2375,8 +2388,21 @@ router.post('/pulse', async (req, res) => {
       hasLocalRoomState: !!(request.localRoomState && typeof request.localRoomState === 'object' && Object.keys(request.localRoomState).length),
       hasCharacterStates: !!Object.keys(characterStates).length,
       recentMessagesCount: recentMessages.length,
-      hasProjectContext: !!(request.projectContext && typeof request.projectContext === 'object' && Object.keys(request.projectContext).length)
+      hasProjectContext: !!(request.projectContext && typeof request.projectContext === 'object' && Object.keys(request.projectContext).length),
+      plannedSpeakerId: String(dialogueQuality.plannedSpeakerId || request.activeSpeakerId || '').trim(),
+      plannedSpeakerVoiceProfileIncluded: !!dialogueQuality.voicePressureProfile,
+      studioPulseContextIncluded: !!(request.projectContext && typeof request.projectContext === 'object'),
+      dialogueQualityBriefIncluded: dialogueQuality.schemaVersion === 'studio-pulse.dialogue-quality.v0.2'
     };
+  }
+
+  function safeAishaText(value = '') {
+    return String(value || '')
+      .replace(/AIza[0-9A-Za-z_-]+/g, '[redacted-key]')
+      .replace(/\b[A-Za-z0-9_-]{32,}\b/g, '[redacted-token]')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
   }
 
   function summarizeAishaResponseShape(response = {}) {
@@ -2387,24 +2413,54 @@ router.post('/pulse', async (req, res) => {
       engineMode: String(response?.engineMode || '').trim(),
       connected: response?.aishaEngineConnected === true,
       responseCount: responses.length,
-      firstResponseHasContent: !!String(first.content || first.text || '').trim()
+      firstResponseHasContent: !!String(first.content || first.text || '').trim(),
+      traceStatus: safeAishaText(response?.diagnostics?.responseTraceStatus || response?.trace?.status || ''),
+      traceFailureReason: safeAishaText(response?.diagnostics?.responseTraceFailureReason || response?.trace?.failureReason || response?.trace?.reason || ''),
+      fallbackReason: safeAishaText(response?.diagnostics?.responseFallbackReason || response?.fallbackReason || '')
+    };
+  }
+
+  function aishaAttemptDebugMetadata() {
+    if (!aishaDebugEnabled() || !aishaAttempt) return {};
+    const diagnostics = aishaAttempt.diagnostics || aishaAttempt.trace?.aishaDiagnostics || {};
+    return {
+      aishaTraceStatus: safeAishaText(diagnostics.responseTraceStatus || aishaAttempt.trace?.status || ''),
+      aishaTraceFailureReason: safeAishaText(diagnostics.responseTraceFailureReason || aishaAttempt.trace?.failureReason || aishaAttempt.trace?.reason || ''),
+      aishaRuntimeFallbackReason: safeAishaText(diagnostics.responseFallbackReason || aishaAttempt.fallbackReason || ''),
+      aishaRuntimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
+      aishaRuntimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
+      aishaRuntimeCredentialSource: safeAishaText(diagnostics.runtimeCredentialSource || ''),
+      aishaResponseShapeSummary: summarizeAishaResponseShape(aishaAttempt)
     };
   }
 
   function recordAishaRejectionDebug({ request = {}, response = {}, reason = '', content = '' } = {}) {
     if (!aishaDebugEnabled()) return;
     const rejectedText = String(content || '').replace(/\s+/g, ' ').trim();
+    const promptInternals = ['speakerId', 'responseIntent', 'roomStateDelta', 'emotionalDelta', 'projectContext', 'dialogueQualityV02', 'schema', 'validation'];
+    const responseText = String(content || '');
     aishaRejectionDebug = {
       aishaRejectedTextPreview: rejectedText.slice(0, 120),
       aishaRejectedLength: rejectedText.length,
       aishaRejectionReason: String(reason || '').trim(),
-      aishaRequestShapeSummary: summarizeAishaRequestShape(request),
+      genericFillerDetected: !!assistantFillerReason(rejectedText),
+      finalPromptContainsForbiddenInternals: promptInternals.some(token => responseText.includes(token)),
+      aishaRequestShapeSummary: {
+        ...summarizeAishaRequestShape(request),
+        runtimeCredentialProvided: response?.diagnostics?.runtimeCredentialProvided === true,
+        runtimeCredentialLength: Number(response?.diagnostics?.runtimeCredentialLength || 0) || 0,
+        runtimeCredentialSource: safeAishaText(response?.diagnostics?.runtimeCredentialSource || '')
+      },
       aishaResponseShapeSummary: summarizeAishaResponseShape(response)
     };
   }
 
   function aishaDebugMetadata() {
-    return aishaDebugEnabled() && aishaRejectionDebug ? aishaRejectionDebug : {};
+    if (!aishaDebugEnabled()) return {};
+    return {
+      ...aishaAttemptDebugMetadata(),
+      ...(aishaRejectionDebug || {})
+    };
   }
 
   function pulsePayload(base = {}) {
@@ -2604,6 +2660,15 @@ router.post('/pulse', async (req, res) => {
     });
     function buildAishaRequestForRoomStep(step = {}, plan = roomPlan, perception = roomPerception, state = roomIntelligenceState, messageText = effectiveQuestion) {
       const speakerId = String(step.speakerId || '').trim().toLowerCase();
+      const dialogueQualityV02 = dialogueQualityPayloadFor({
+        step,
+        plan,
+        perception,
+        roomState: state,
+        system,
+        mode,
+        modeContext
+      });
       return buildAishaBoundaryRequest(messageText, {
         activeCharacterId: speakerId,
         activeSpeakerId: speakerId,
@@ -2615,6 +2680,7 @@ router.post('/pulse', async (req, res) => {
           roomPlan: roomPlanForAisha(plan),
           roomPerception: roomPerceptionForAisha(perception),
           characterContinuityV0: continuityPayloadForAisha(state.characterContinuityV0, plan.socialImpulses || socialImpulses),
+          dialogueQualityV02,
           responseIntent: step.responseIntent || '',
           selectionReason: step.reason || plan.trace || 'room-intelligence-v0',
           selectedSpeakerId: speakerId,
@@ -2660,13 +2726,15 @@ router.post('/pulse', async (req, res) => {
       const genericOutputs = new Set(['hello', 'hi', 'hey', 'okay', 'ok', 'sure', 'yes', 'no', 'thanks', 'thank you']);
       if (!content) return 'empty-response-content';
       if (genericOutputs.has(normalized)) return 'aisha-generic-output';
+      const fillerReason = assistantFillerReason(content);
+      if (fillerReason) return fillerReason;
       const wordCount = normalized ? normalized.split(' ').filter(Boolean).length : 0;
       if (wordCount > 0 && wordCount < 4) return 'aisha-low-context-output';
       return validateRoomCharacterTurn(turn, step, perception, state);
     }
     async function aishaTurnForRoomStep(step = {}) {
       const request = buildAishaRequestForRoomStep(step);
-      const response = await callAishaEngine(request);
+      const response = await callAishaEngine(request, aishaRuntimeCredentialOptions());
       aishaAttempt = response;
       const usability = getAishaResponseUsability(response);
       if (!usability.usable) {
@@ -2799,6 +2867,10 @@ router.post('/pulse', async (req, res) => {
           continue;
         }
         if (aishaStep.reason) aishaFallbackReason = aishaFallbackReason || aishaStep.reason;
+        if (aishaStep.response?.aishaEngineConnected === true) {
+          providerTurns.push(aishaStep.turn);
+          continue;
+        }
         const roomPrompt = buildRoomCharacterPrompt({
           step,
           roomState: roomIntelligenceState,
