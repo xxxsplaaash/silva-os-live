@@ -249,18 +249,20 @@ test('everyone else calls in quiet members naturally without generic critique co
   assert.doesNotMatch(text, FORBIDDEN_ARCHITECTURE_RX);
 });
 
-test('casual pizza questions produce a visible personality-rich room response', () => {
-  const state = createRoomIntelligenceContext({ threadId: 'room-test-pizza' });
-  ['who likes pizza?', 'who here likes pizza?', 'anyone like pizza?'].forEach(prompt => {
+test('casual social preference questions route through generic room-social planning', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-social-preference' });
+  ['who likes pizza?', 'who here hates meetings?', 'anyone like brutalism?'].forEach(prompt => {
     const perception = perceiveRoomMessage(prompt, state);
     const plan = planRoomTurn({ perception, roomState: state });
-    assert.equal(perception.taskType, 'social_food', prompt);
+    assert.equal(perception.taskType, 'social_preference', prompt);
     assert.equal(plan.intentFamily, 'casual-social', prompt);
-    assert.equal(plan.deterministic, true, prompt);
+    assert.equal(plan.deterministic, false, prompt);
+    assert.equal(plan.requiresProvider, true, prompt);
     assert.deepEqual(plan.responseOrder, ['vanya'], prompt);
-    assert.match(plan.steps[0].deterministicText, /Pizza roll call/i, prompt);
-    assert.match(plan.steps[0].deterministicText, /Vanya|Aisha|Leah|Claudia|Grok/i, prompt);
-    assert.doesNotMatch(plan.steps[0].deterministicText, FORBIDDEN_ARCHITECTURE_RX, prompt);
+    assert.equal(plan.steps[0].responseIntent, 'social-read', prompt);
+    assert.match(plan.steps[0].fallbackText, /Room read on/i, prompt);
+    assert.doesNotMatch(plan.steps[0].fallbackText, /Pizza roll call/i, prompt);
+    assert.doesNotMatch(plan.steps[0].fallbackText, FORBIDDEN_ARCHITECTURE_RX, prompt);
   });
 });
 

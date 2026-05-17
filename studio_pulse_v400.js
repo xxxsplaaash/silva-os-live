@@ -2256,7 +2256,7 @@
 	        relationshipDeltas:[]
 	      };
 	    }
-	    if (/\b(hungry|pizza|food|lunch|dinner)\b/.test(q)) {
+	    if (/\b(hungry|food|lunch|dinner)\b/.test(q)) {
 	      return {
 	        title:'Open room',
 	        summary:'',
@@ -2265,7 +2265,7 @@
 	        messageEvents:[
 	          { speakerId:'vanya', kind:'message', tone:'playful', text:`The room is alive enough to want food. The route is just being rude about it.` },
 	          { speakerId:'grok', kind:'message', tone:'deadpan', text:`Morale remains recoverable. Transport layer less so.` },
-	          { speakerId:'aisha', kind:'message', tone:'composed', text:`Retry once. Then we can discuss pizza with standards intact.` }
+	          { speakerId:'aisha', kind:'message', tone:'composed', text:`Retry once. Then we can discuss food with standards intact.` }
 	        ],
 	        relationshipDeltas:[]
 	      };

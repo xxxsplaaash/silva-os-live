@@ -1516,6 +1516,7 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   const planner = fs.readFileSync(path.join(STUDIO_ROOM_INTELLIGENCE, 'planner.js'), 'utf8');
   const reducer = fs.readFileSync(path.join(STUDIO_ROOM_INTELLIGENCE, 'reducer.js'), 'utf8');
   const adapter = fs.readFileSync(path.join(STUDIO_ROOM_INTELLIGENCE, 'adapter.js'), 'utf8');
+  const dialogueQuality = fs.readFileSync(path.join(STUDIO_ROOM_INTELLIGENCE, 'dialogueQuality.js'), 'utf8');
   const aishaAdapter = fs.readFileSync(path.join(ROOT, 'lib', 'aisha', 'aishaAdapter.js'), 'utf8');
   const aishaTypes = fs.readFileSync(path.join(ROOT, 'lib', 'aisha', 'aishaTypes.js'), 'utf8');
 
@@ -1536,8 +1537,12 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(reducer, /memory-confirmation/);
   assert.match(adapter, /buildRoomCharacterPrompt/);
   assert.match(adapter, /do not answer as a generic assistant/i);
+  assert.match(dialogueQuality, /studio-pulse\.dialogue-quality\.v0\.2/);
+  assert.match(dialogueQuality, /assistantFillerReason/);
+  assert.match(dialogueQuality, /literal-consciousness-claim/);
   assert.match(route, /createRoomIntelligenceContext/);
   assert.match(route, /planRoomTurn/);
+  assert.match(route, /dialogueQualityV02/);
   assert.match(route, /studio-room-intelligence-v0/);
   assert.match(route, /roomIntelligenceV0/);
   assert.match(route, /callAishaEngine/);
