@@ -1930,7 +1930,15 @@
 	      activeCharacterIds:['aisha','vanya'],
 	      inactiveCharacterIds:[],
 	      characterStates:{},
-	      characterContinuityV0:{ roomSocialState:{ dominantMood:'steady', currentFloorHolder:'', suppressedSpeakers:[] } }
+	      characterContinuityV0:{
+	        roomSocialState:{ dominantMood:'steady', currentFloorHolder:'', suppressedSpeakers:[] },
+	        expressiveHabitatV0:{
+	          roomMood:'neutral',
+	          aishaAuthorityState:'anchoring',
+	          vanyaLeadStatus:'lead-room-voice',
+	          characterPulses:{}
+	        }
+	      }
 	    };
 	  }
 	  function roomPresenceLabel(ids){
@@ -1939,6 +1947,62 @@
 	    if (list.length === 1) return list[0];
 	    if (list.length === 2) return `${list[0]} + ${list[1]}`;
 	    return `${list.slice(0,2).join(' + ')} +${list.length - 2}`;
+	  }
+	  function safeRoomMoodLabel(value){
+	    const key = String(value || '').trim().toLowerCase();
+	    if (key === 'warm') return 'Warm';
+	    if (key === 'elevated') return 'Elevated';
+	    if (key === 'tense') return 'Tense';
+	    if (key === 'cooling' || key === 'repairing') return 'Cooling';
+	    if (key === 'sharp') return 'Sharp';
+	    if (key === 'focused') return 'Focused';
+	    return 'Neutral';
+	  }
+	  function safePulseDisplayLabel(value, fallback){
+	    const raw = String(value || '').trim().toLowerCase().replace(/[’']/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+	    const map = {
+	      'anchoring':'Anchoring',
+	      'reading':'Reading',
+	      'reading-the-room':'Reading the room',
+	      'tracking':'Tracking',
+	      'tracking-failure':'Tracking failure',
+	      'tracking-next-steps':'Tracking next steps',
+	      'holding-critique':'Holding critique',
+	      'ready':'Ready',
+	      'cooling':'Cooling',
+	      'cooling-off':'Cooling off',
+	      'protective':'Protective',
+	      'aligned':'Aligned',
+	      'resisting':'Resisting',
+	      'watching':'Watching'
+	    };
+	    return map[raw] || fallback || 'Watching';
+	  }
+	  function defaultPulseLabel(id){
+	    if (id === 'aisha') return 'Anchoring';
+	    if (id === 'vanya') return 'Reading the room';
+	    if (id === 'claudia') return 'Tracking next steps';
+	    return 'Watching';
+	  }
+	  function pulseChipsMarkup(habitat, room){
+	    const pulses = habitat && typeof habitat === 'object' && habitat.characterPulses && typeof habitat.characterPulses === 'object'
+	      ? habitat.characterPulses
+	      : {};
+	    const currentSpeaker = room && CHARS[room.lastSpeakerId] ? room.lastSpeakerId : '';
+	    return ['aisha','vanya','leah','claudia','grok'].filter(id => CHARS[id]).map(id => {
+	      const pulse = pulses[id] && typeof pulses[id] === 'object' ? pulses[id] : {};
+	      const label = safePulseDisplayLabel(pulse.visibleLabel || pulse.currentPulse, defaultPulseLabel(id));
+	      const isSpeaking = id === currentSpeaker;
+	      const className = [
+	        'sp-room-presence-chip',
+	        'is-pulse',
+	        isSpeaking ? 'is-speaking' : '',
+	        label === 'Ready' ? 'is-ready' : '',
+	        label === 'Cooling' || label === 'Cooling off' ? 'is-cooling' : ''
+	      ].filter(Boolean).join(' ');
+	      const visible = isSpeaking ? `Speaking · ${label}` : label;
+	      return `<span class="${className}"><strong>${esc(characterLabel(id))}</strong>${esc(visible)}</span>`;
+	    }).join('');
 	  }
 	  function pulseEngineStatus(){
 	    const meta = pulseState.lastMeta && typeof pulseState.lastMeta === 'object' ? pulseState.lastMeta : {};
@@ -1952,25 +2016,12 @@
 	  function roomPresenceStripMarkup(){
 	    const room = roomIntelligenceRuntime();
 	    const engine = pulseEngineStatus();
-	    const status = room.knownPresenceStatus || {};
 	    const continuity = room.characterContinuityV0 && typeof room.characterContinuityV0 === 'object' ? room.characterContinuityV0 : {};
 	    const social = continuity.roomSocialState && typeof continuity.roomSocialState === 'object' ? continuity.roomSocialState : {};
-	    const active = Object.keys(status).filter(id => status[id] === 'active');
-	    const quiet = Object.keys(status).filter(id => status[id] === 'quiet');
-	    const away = Object.keys(status).filter(id => status[id] === 'away');
-	    const unknown = Object.keys(status).filter(id => status[id] === 'unknown');
-	    const speaker = CHARS[room.lastSpeakerId] ? room.lastSpeakerId : '';
-	    const floor = CHARS[social.currentFloorHolder] ? social.currentFloorHolder : speaker;
-	    const suppressed = Array.isArray(social.suppressedSpeakers) ? social.suppressedSpeakers.filter(id => CHARS[id]) : [];
+	    const habitat = continuity.expressiveHabitatV0 && typeof continuity.expressiveHabitatV0 === 'object' ? continuity.expressiveHabitatV0 : {};
 	    const chips = [
-	      `<span class="sp-room-presence-chip"><i class="sp-room-dot is-active"></i><strong>Present</strong>${esc(roomPresenceLabel(active))}</span>`,
-	      `<span class="sp-room-presence-chip"><i class="sp-room-dot is-quiet"></i><strong>Quiet</strong>${esc(roomPresenceLabel(quiet))}</span>`,
-	      away.length ? `<span class="sp-room-presence-chip"><i class="sp-room-dot is-away"></i><strong>Away</strong>${esc(roomPresenceLabel(away))}</span>` : '',
-	      unknown.length ? `<span class="sp-room-presence-chip"><i class="sp-room-dot is-unknown"></i><strong>Unknown</strong>${esc(roomPresenceLabel(unknown))}</span>` : '',
-	      speaker ? `<span class="sp-room-presence-chip"><strong>Current speaker</strong>${esc(characterLabel(speaker))}</span>` : '',
-	      floor ? `<span class="sp-room-presence-chip"><strong>Floor</strong>${esc(characterLabel(floor))}</span>` : '',
-	      `<span class="sp-room-presence-chip"><strong>Mood</strong>${esc(String(social.dominantMood || room.roomMood || 'steady'))}</span>`,
-	      suppressed.length ? `<span class="sp-room-presence-chip"><strong>Holding back</strong>${esc(roomPresenceLabel(suppressed))}</span>` : '',
+	      pulseChipsMarkup(habitat, room),
+	      `<span class="sp-room-presence-chip"><strong>Mood</strong>${esc(safeRoomMoodLabel(habitat.roomMood || social.dominantMood || room.roomMood || 'neutral'))}</span>`,
 	      `<span class="sp-room-presence-chip is-engine"><strong>Active Engine</strong>${esc(engine.activeLabel)}</span>`,
 	      `<span class="sp-room-presence-chip is-engine"><strong>A.I.S.H.A</strong>${esc(engine.aishaLabel)}</span>`
 	    ].filter(Boolean).join('');

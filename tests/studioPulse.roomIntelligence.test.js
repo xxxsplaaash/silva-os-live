@@ -15,6 +15,11 @@ const {
   calculateSocialImpulses,
   normalizeCharacterContinuityState,
   normalizeMemoryList,
+  normalizeExpressiveHabitatState,
+  expressiveHabitatContextForAisha,
+  safePulseLabel,
+  safePulseDisplayLabel,
+  roomMoodLabel,
   continuityPayloadForAisha,
   classifyRelationshipMoment,
   relationshipSummariesForAisha,
@@ -90,6 +95,50 @@ test('character continuity defaults include memory, relationships, and room soci
   assert.equal(continuity.relationshipStates[relationshipKey('vanya', 'user')].fromCharacterId, 'vanya');
   assert.equal(continuity.relationshipStates[relationshipKey('leah', 'claudia')].toEntityId, 'claudia');
   assert.equal(continuity.roomSocialState.dominantMood, 'steady');
+  assert.equal(continuity.expressiveHabitatV0.schemaVersion, 'studio-pulse.expressive-habitat.v0.5');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.vanya.currentPulse, 'Reading');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.aisha.visibleLabel, 'Anchoring');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.vanya.visibleLabel, 'Reading the room');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.claudia.currentPulse, 'Tracking');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.claudia.visibleLabel, 'Tracking next steps');
+  assert.equal(continuity.expressiveHabitatV0.roomMood, 'neutral');
+});
+
+test('expressive habitat normalizes safe pulse labels and hides raw internals from context', () => {
+  const continuity = normalizeCharacterContinuityState({
+    expressiveHabitatV0: {
+      roomMood: 'tense',
+      aishaAuthorityState: 'takeover',
+      characterPulses: {
+        leah: { visibleLabel: 'Holding critique', pulseReason: 'internal taste pressure', expiresAfterTurns: 2 },
+        grok: { visibleLabel: 'trust: 0.58', pulseReason: 'debug number' }
+      },
+      specialistGravity: {
+        grok: { value: 99, topicAnchor: 'provider timeout', lastSignal: 'provider failed' }
+      }
+    }
+  });
+  assert.equal(safePulseLabel('Holding critique'), 'Holding critique');
+  assert.equal(safePulseLabel('Tracking failure'), 'Tracking');
+  assert.equal(safePulseDisplayLabel('Tracking failure'), 'Tracking failure');
+  assert.equal(safePulseLabel('trust: 0.58'), 'Watching');
+  assert.equal(roomMoodLabel('cooling'), 'Cooling');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.leah.visibleLabel, 'Holding critique');
+  assert.equal(continuity.expressiveHabitatV0.characterPulses.grok.visibleLabel, 'Watching');
+  assert.equal(continuity.expressiveHabitatV0.specialistGravity.grok.value, 3);
+
+  const context = expressiveHabitatContextForAisha(continuity, {
+    plannedSpeakerId: 'grok',
+    plan: { intentFamily: 'technical-diagnosis' }
+  });
+  assert.equal(context.schemaVersion, 'studio-pulse.expressive-habitat.v0.5');
+  assert.equal(context.plannedSpeakerId, 'grok');
+  assert.equal(context.roomMood, 'Tense');
+  assert.equal(context.sideCommentAllowed, false);
+  assert.equal(context.characterPulseSummary.length, 5);
+  assert.equal(context.specialistGravitySummary.length <= 3, true);
+  const serialized = JSON.stringify(context);
+  assert.doesNotMatch(serialized, /\b(pulseReason|expiresAfterTurns|repairNeeded|trust|warmth|irritation|relationshipStates|value":|gravity":)\b/i);
 });
 
 test('continuity memory normalization is idempotent and keeps seeds out of learned memory', () => {
@@ -193,6 +242,92 @@ test('repeated failure raises Grok and records a pattern continuity event', () =
   assert.match(next.characterContinuityV0.characterMemories.grok.projectAttachments.at(-1), /failed again/i);
   assert.ok(next.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism > state.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism);
   assert.ok(next.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')].collaboration > state.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')].collaboration);
+});
+
+test('expressive pulses can change without forcing speech', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-expressive-no-speech' });
+  const perception = perceiveRoomMessage('the provider failed again with the same timeout', state);
+  const socialImpulses = calculateSocialImpulses({ perception, roomState: state });
+  const plan = { intentFamily: 'ambient-signal', deterministic: true, requiresProvider: false, responseOrder: [], steps: [], socialImpulses };
+  const next = reduceRoomState({ previous: state, perception, plan, turns: [], socialImpulses, threadId: 'room-test-expressive-no-speech' });
+  const habitat = next.characterContinuityV0.expressiveHabitatV0;
+  assert.equal(habitat.roomMood, 'elevated');
+  assert.equal(habitat.characterPulses.grok.visibleLabel, 'Tracking failure');
+  assert.equal(habitat.characterPulses.claudia.visibleLabel, 'Tracking next steps');
+  assert.equal(habitat.expressionLevel >= 3, true);
+  assert.deepEqual(plan.responseOrder, []);
+});
+
+test('expressive pulse expiry, gravity cap, decay, and reset stay bounded', () => {
+  let state = createRoomIntelligenceContext({ threadId: 'room-test-expressive-gravity' });
+  state.characterContinuityV0 = normalizeCharacterContinuityState({
+    ...state.characterContinuityV0,
+    expressiveHabitatV0: {
+      ...state.characterContinuityV0.expressiveHabitatV0,
+      characterPulses: {
+        ...state.characterContinuityV0.expressiveHabitatV0.characterPulses,
+        leah: { visibleLabel: 'Holding critique', currentPulse: 'Holding critique', expiresAfterTurns: 1 }
+      }
+    }
+  });
+  const neutral = perceiveRoomMessage('hi team', state);
+  state = reduceRoomState({
+    previous: state,
+    perception: neutral,
+    plan: { intentFamily: 'ambient', steps: [], responseOrder: [] },
+    turns: [],
+    socialImpulses: [],
+    threadId: 'room-test-expressive-gravity'
+  });
+  assert.equal(state.characterContinuityV0.expressiveHabitatV0.characterPulses.leah.visibleLabel, 'Watching');
+
+  const leahProgression = [];
+  for (const text of [
+    'the creative direction is bland',
+    'the brand copy is still bland',
+    'the visual taste is collapsing'
+  ]) {
+    const perception = perceiveRoomMessage(text, state);
+    state = reduceRoomState({
+      previous: state,
+      perception,
+      plan: { intentFamily: 'ambient-creative', steps: [], responseOrder: [] },
+      turns: [],
+      socialImpulses: [],
+      threadId: 'room-test-expressive-gravity'
+    });
+    leahProgression.push({
+      value: state.characterContinuityV0.expressiveHabitatV0.specialistGravity.leah.value,
+      pulse: state.characterContinuityV0.expressiveHabitatV0.characterPulses.leah.visibleLabel
+    });
+  }
+  let habitat = state.characterContinuityV0.expressiveHabitatV0;
+  assert.deepEqual(leahProgression, [
+    { value: 1, pulse: 'Holding critique' },
+    { value: 2, pulse: 'Ready' },
+    { value: 3, pulse: 'Ready' }
+  ]);
+  assert.equal(habitat.specialistGravity.leah.value <= 3, true);
+  assert.equal(habitat.characterPulses.leah.visibleLabel, 'Ready');
+
+  const shifted = perceiveRoomMessage('the budget handoff is a different topic', state);
+  state = reduceRoomState({
+    previous: state,
+    perception: shifted,
+    plan: { intentFamily: 'ambient-shift', steps: [], responseOrder: [] },
+    turns: [],
+    socialImpulses: [],
+    threadId: 'room-test-expressive-gravity'
+  });
+  assert.ok(state.characterContinuityV0.expressiveHabitatV0.specialistGravity.leah.value < habitat.specialistGravity.leah.value);
+
+  const critique = perceiveRoomMessage('Leah, be honest, is this tasteful?', state);
+  const impulses = calculateSocialImpulses({ perception: critique, roomState: state });
+  const plan = planRoomTurn({ perception: critique, roomState: state, socialImpulses: impulses });
+  const turns = plan.steps.map(step => fallbackTurnFromStep(step, critique));
+  state = reduceRoomState({ previous: state, perception: critique, plan, turns, socialImpulses: impulses, threadId: 'room-test-expressive-gravity' });
+  assert.equal(plan.responseOrder[0], 'leah');
+  assert.equal(state.characterContinuityV0.expressiveHabitatV0.specialistGravity.leah.value, 0);
 });
 
 test('continuity reducer is idempotent for the same meaningful event', () => {
@@ -364,6 +499,87 @@ test('relationship pressure influences impulses without overriding direct addres
   const directPlan = planRoomTurn({ perception: directPerception, roomState: state, socialImpulses: directImpulses });
   assert.deepEqual(directPlan.responseOrder, ['claudia']);
   assert.equal(directPlan.steps.length, 1);
+});
+
+test('direct-address conflict wins while Aisha takeover stays rare and cooled down', () => {
+  const directState = createRoomIntelligenceContext({ threadId: 'room-test-direct-conflict-wins' });
+  const directPerception = perceiveRoomMessage('Grok, that was useless.', directState);
+  const directImpulses = calculateSocialImpulses({ perception: directPerception, roomState: directState });
+  const directPlan = planRoomTurn({ perception: directPerception, roomState: directState, socialImpulses: directImpulses });
+  assert.equal(directPlan.intentFamily, 'direct-conflict');
+  assert.deepEqual(directPlan.responseOrder, ['grok']);
+  assert.match(directPlan.steps[0].deterministicText, /What broke/i);
+
+  const driftState = createRoomIntelligenceContext({ threadId: 'room-test-aisha-takeover' });
+  const driftPerception = perceiveRoomMessage('we are drifting and losing the thread', driftState);
+  const driftImpulses = calculateSocialImpulses({ perception: driftPerception, roomState: driftState });
+  const driftPlan = planRoomTurn({ perception: driftPerception, roomState: driftState, socialImpulses: driftImpulses });
+  assert.notEqual(driftPlan.intentFamily, 'aisha-takeover');
+  const stagedTurns = driftPlan.steps.map(step => fallbackTurnFromStep(step, driftPerception));
+  const afterStaging = reduceRoomState({ previous: driftState, perception: driftPerception, plan: driftPlan, turns: stagedTurns, socialImpulses: driftImpulses, threadId: 'room-test-aisha-takeover' });
+  assert.equal(afterStaging.characterContinuityV0.expressiveHabitatV0.aishaAuthorityState, 'ready');
+  assert.equal(afterStaging.characterContinuityV0.expressiveHabitatV0.characterPulses.aisha.visibleLabel, 'Ready');
+
+  const readyImpulses = calculateSocialImpulses({ perception: driftPerception, roomState: afterStaging });
+  const readyPlan = planRoomTurn({ perception: driftPerception, roomState: afterStaging, socialImpulses: readyImpulses });
+  assert.equal(readyPlan.intentFamily, 'aisha-takeover');
+  assert.deepEqual(readyPlan.responseOrder, ['aisha']);
+  assert.doesNotMatch(readyPlan.steps[0].deterministicText, /let me step in/i);
+  const turns = readyPlan.steps.map(step => fallbackTurnFromStep(step, driftPerception));
+  const afterTakeover = reduceRoomState({ previous: afterStaging, perception: driftPerception, plan: readyPlan, turns, socialImpulses: readyImpulses, threadId: 'room-test-aisha-takeover' });
+  assert.equal(afterTakeover.characterContinuityV0.expressiveHabitatV0.aishaAuthorityState, 'anchoring');
+  assert.ok(afterTakeover.characterContinuityV0.expressiveHabitatV0.aishaCooldownTurns > 0);
+
+  const repeatImpulses = calculateSocialImpulses({ perception: driftPerception, roomState: afterTakeover });
+  const repeatPlan = planRoomTurn({ perception: driftPerception, roomState: afterTakeover, socialImpulses: repeatImpulses });
+  assert.notEqual(repeatPlan.intentFamily, 'aisha-takeover');
+});
+
+test('expressive room mood tracks tension, cooling, stress, and repeated failure', () => {
+  const frictionState = createRoomIntelligenceContext({ threadId: 'room-test-expressive-mood' });
+  const frictionPerception = perceiveRoomMessage('Grok, that was useless.', frictionState);
+  const frictionImpulses = calculateSocialImpulses({ perception: frictionPerception, roomState: frictionState });
+  const frictionPlan = planRoomTurn({ perception: frictionPerception, roomState: frictionState, socialImpulses: frictionImpulses });
+  const afterFriction = reduceRoomState({
+    previous: frictionState,
+    perception: frictionPerception,
+    plan: frictionPlan,
+    turns: frictionPlan.steps.map(step => fallbackTurnFromStep(step, frictionPerception)),
+    socialImpulses: frictionImpulses,
+    threadId: 'room-test-expressive-mood'
+  });
+  assert.equal(afterFriction.characterContinuityV0.expressiveHabitatV0.roomMood, 'tense');
+  assert.equal(afterFriction.characterContinuityV0.expressiveHabitatV0.characterPulses.vanya.visibleLabel, 'Protective');
+
+  const repairPerception = perceiveRoomMessage('Fair, sorry Grok. The provider keeps timing out.', afterFriction);
+  const repairImpulses = calculateSocialImpulses({ perception: repairPerception, roomState: afterFriction });
+  const repairPlan = planRoomTurn({ perception: repairPerception, roomState: afterFriction, socialImpulses: repairImpulses });
+  const afterRepair = reduceRoomState({
+    previous: afterFriction,
+    perception: repairPerception,
+    plan: repairPlan,
+    turns: repairPlan.steps.map(step => fallbackTurnFromStep(step, repairPerception)),
+    socialImpulses: repairImpulses,
+    threadId: 'room-test-expressive-mood'
+  });
+  assert.equal(afterRepair.characterContinuityV0.expressiveHabitatV0.roomMood, 'cooling');
+  assert.equal(afterRepair.characterContinuityV0.expressiveHabitatV0.characterPulses.grok.visibleLabel, 'Tracking failure');
+  assert.equal(afterRepair.characterContinuityV0.expressiveHabitatV0.characterPulses.claudia.visibleLabel, 'Tracking next steps');
+
+  const stressState = createRoomIntelligenceContext({ threadId: 'room-test-expressive-stress' });
+  const stressPerception = perceiveRoomMessage("I'm stressed and need a human read.", stressState);
+  const stressImpulses = calculateSocialImpulses({ perception: stressPerception, roomState: stressState });
+  const stressPlan = planRoomTurn({ perception: stressPerception, roomState: stressState, socialImpulses: stressImpulses });
+  const afterStress = reduceRoomState({
+    previous: stressState,
+    perception: stressPerception,
+    plan: stressPlan,
+    turns: stressPlan.steps.map(step => fallbackTurnFromStep(step, stressPerception)),
+    socialImpulses: stressImpulses,
+    threadId: 'room-test-expressive-stress'
+  });
+  assert.equal(afterStress.characterContinuityV0.expressiveHabitatV0.roomMood, 'warm');
+  assert.equal(afterStress.characterContinuityV0.expressiveHabitatV0.characterPulses.aisha.visibleLabel, 'Protective');
 });
 
 test('relationship summaries for A.I.S.H.A are concise, bounded, and not a raw numeric matrix', () => {

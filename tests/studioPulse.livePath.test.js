@@ -582,6 +582,13 @@ test('aisha_context_request_contains_room_state', async () => {
         assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.plannedSpeakerId, 'vanya');
         assert.equal(capturedRequest.projectContext?.dialogueQualityV02?.voicePressureProfile?.function, 'people temperature, social read, morale, human landing');
         assert.ok(capturedRequest.projectContext?.dialogueQualityV02?.qualityRules?.some(rule => /generic assistant filler/i.test(rule)));
+        assert.equal(capturedRequest.projectContext?.expressiveHabitatContext?.schemaVersion, 'studio-pulse.expressive-habitat.v0.5');
+        assert.equal(capturedRequest.projectContext?.expressiveHabitatContext?.plannedSpeakerId, 'vanya');
+        assert.match(capturedRequest.projectContext?.expressiveHabitatContext?.vanyaLeadStatus || '', /lead social voice/i);
+        assert.equal(capturedRequest.projectContext?.expressiveHabitatContext?.sideCommentAllowed, false);
+        assert.equal(Array.isArray(capturedRequest.projectContext?.expressiveHabitatContext?.characterPulseSummary), true);
+        assert.equal(capturedRequest.projectContext.expressiveHabitatContext.characterPulseSummary.length, 5);
+        assert.doesNotMatch(JSON.stringify(capturedRequest.projectContext.expressiveHabitatContext), /\b(pulseReason|expiresAfterTurns|relationshipStates|repairNeeded|trust|warmth|irritation|gravity":|value":)\b/i);
         assert.ok(capturedRequest.projectContext?.characterContinuityV0);
         const vanyaMemory = capturedRequest.projectContext.characterContinuityV0.characterMemories?.vanya;
         assert.ok(vanyaMemory);
@@ -650,6 +657,54 @@ test('A.I.S.H.A request receives bounded relationship summaries, not raw relatio
         });
         assert.equal(second.response.messageEvents[0].speakerId, 'grok');
         assert.equal(second.response.messageEvents[0].providerMode, 'aisha-accepted');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('A.I.S.H.A request receives expressive habitat context without raw internals', async () => {
+  await withAishaFlag('true', async () => {
+    let capturedRequest = null;
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequest = request;
+        return {
+          ok: true,
+          responses: [{ content: 'I can keep this human without turning it into a full-room performance.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        };
+      }
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for expressive habitat smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, "I'm stressed and need a human read.");
+        assert.ok(capturedRequest);
+        const expressive = capturedRequest.projectContext?.expressiveHabitatContext;
+        assert.equal(expressive?.schemaVersion, 'studio-pulse.expressive-habitat.v0.5');
+        assert.equal(expressive?.plannedSpeakerId, 'vanya');
+        assert.match(expressive?.vanyaLeadStatus || '', /lead social voice/i);
+        assert.equal(expressive?.sideCommentAllowed, false);
+        assert.equal(expressive?.aishaAuthorityState, 'anchoring');
+        assert.equal(Array.isArray(expressive?.characterPulseSummary), true);
+        assert.equal(expressive.characterPulseSummary.length, 5);
+        assert.ok(expressive.characterPulseSummary.some(item => item.characterId === 'aisha' && /Anchoring|Protective/.test(item.label)));
+        assert.equal(Array.isArray(expressive.specialistGravitySummary), true);
+        assert.equal(expressive.specialistGravitySummary.length <= 3, true);
+        assert.doesNotMatch(JSON.stringify(expressive), /\b(pulseReason|expiresAfterTurns|specialistGravity|relationshipStates|relationshipSummaries|repairNeeded|trust|warmth|irritation|gravity|value":)\b/i);
+        assert.equal(data.response.messageEvents[0].speakerId, 'vanya');
       });
     } finally {
       global.fetch = originalFetch;
@@ -743,6 +798,7 @@ test('active Studio Pulse runtime has no pizza-specific generation handler', () 
     'lib/studio/roomRuntime.js',
     'lib/studio/roomIntelligence/perception.js',
     'lib/studio/roomIntelligence/planner.js',
+    'lib/studio/roomIntelligence/continuity.js',
     'lib/studio/roomIntelligence/adapter.js'
   ].forEach(file => {
     assert.doesNotMatch(read(file), /\bpizza\b/i, file);
@@ -771,7 +827,7 @@ test('character continuity persists in thread metadata and visible messages hide
         assert.equal(secondContinuity?.schemaVersion, 'studio-pulse.character-continuity.v0');
         assert.ok(Object.keys(secondContinuity.relationshipStates || {}).includes('vanya__user'));
         const visibleText = JSON.stringify(second.response?.messageEvents || []);
-        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|holdback|socialImpulses|suppressedSpeakers|aishaDiagnostics|stableTraits|preferences|dislikes|learnedTraits|seedTraits|relationshipStates|relationshipSummaries|repairNeeded|skepticism|collaboration|recentPressure|lastShiftReason|lastShiftAt|continuityEvents|memoryImportance|relationshipDeltas)\b/i);
+        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|holdback|socialImpulses|suppressedSpeakers|aishaDiagnostics|stableTraits|preferences|dislikes|learnedTraits|seedTraits|relationshipStates|relationshipSummaries|repairNeeded|skepticism|collaboration|recentPressure|lastShiftReason|lastShiftAt|continuityEvents|memoryImportance|relationshipDeltas|pulseReason|expiresAfterTurns|specialistGravity|aishaCooldownTurns|lastTakeoverReason)\b/i);
       });
     } finally {
       global.fetch = originalFetch;
@@ -806,6 +862,11 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
     const uiSource = read('studio_pulse_v400.js');
     assert.match(uiSource, /humanSpeakingPresenceLabel/);
     assert.match(uiSource, /room-call-in['"]:\s*['"]Called in/);
+    assert.match(uiSource, /pulseChipsMarkup\(habitat, room\)/);
+    const stripStart = uiSource.indexOf('function roomPresenceStripMarkup');
+    const stripEnd = uiSource.indexOf('function roomMessageMetaMarkup', stripStart);
+    const stripSource = uiSource.slice(stripStart, stripEnd);
+    assert.doesNotMatch(stripSource, /<strong>Present<\/strong>|<strong>Quiet<\/strong>|Current speaker|<strong>Floor<\/strong>/);
     const originalFetch = global.fetch;
     try {
       global.fetch = async (url, options) => {

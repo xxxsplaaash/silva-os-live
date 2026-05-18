@@ -50,6 +50,7 @@ const {
   planRoomTurn,
   calculateSocialImpulses,
   continuityPayloadForAisha,
+  expressiveHabitatContextForAisha,
   reduceRoomState,
   buildRoomCharacterPrompt,
   parseRoomCharacterOutput,
@@ -2682,6 +2683,12 @@ router.post('/pulse', async (req, res) => {
           characterContinuityV0: continuityPayloadForAisha(state.characterContinuityV0, plan.socialImpulses || socialImpulses, {
             plannedSpeakerId: speakerId,
             perception
+          }),
+          expressiveHabitatContext: expressiveHabitatContextForAisha(state.characterContinuityV0, {
+            plannedSpeakerId: speakerId,
+            plan,
+            perception,
+            socialImpulses: plan.socialImpulses || socialImpulses
           }),
           dialogueQualityV02,
           responseIntent: step.responseIntent || '',
