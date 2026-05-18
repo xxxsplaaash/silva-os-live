@@ -2679,7 +2679,10 @@ router.post('/pulse', async (req, res) => {
           activeEnginePolicy: 'local-room-intelligence-plans-first',
           roomPlan: roomPlanForAisha(plan),
           roomPerception: roomPerceptionForAisha(perception),
-          characterContinuityV0: continuityPayloadForAisha(state.characterContinuityV0, plan.socialImpulses || socialImpulses),
+          characterContinuityV0: continuityPayloadForAisha(state.characterContinuityV0, plan.socialImpulses || socialImpulses, {
+            plannedSpeakerId: speakerId,
+            perception
+          }),
           dialogueQualityV02,
           responseIntent: step.responseIntent || '',
           selectionReason: step.reason || plan.trace || 'room-intelligence-v0',

@@ -592,8 +592,64 @@ test('aisha_context_request_contains_room_state', async () => {
         assert.equal(vanyaMemory.stableTraits.length <= 12, true);
         assert.equal(vanyaMemory.preferences.length <= 12, true);
         assert.equal(vanyaMemory.dislikes.length <= 12, true);
-        assert.ok(capturedRequest.projectContext.characterContinuityV0.relationshipStates?.vanya__user);
+        assert.equal(Object.prototype.hasOwnProperty.call(capturedRequest.projectContext.characterContinuityV0, 'relationshipStates'), false);
+        assert.equal(Array.isArray(capturedRequest.projectContext.characterContinuityV0.relationshipSummaries), true);
+        assert.equal(capturedRequest.projectContext.characterContinuityV0.relationshipSummaries.length <= 5, true);
         assert.equal(capturedRequest.projectContext.characterContinuityV0.socialImpulses?.[0]?.characterId, 'aisha');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('A.I.S.H.A request receives bounded relationship summaries, not raw relationship matrix', async () => {
+  await withAishaFlag('true', async () => {
+    const capturedRequests = [];
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequests.push(request);
+        return {
+          ok: true,
+          responses: [{ content: 'I can see the pressure pattern. Name the failing edge first, then we stop decorating the smoke.' }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.88
+        };
+      }
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for A.I.S.H.A relationship context smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const threadId = `relationship-summary-thread-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const first = await pulsePost(baseUrl, 'Grok, that was useless.', { threadId });
+        assert.equal(first.roomRuntime.roomIntelligenceV0.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-friction');
+
+        const second = await pulsePost(baseUrl, 'Fair, sorry Grok, that was harsh. The issue is the provider keeps timing out.', { threadId });
+        assert.ok(capturedRequests.length >= 2);
+        const request = capturedRequests.at(-1);
+        const continuity = request.projectContext?.characterContinuityV0;
+        assert.ok(continuity);
+        assert.equal(Object.prototype.hasOwnProperty.call(continuity, 'relationshipStates'), false);
+        assert.equal(Array.isArray(continuity.relationshipSummaries), true);
+        assert.equal(continuity.relationshipSummaries.length <= 5, true);
+        assert.ok(continuity.relationshipSummaries.some(item => item.characterId === 'grok' && item.plannedSpeaker));
+        continuity.relationshipSummaries.forEach(item => {
+          assert.equal(item.summary.length <= 160, true);
+          assert.doesNotMatch(item.summary, /\b0\.\d+\b/);
+          assert.ok(Array.isArray(item.pressureLabels));
+          assert.ok(item.pressureLabels.length <= 4);
+        });
+        assert.equal(second.response.messageEvents[0].speakerId, 'grok');
+        assert.equal(second.response.messageEvents[0].providerMode, 'aisha-accepted');
       });
     } finally {
       global.fetch = originalFetch;
@@ -715,7 +771,7 @@ test('character continuity persists in thread metadata and visible messages hide
         assert.equal(secondContinuity?.schemaVersion, 'studio-pulse.character-continuity.v0');
         assert.ok(Object.keys(secondContinuity.relationshipStates || {}).includes('vanya__user'));
         const visibleText = JSON.stringify(second.response?.messageEvents || []);
-        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|socialImpulses|suppressedSpeakers|aishaDiagnostics|stableTraits|preferences|dislikes|learnedTraits|seedTraits|relationshipStates|continuityEvents|memoryImportance|relationshipDeltas)\b/i);
+        assert.doesNotMatch(visibleText, /\b(speak|interrupt|observe|withdraw|holdback|socialImpulses|suppressedSpeakers|aishaDiagnostics|stableTraits|preferences|dislikes|learnedTraits|seedTraits|relationshipStates|relationshipSummaries|repairNeeded|skepticism|collaboration|recentPressure|lastShiftReason|lastShiftAt|continuityEvents|memoryImportance|relationshipDeltas)\b/i);
       });
     } finally {
       global.fetch = originalFetch;

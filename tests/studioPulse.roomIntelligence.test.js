@@ -16,6 +16,8 @@ const {
   normalizeCharacterContinuityState,
   normalizeMemoryList,
   continuityPayloadForAisha,
+  classifyRelationshipMoment,
+  relationshipSummariesForAisha,
   MEMORY_CAPS,
   relationshipKey
 } = require('../lib/studio/roomIntelligence');
@@ -141,6 +143,14 @@ test('relationship state keys remain stable and directional after normalization'
   assert.ok(keys.includes(relationshipKey('vanya', 'leah')));
   assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].respect, 1);
   assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].irritation, 0);
+  assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].repairNeeded >= 0, true);
+  assert.equal(state.relationshipStates[relationshipKey('leah', 'user')].repairNeeded <= 1, true);
+  assert.equal(state.relationshipStates[relationshipKey('grok', 'user')].skepticism >= 0, true);
+  assert.equal(state.relationshipStates[relationshipKey('grok', 'user')].skepticism <= 1, true);
+  assert.equal(state.relationshipStates[relationshipKey('claudia', 'user')].collaboration >= 0, true);
+  assert.equal(state.relationshipStates[relationshipKey('claudia', 'user')].collaboration <= 1, true);
+  assert.equal(state.relationshipStates[relationshipKey('vanya', 'user')].recentPressure >= 0, true);
+  assert.equal(state.relationshipStates[relationshipKey('vanya', 'user')].recentPressure <= 1, true);
   assert.equal(state.relationshipStates[relationshipKey('user', 'leah')], undefined);
 });
 
@@ -179,8 +189,10 @@ test('repeated failure raises Grok and records a pattern continuity event', () =
   const turns = plan.steps.map(step => fallbackTurnFromStep(step, perception));
   const next = reduceRoomState({ previous: state, perception, plan, turns, socialImpulses, threadId: 'room-test-repeated-failure' });
   assert.deepEqual(plan.responseOrder, ['grok']);
-  assert.equal(next.characterContinuityV0.continuityEvents.at(-1).type, 'pattern-failure');
+  assert.equal(next.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-pattern');
   assert.match(next.characterContinuityV0.characterMemories.grok.projectAttachments.at(-1), /failed again/i);
+  assert.ok(next.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism > state.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism);
+  assert.ok(next.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')].collaboration > state.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')].collaboration);
 });
 
 test('continuity reducer is idempotent for the same meaningful event', () => {
@@ -260,6 +272,136 @@ test('casual social prompts do not create permanent preferences or relationship 
   assert.equal(next.characterContinuityV0.continuityEvents.at(-1).shouldPersist, false);
 });
 
+test('relationship dynamics handle friction, repair, support, and repeated failure with bounded deltas', () => {
+  const frictionState = createRoomIntelligenceContext({ threadId: 'room-test-relationship-friction' });
+  const frictionPerception = perceiveRoomMessage('Grok, that was useless.', frictionState);
+  const frictionImpulses = calculateSocialImpulses({ perception: frictionPerception, roomState: frictionState });
+  const frictionPlan = planRoomTurn({ perception: frictionPerception, roomState: frictionState, socialImpulses: frictionImpulses });
+  const frictionTurns = frictionPlan.steps.map(step => fallbackTurnFromStep(step, frictionPerception));
+  const beforeGrok = frictionState.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')];
+  const afterFrictionState = reduceRoomState({ previous: frictionState, perception: frictionPerception, plan: frictionPlan, turns: frictionTurns, socialImpulses: frictionImpulses, threadId: 'room-test-relationship-friction' });
+  const afterFrictionGrok = afterFrictionState.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')];
+  assert.equal(classifyRelationshipMoment({ perception: frictionPerception, plan: frictionPlan, turns: frictionTurns }).type, 'dismissal');
+  assert.equal(afterFrictionState.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-friction');
+  assert.ok(afterFrictionGrok.irritation > beforeGrok.irritation);
+  assert.ok(afterFrictionGrok.repairNeeded > beforeGrok.repairNeeded);
+  assert.ok(afterFrictionGrok.recentPressure > beforeGrok.recentPressure);
+  assert.ok(afterFrictionState.characterContinuityV0.roomSocialState.tension > frictionState.characterContinuityV0.roomSocialState.tension);
+
+  const repairPerception = perceiveRoomMessage('Fair, sorry Grok, that was harsh. The issue is the provider keeps timing out.', afterFrictionState);
+  const repairImpulses = calculateSocialImpulses({ perception: repairPerception, roomState: afterFrictionState });
+  const repairPlan = planRoomTurn({ perception: repairPerception, roomState: afterFrictionState, socialImpulses: repairImpulses });
+  const repairTurns = repairPlan.steps.map(step => fallbackTurnFromStep(step, repairPerception));
+  const afterRepairState = reduceRoomState({ previous: afterFrictionState, perception: repairPerception, plan: repairPlan, turns: repairTurns, socialImpulses: repairImpulses, threadId: 'room-test-relationship-friction' });
+  const afterRepairGrok = afterRepairState.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')];
+  assert.equal(afterRepairState.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-repair');
+  assert.ok(afterRepairGrok.irritation < afterFrictionGrok.irritation);
+  assert.ok(afterRepairGrok.repairNeeded < afterFrictionGrok.repairNeeded);
+  assert.ok(afterRepairGrok.trust > afterFrictionGrok.trust);
+  assert.ok(afterRepairGrok.warmth > afterFrictionGrok.warmth);
+  assert.ok(afterRepairGrok.skepticism >= afterFrictionGrok.skepticism);
+  assert.equal(afterRepairGrok.lastShiftReason, 'specific-repair');
+
+  const supportState = createRoomIntelligenceContext({ threadId: 'room-test-relationship-support' });
+  const supportPerception = perceiveRoomMessage('Leah is right, the bland version has no taste.', supportState);
+  const supportImpulses = calculateSocialImpulses({ perception: supportPerception, roomState: supportState });
+  const supportPlan = planRoomTurn({ perception: supportPerception, roomState: supportState, socialImpulses: supportImpulses });
+  const supportTurns = supportPlan.steps.map(step => fallbackTurnFromStep(step, supportPerception));
+  const beforeLeah = supportState.characterContinuityV0.relationshipStates[relationshipKey('leah', 'user')];
+  const afterSupportState = reduceRoomState({ previous: supportState, perception: supportPerception, plan: supportPlan, turns: supportTurns, socialImpulses: supportImpulses, threadId: 'room-test-relationship-support' });
+  const afterLeah = afterSupportState.characterContinuityV0.relationshipStates[relationshipKey('leah', 'user')];
+  assert.equal(afterSupportState.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-supported');
+  assert.deepEqual(supportPlan.responseOrder, ['leah']);
+  assert.ok(afterLeah.respect > beforeLeah.respect);
+  assert.ok(afterLeah.trust > beforeLeah.trust);
+  assert.ok(supportPlan.steps.length < 5);
+
+  const failureState = createRoomIntelligenceContext({ threadId: 'room-test-relationship-pattern' });
+  const failurePerception = perceiveRoomMessage('The provider failed again with the same timeout.', failureState);
+  const failureImpulses = calculateSocialImpulses({ perception: failurePerception, roomState: failureState });
+  const failurePlan = planRoomTurn({ perception: failurePerception, roomState: failureState, socialImpulses: failureImpulses });
+  const failureTurns = failurePlan.steps.map(step => fallbackTurnFromStep(step, failurePerception));
+  const beforeFailureGrok = failureState.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')];
+  const beforeFailureClaudia = failureState.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')];
+  const afterFailureState = reduceRoomState({ previous: failureState, perception: failurePerception, plan: failurePlan, turns: failureTurns, socialImpulses: failureImpulses, threadId: 'room-test-relationship-pattern' });
+  const afterFailureGrok = afterFailureState.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')];
+  const afterFailureClaudia = afterFailureState.characterContinuityV0.relationshipStates[relationshipKey('claudia', 'user')];
+  assert.equal(afterFailureState.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-pattern');
+  assert.ok(afterFailureGrok.skepticism > beforeFailureGrok.skepticism);
+  assert.ok(afterFailureClaudia.collaboration > beforeFailureClaudia.collaboration);
+  assert.equal(afterFailureGrok.trust, beforeFailureGrok.trust);
+  assert.equal(afterFailureGrok.warmth, beforeFailureGrok.warmth);
+});
+
+test('relationship pressure influences impulses without overriding direct address or activating everyone', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-relationship-pressure' });
+  state.characterContinuityV0 = normalizeCharacterContinuityState({
+    ...state.characterContinuityV0,
+    relationshipStates: {
+      ...state.characterContinuityV0.relationshipStates,
+      [relationshipKey('grok', 'user')]: {
+        ...state.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')],
+        skepticism: 0.88,
+        recentPressure: 0.48
+      },
+      [relationshipKey('leah', 'user')]: {
+        ...state.characterContinuityV0.relationshipStates[relationshipKey('leah', 'user')],
+        repairNeeded: 0.72,
+        irritation: 0.5
+      }
+    }
+  });
+
+  const failurePerception = perceiveRoomMessage('the provider failed again with the same timeout', state);
+  const failureImpulses = calculateSocialImpulses({ perception: failurePerception, roomState: state });
+  const grokImpulse = failureImpulses.find(impulse => impulse.characterId === 'grok');
+  assert.equal(grokImpulse.impulseType, 'speak');
+  assert.ok(grokImpulse.intensity > 0.94);
+  assert.match(grokImpulse.reason, /skepticism|repeated-failure/i);
+
+  const directPerception = perceiveRoomMessage('Claudia, what is the next step?', state);
+  const directImpulses = calculateSocialImpulses({ perception: directPerception, roomState: state });
+  const directPlan = planRoomTurn({ perception: directPerception, roomState: state, socialImpulses: directImpulses });
+  assert.deepEqual(directPlan.responseOrder, ['claudia']);
+  assert.equal(directPlan.steps.length, 1);
+});
+
+test('relationship summaries for A.I.S.H.A are concise, bounded, and not a raw numeric matrix', () => {
+  const state = normalizeCharacterContinuityState({
+    threadId: 'room-test-relationship-summaries',
+    relationshipStates: {
+      [relationshipKey('grok', 'user')]: {
+        fromCharacterId: 'grok',
+        toEntityId: 'user',
+        irritation: 0.42,
+        repairNeeded: 0.52,
+        skepticism: 0.7,
+        recentPressure: 0.62
+      },
+      [relationshipKey('vanya', 'user')]: {
+        fromCharacterId: 'vanya',
+        toEntityId: 'user',
+        warmth: 0.82,
+        protectiveness: 0.6
+      }
+    }
+  });
+  const summaries = relationshipSummariesForAisha(state, { plannedSpeakerId: 'grok' });
+  assert.ok(summaries.length >= 1);
+  assert.ok(summaries.length <= MEMORY_CAPS.relationshipSummariesForAisha);
+  assert.equal(summaries[0].characterId, 'grok');
+  summaries.forEach(item => {
+    assert.equal(item.summary.length <= 160, true);
+    assert.doesNotMatch(item.summary, /\b0\.\d+\b/);
+    assert.ok(Array.isArray(item.pressureLabels));
+    assert.ok(item.pressureLabels.length <= 4);
+  });
+  const payload = continuityPayloadForAisha(state, [], { plannedSpeakerId: 'grok' });
+  assert.equal(Object.prototype.hasOwnProperty.call(payload, 'relationshipStates'), false);
+  assert.equal(payload.relationshipSummaries.length <= MEMORY_CAPS.relationshipSummariesForAisha, true);
+  assert.doesNotMatch(JSON.stringify(payload.relationshipSummaries), /\b0\.\d+\b/);
+});
+
 test('explicit repeated running jokes become one bounded continuity memory', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-running-joke' });
   const perception = perceiveRoomMessage('Grok stealing the last slice is officially a running joke', state);
@@ -303,6 +445,9 @@ test('A.I.S.H.A continuity payload is clean, bounded, and seed traits appear onc
   assert.equal(payload.continuityEvents.length <= MEMORY_CAPS.recentContinuityEventsForAisha, true);
   assert.equal(Object.prototype.hasOwnProperty.call(aishaMemory, 'seedTraits'), false);
   assert.equal(Object.prototype.hasOwnProperty.call(aishaMemory, 'learnedTraits'), false);
+  assert.equal(Array.isArray(payload.relationshipSummaries), true);
+  assert.equal(payload.relationshipSummaries.length <= MEMORY_CAPS.relationshipSummariesForAisha, true);
+  assert.equal(Object.prototype.hasOwnProperty.call(payload, 'relationshipStates'), false);
 });
 
 test('everyone_opinion_answers_user_topic', () => {
@@ -475,7 +620,9 @@ test('insults produce differentiated reactions and update room tension', () => {
   assert.match(turns[2].content, /fault line/i);
   assert.ok(next.recentTension >= 0.6);
   assert.ok(afterAishaUser.irritation > beforeAishaUser.irritation);
-  assert.equal(next.characterContinuityV0.continuityEvents.at(-1).type, 'conflict-boundary');
+  assert.equal(next.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-friction');
+  assert.ok(afterAishaUser.repairNeeded > beforeAishaUser.repairNeeded);
+  assert.ok(afterAishaUser.recentPressure > beforeAishaUser.recentPressure);
 });
 
 test('fact changes create a memory candidate and unresolved confirmation when needed', () => {
