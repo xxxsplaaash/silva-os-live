@@ -874,6 +874,17 @@ test('direct Leah ignoring question routes to Leah when she is quiet but present
   assert.doesNotMatch(plan.steps[0].deterministicText, FORBIDDEN_ARCHITECTURE_RX);
 });
 
+test('provider-unavailable direct fallback stays anchored to the user problem', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-direct-fallback' });
+  const perception = perceiveRoomMessage('Grok, why does this keep falling apart after five messages?', state);
+  const plan = planRoomTurn({ perception, roomState: state });
+  const turn = fallbackTurnFromStep(plan.steps[0], perception, { providerMode: 'provider-unavailable-fallback' });
+  assert.equal(plan.intentFamily, 'direct-answer');
+  assert.equal(turn.speakerId, 'grok');
+  assert.doesNotMatch(turn.content, /I need the object|Give me the thing|Say the thing plainly/i);
+  assert.match(turn.content, /falling apart after five messages|exact turn|response events|patch that seam/i);
+});
+
 test('normal_help_request_one_speaker', () => {
   const state = createRoomIntelligenceContext({ threadId: 'room-test-planning' });
   const perception = perceiveRoomMessage('help me plan the next campaign', state);
