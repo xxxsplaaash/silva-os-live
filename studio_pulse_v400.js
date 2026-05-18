@@ -1675,6 +1675,7 @@
         </div>
         <div class="sp-send-row">
           <button class="sp-spark-trigger${sparkBusy ? ' is-busy' : ''}" type="button" id="sp-spark-trigger" title="Spark the room" aria-label="Spark the room" aria-busy="${sparkBusy ? 'true' : 'false'}">${iconMarkup('sparkTrigger')}</button>
+          <button class="sp-tool sp-tool-label" type="button" id="sp-open-floor" title="Hear from the room" aria-label="Open Floor"><span>Open Floor</span></button>
           <button class="btn btn-primary" id="sp-send" ${requestBusy ? 'disabled aria-busy="true"' : ''}>${requestBusy ? 'Thinking…' : 'Ask Studio Pulse'}</button>
         </div>
       </div>
@@ -2032,9 +2033,12 @@
 	    const presence = String(meta?.presence || '').trim();
 	    const intent = String(meta?.roomIntent || meta?.responseIntent || '').trim();
 	    const emotional = String(meta?.emotionalState || '').trim();
+	    const exchange = String(meta?.exchangeLabel || meta?.metadata?.exchangeLabel || '').trim();
 	    const humanPresence = humanSpeakingPresenceLabel(presence, intent);
 	    const humanIntent = humanRoomChipLabel(intent, 'intent');
 	    const humanEmotional = humanRoomChipLabel(emotional, 'mood');
+	    const humanExchange = humanRoomChipLabel(exchange, 'exchange');
+	    if (humanExchange) bits.push(`<span>${esc(humanExchange)}</span>`);
 	    if (humanPresence) bits.push(`<span>${esc(humanPresence)}</span>`);
 	    if (humanIntent) bits.push(`<span>${esc(humanIntent)}</span>`);
 	    if (humanEmotional && humanEmotional !== humanIntent) bits.push(`<span>${esc(humanEmotional)}</span>`);
@@ -2054,6 +2058,13 @@
 	    const raw = String(value || '').trim();
 	    if (!raw) return '';
 	    const key = raw.toLowerCase().replace(/[_\s]+/g, '-');
+	    if (kind === 'exchange') {
+	      if (key === 'adds') return 'Adds';
+	      if (key === 'side-note') return 'Side note';
+	      if (key === 'open-floor') return 'Open Floor';
+	      if (key === 'close') return 'Close';
+	      return '';
+	    }
 	    if (kind === 'presence') {
 	      if (key === 'active') return 'Present';
 	      if (key === 'quiet') return 'Quiet';
@@ -2609,7 +2620,7 @@
 		      const res = await fetch('/api/studio/pulse', {
 		        method: 'POST',
 		        headers: { 'Content-Type': 'application/json' },
-		        body: JSON.stringify({ question: q, mode: requestMode, counts: consistencyCounts(), history: pulseState.history || [], threadId: pulseState.activeThreadId || '', threadTitle: pulseState.activeThreadTitle || '', includeInContext: pulseState.activeThreadIncludeInContext !== false, replyToEventId: replyTarget?.eventId || '', replyToLane: replyTarget?.lane || '', replyToSpeakerId: replyTarget?.speakerId || '', workflowIntent, workflowDraftId, commitRequested: WORKFLOWS_DISABLED ? false : opts.commitRequested === true, confirmCommit: WORKFLOWS_DISABLED ? false : opts.confirmCommit === true, characterTuning: pulseState.characterTuning || {}, councilTuning: pulseState.councilTuning || {}, characterBehaviorTree: buildCharacterBehaviorTreePayload(), councilBehavior: buildCouncilBehaviorPayload(), relationships: pulseState.relationships || {}, liveState: buildLiveStatePayload() })
+		        body: JSON.stringify({ question: q, mode: requestMode, counts: consistencyCounts(), history: pulseState.history || [], threadId: pulseState.activeThreadId || '', threadTitle: pulseState.activeThreadTitle || '', includeInContext: pulseState.activeThreadIncludeInContext !== false, replyToEventId: replyTarget?.eventId || '', replyToLane: replyTarget?.lane || '', replyToSpeakerId: replyTarget?.speakerId || '', workflowIntent, workflowDraftId, commitRequested: WORKFLOWS_DISABLED ? false : opts.commitRequested === true, confirmCommit: WORKFLOWS_DISABLED ? false : opts.confirmCommit === true, openFloor: opts.openFloor === true, openFloorMode: opts.openFloor === true, exchangeMode: opts.openFloor === true ? 'open-floor' : String(opts.exchangeMode || '').trim(), characterTuning: pulseState.characterTuning || {}, councilTuning: pulseState.councilTuning || {}, characterBehaviorTree: buildCharacterBehaviorTreePayload(), councilBehavior: buildCouncilBehaviorPayload(), relationships: pulseState.relationships || {}, liveState: buildLiveStatePayload() })
 		      });
 	      const payload = await res.json();
 	      if (!payload?.ok) throw new Error(payload?.error || 'Studio Pulse failed.');
@@ -2747,6 +2758,7 @@
       renderStudioPulseHome();
     };
 	    const send = byId('sp-send'); if (send) send.onclick = () => { if (pulseRequestBusy()) return; const input = byId('sp-input'); const q = String(input?.value || '').trim(); if (!q) return; clearComposerDraft(); if (input) input.value=''; askStudioPulse(q); };
+	    const openFloor = byId('sp-open-floor'); if (openFloor) openFloor.onclick = () => { if (pulseRequestBusy()) return; const input = byId('sp-input'); const q = String(input?.value || '').trim() || 'open floor'; clearComposerDraft(); if (input) input.value=''; askStudioPulse(q, { openFloor:true, exchangeMode:'open-floor' }); };
 	    const input = byId('sp-input'); if (input) {
 	      input.onfocus = () => { pulseRuntime.composerFocused = true; };
 	      input.onblur = () => { pulseRuntime.composerFocused = false; savePulse({ global:false, bridge:false }); };

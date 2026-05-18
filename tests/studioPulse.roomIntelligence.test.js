@@ -237,7 +237,11 @@ test('repeated failure raises Grok and records a pattern continuity event', () =
   const plan = planRoomTurn({ perception, roomState: state, socialImpulses });
   const turns = plan.steps.map(step => fallbackTurnFromStep(step, perception));
   const next = reduceRoomState({ previous: state, perception, plan, turns, socialImpulses, threadId: 'room-test-repeated-failure' });
-  assert.deepEqual(plan.responseOrder, ['grok']);
+  assert.deepEqual(plan.responseOrder, ['grok', 'claudia']);
+  assert.equal(plan.exchangeMode, 'solo-plus-addendum');
+  assert.equal(plan.addendumSpeakerId, 'claudia');
+  assert.equal(plan.steps[0].exchangeRole, 'primary');
+  assert.equal(plan.steps[1].exchangeRole, 'addendum');
   assert.equal(next.characterContinuityV0.continuityEvents.at(-1).type, 'relationship-pattern');
   assert.match(next.characterContinuityV0.characterMemories.grok.projectAttachments.at(-1), /failed again/i);
   assert.ok(next.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism > state.characterContinuityV0.relationshipStates[relationshipKey('grok', 'user')].skepticism);
@@ -785,6 +789,79 @@ test('everyone honest opinion produces distinct planned speakers', () => {
   assert.equal(new Set(plan.steps.map(item => item.deterministicText)).size, 5);
   assert.doesNotMatch(plannedTexts(plan), /^On that:/im);
   assert.doesNotMatch(plannedTexts(plan), FORBIDDEN_ARCHITECTURE_RX);
+});
+
+test('explicit Open Floor stays bounded and does not replace ordinary everyone routing', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-open-floor' });
+  const perception = perceiveRoomMessage('open floor: what do you all think about brutalism?', state);
+  const plan = planRoomTurn({ perception, roomState: state });
+  const nonCloseSteps = plan.steps.filter(step => step.exchangeRole !== 'command-close');
+  assert.equal(perception.asksOpenFloor, true);
+  assert.equal(perception.asksEveryone, false);
+  assert.equal(plan.intentFamily, 'open-floor');
+  assert.equal(plan.exchangeMode, 'open-floor');
+  assert.ok(nonCloseSteps.length <= 3);
+  assert.ok(plan.steps.length <= 4);
+  assert.ok(plan.responseOrder.includes('vanya'));
+  assert.equal(plan.commandCloseSpeakerId, 'aisha');
+  assert.ok(plan.steps.some(step => step.exchangeRole === 'command-close'));
+  assert.notDeepEqual(plan.responseOrder, ['aisha', 'leah', 'claudia', 'grok', 'vanya']);
+
+  const everyone = perceiveRoomMessage('everyone give me your honest opinion on this logo', state);
+  const everyonePlan = planRoomTurn({ perception: everyone, roomState: state });
+  assert.equal(everyone.asksOpenFloor, false);
+  assert.equal(everyone.asksEveryone, true);
+  assert.equal(everyonePlan.intentFamily, 'group-honest-opinion');
+});
+
+test('direct address wins over Open Floor language', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-open-floor-direct' });
+  const perception = perceiveRoomMessage('Leah, open floor on this design direction', state);
+  const plan = planRoomTurn({ perception, roomState: state });
+  assert.equal(perception.asksOpenFloor, true);
+  assert.deepEqual(perception.requestedCharacterIds, ['leah']);
+  assert.notEqual(plan.intentFamily, 'open-floor');
+  assert.deepEqual(plan.responseOrder, ['leah']);
+  assert.equal(plan.exchangeMode, 'solo');
+});
+
+test('addendum and Aisha close cooldowns suppress repeat side entries', () => {
+  let state = createRoomIntelligenceContext({ threadId: 'room-test-exchange-cooldown' });
+  const failure = perceiveRoomMessage('the provider failed again with the same timeout', state);
+  let impulses = calculateSocialImpulses({ perception: failure, roomState: state });
+  let plan = planRoomTurn({ perception: failure, roomState: state, socialImpulses: impulses });
+  assert.equal(plan.exchangeMode, 'solo-plus-addendum');
+  assert.equal(plan.addendumSpeakerId, 'claudia');
+  state = reduceRoomState({
+    previous: state,
+    perception: failure,
+    plan,
+    turns: plan.steps.map(step => fallbackTurnFromStep(step, failure)),
+    socialImpulses: impulses,
+    threadId: 'room-test-exchange-cooldown'
+  });
+  assert.equal(state.characterContinuityV0.exchangeStateV06.addendumCooldownTurns, 1);
+
+  impulses = calculateSocialImpulses({ perception: failure, roomState: state });
+  plan = planRoomTurn({ perception: failure, roomState: state, socialImpulses: impulses });
+  assert.equal(plan.exchangeMode, 'solo');
+  assert.deepEqual(plan.responseOrder, ['grok']);
+
+  const open = perceiveRoomMessage('hear from the room on the provider timeout', state);
+  let openPlan = planRoomTurn({ perception: open, roomState: state });
+  assert.equal(openPlan.exchangeMode, 'open-floor');
+  assert.ok(openPlan.steps.some(step => step.exchangeRole === 'command-close'));
+  state = reduceRoomState({
+    previous: state,
+    perception: open,
+    plan: openPlan,
+    turns: openPlan.steps.map(step => fallbackTurnFromStep(step, open)),
+    socialImpulses: [],
+    threadId: 'room-test-exchange-cooldown'
+  });
+  assert.ok(state.characterContinuityV0.exchangeStateV06.aishaCloseCooldownTurns > 0);
+  openPlan = planRoomTurn({ perception: open, roomState: state });
+  assert.equal(openPlan.steps.some(step => step.exchangeRole === 'command-close'), false);
 });
 
 test('direct Leah ignoring question routes to Leah when she is quiet but present', () => {

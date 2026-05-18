@@ -1534,6 +1534,10 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(planner, /leahIgnoringText/);
   assert.match(planner, /groupOpinionSteps/);
   assert.match(planner, /insultSteps/);
+  assert.match(perception, /OPEN_FLOOR_RX/);
+  assert.match(planner, /exchangeMode/);
+  assert.match(planner, /solo-plus-addendum/);
+  assert.match(planner, /open-floor/);
   assert.match(reducer, /memory-confirmation/);
   assert.match(adapter, /buildRoomCharacterPrompt/);
   assert.match(adapter, /do not answer as a generic assistant/i);
@@ -1546,6 +1550,8 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(route, /studio-room-intelligence-v0/);
   assert.match(route, /roomIntelligenceV0/);
   assert.match(route, /callAishaEngine/);
+  assert.match(route, /exchangeContextV06/);
+  assert.match(route, /openFloorRequested/);
   assert.match(route, /activeEngine[\s\S]{0,220}local-room-intelligence/);
   assert.match(route, /fallbackReason:\s*['"]aisha-not-connected['"]/);
   assert.match(aishaAdapter, /callAishaEngine/);
@@ -1562,6 +1568,10 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(studio, /sp-room-presence/);
   assert.match(studio, /roomPresenceStripMarkup/);
   assert.match(studio, /sp-room-msg-meta/);
+  assert.match(studio, /sp-open-floor/);
+  assert.match(studio, /exchangeLabel/);
+  assert.match(studio, /Open Floor/);
+  assert.match(studio, /Adds/);
   assert.match(studio, /Active Engine/);
   assert.match(studio, /A\.I\.S\.H\.A/);
   assert.match(studio, /Not connected/);

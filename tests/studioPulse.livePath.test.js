@@ -70,6 +70,10 @@ function countMemory(items = [], value = '') {
   return (Array.isArray(items) ? items : []).filter(item => String(item || '').toLowerCase() === key).length;
 }
 
+function exchangeLabelOf(event = {}) {
+  return String(event.exchangeLabel || event.metadata?.exchangeLabel || '');
+}
+
 async function withMockProvider(output, fn) {
   const originalFetch = global.fetch;
   const outputFn = typeof output === 'function' ? output : () => output;
@@ -642,7 +646,8 @@ test('A.I.S.H.A request receives bounded relationship summaries, not raw relatio
 
         const second = await pulsePost(baseUrl, 'Fair, sorry Grok, that was harsh. The issue is the provider keeps timing out.', { threadId });
         assert.ok(capturedRequests.length >= 2);
-        const request = capturedRequests.at(-1);
+        const request = capturedRequests.find(item => item.activeSpeakerId === 'grok' && /sorry Grok/i.test(item.messageText))
+          || capturedRequests.at(-1);
         const continuity = request.projectContext?.characterContinuityV0;
         assert.ok(continuity);
         assert.equal(Object.prototype.hasOwnProperty.call(continuity, 'relationshipStates'), false);
@@ -705,6 +710,203 @@ test('A.I.S.H.A request receives expressive habitat context without raw internal
         assert.equal(expressive.specialistGravitySummary.length <= 3, true);
         assert.doesNotMatch(JSON.stringify(expressive), /\b(pulseReason|expiresAfterTurns|specialistGravity|relationshipStates|relationshipSummaries|repairNeeded|trust|warmth|irritation|gravity|value":)\b/i);
         assert.equal(data.response.messageEvents[0].speakerId, 'vanya');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse v0.6 Open Floor is explicit, bounded, and direct address still wins', async () => {
+  await withAishaFlag(null, async () => {
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for deterministic Open Floor smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const standard = await pulsePost(baseUrl, 'hi team');
+        assert.equal(standard.roomIntelligence.exchangeMode, 'solo');
+        assert.equal(standard.response.messageEvents.length, 1);
+
+        const openFloor = await pulsePost(baseUrl, 'hear from the room on the provider timeout', {
+          openFloor: true,
+          exchangeMode: 'open-floor'
+        });
+        const openEvents = openFloor.response.messageEvents || [];
+        const nonClose = openEvents.filter(event => exchangeLabelOf(event) !== 'Close');
+        assert.equal(openFloor.roomIntelligence.exchangeMode, 'open-floor');
+        assert.equal(openEvents.length <= 4, true);
+        assert.equal(nonClose.length <= 3, true);
+        assert.notDeepEqual(openEvents.map(event => event.speakerId).sort(), ['aisha', 'claudia', 'grok', 'leah', 'vanya'].sort());
+        assert.ok(openEvents.some(event => exchangeLabelOf(event) === 'Open Floor'));
+        assert.doesNotMatch(JSON.stringify(openEvents), /\b(exchangeRole|addendumSpeakerId|commandCloseSpeakerId|specialistGravity|relationshipStates)\b/i);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{ content: 'I think the taste issue is the direction, not the volume. If it needs force to feel alive, it is probably too bland.' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.9
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for direct-address exchange smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const direct = await pulsePost(baseUrl, 'Leah, open floor on this tasteful direction', {
+          openFloor: true,
+          exchangeMode: 'open-floor'
+        });
+        assert.equal(direct.roomIntelligence.exchangeMode, 'solo');
+        assert.deepEqual(direct.response.messageEvents.map(event => event.speakerId), ['leah']);
+        assert.equal(direct.response.messageEvents[0].providerMode, 'aisha-accepted');
+        assert.equal(exchangeLabelOf(direct.response.messageEvents[0]), '');
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse v0.6 accepts only planned addenda and suppresses weak side notes', async () => {
+  await withAishaFlag('true', async () => {
+    const capturedRequests = [];
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequests.push(request);
+        const speaker = String(request.activeSpeakerId || '');
+        return {
+          ok: true,
+          responses: [{
+            speakerId: 'runtime-extra-speaker',
+            content: speaker === 'claudia'
+              ? 'Side note: assign one owner and freeze the next verification pass before another provider timeout gets buried.'
+              : 'The provider timeout repeated. Isolate the failing edge first, then stop decorating the smoke.'
+          }],
+          memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+          stateEnvelope: { mood: 0.2 },
+          relationshipDeltas: [],
+          trace: { status: 'succeeded' },
+          engineMode: 'production',
+          aishaEngineConnected: true,
+          confidence: 0.9
+        };
+      }
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for accepted addendum smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'the provider failed again with the same timeout');
+        const events = data.response.messageEvents || [];
+        assert.deepEqual(events.map(event => event.speakerId), ['grok', 'claudia']);
+        assert.equal(exchangeLabelOf(events[1]), 'Adds');
+        assert.equal(data.roomIntelligence.exchangeMode, 'solo-plus-addendum');
+        assert.equal(data.roomIntelligence.aishaAcceptedCount, 2);
+        assert.equal(data.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(capturedRequests.length, 2);
+        const addendumRequest = capturedRequests.find(request => request.activeSpeakerId === 'claudia');
+        assert.equal(addendumRequest.projectContext?.exchangeContextV06?.schemaVersion, 'studio-pulse.exchange.v0.6');
+        assert.equal(addendumRequest.projectContext.exchangeContextV06.exchangeRole, 'addendum');
+        assert.equal(addendumRequest.projectContext.exchangeContextV06.addendumSpeakerId, 'claudia');
+        assert.equal(addendumRequest.projectContext.exchangeContextV06.openFloorActive, false);
+        assert.equal(addendumRequest.projectContext.expressiveHabitatContext.exchangeRole, 'addendum');
+        assert.equal(addendumRequest.projectContext.expressiveHabitatContext.sideCommentAllowed, true);
+        assert.doesNotMatch(JSON.stringify(addendumRequest.projectContext.exchangeContextV06), /\b(relationshipStates|specialistGravity|pulseReason|repairNeeded|trust|warmth|irritation|0\.\d+)\b/i);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{
+          content: request.activeSpeakerId === 'claudia'
+            ? 'I agree.'
+            : 'The provider timeout repeated. Isolate the failing edge first, then stop decorating the smoke.'
+        }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.9
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for suppressed addendum smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'the provider failed again with the same timeout');
+        const events = data.response.messageEvents || [];
+        assert.deepEqual(events.map(event => event.speakerId), ['grok']);
+        assert.equal(data.roomIntelligence.exchangeMode, 'solo-plus-addendum');
+        assert.equal(data.roomIntelligence.aishaAcceptedCount, 1);
+        assert.equal(data.roomIntelligence.addendumSpeakerId, 'claudia');
+        assert.doesNotMatch(JSON.stringify(events), /\bI agree\b/i);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('A.I.S.H.A cannot invent extra Studio Pulse exchange speakers', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [
+          { speakerId: 'vanya', content: 'Hey team. I can feel the room settling in, and I am keeping the landing human.' },
+          { speakerId: 'grok', content: 'Unplanned diagnostic aside should not appear.' }
+        ],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: true,
+        confidence: 0.9
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for unplanned speaker suppression smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const data = await pulsePost(baseUrl, 'hi team');
+        const events = data.response.messageEvents || [];
+        assert.deepEqual(events.map(event => event.speakerId), ['vanya']);
+        assert.equal(events[0].providerMode, 'aisha-accepted');
+        assert.doesNotMatch(JSON.stringify(events), /Unplanned diagnostic aside/i);
       });
     } finally {
       global.fetch = originalFetch;

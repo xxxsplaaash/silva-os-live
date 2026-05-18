@@ -2021,6 +2021,9 @@ router.post('/pulse', async (req, res) => {
   const threadTitle = String(req.body?.threadTitle || '').trim();
   const includeInContext = req.body?.includeInContext !== false;
   const debugRoomRuntime = req.body?.debug === true || String(req.query?.debug || '').trim() === '1';
+  const openFloorRequested = req.body?.openFloor === true
+    || req.body?.openFloorMode === true
+    || String(req.body?.exchangeMode || '').trim().toLowerCase() === 'open-floor';
   if (!question) return res.status(400).json({ ok: false, error: 'question is required' });
 
   const { system } = buildPulseSystemFromRequest(req);
@@ -2623,6 +2626,7 @@ router.post('/pulse', async (req, res) => {
       threadId: workingThreadId,
       messages: system.currentThreadMessages || []
     });
+    roomIntelligenceState.openFloorRequested = openFloorRequested;
     const roomPerception = perceiveRoomMessage(effectiveQuestion, roomIntelligenceState);
     const socialImpulses = calculateSocialImpulses({
       perception: roomPerception,
@@ -2641,11 +2645,18 @@ router.post('/pulse', async (req, res) => {
       requiresProvider: !!plan.requiresProvider,
       responseOrder: Array.isArray(plan.responseOrder) ? plan.responseOrder : [],
       trace: plan.trace || '',
+      exchangeMode: plan.exchangeMode || 'solo',
+      primarySpeakerId: plan.primarySpeakerId || '',
+      addendumSpeakerId: plan.addendumSpeakerId || '',
+      commandCloseSpeakerId: plan.commandCloseSpeakerId || '',
+      exchangeGoal: plan.exchangeGoal || '',
       steps: (Array.isArray(plan.steps) ? plan.steps : []).map(step => ({
         speakerId: step.speakerId || '',
         responseIntent: step.responseIntent || '',
         reason: step.reason || '',
-        tone: step.tone || ''
+        tone: step.tone || '',
+        exchangeRole: step.exchangeRole || '',
+        maxBubbleLength: Number(step.maxBubbleLength || 0) || null
       }))
     });
     const roomPerceptionForAisha = (perception = roomPerception) => ({
@@ -2659,8 +2670,35 @@ router.post('/pulse', async (req, res) => {
       allowsMetaRoomTalk: !!perception.allowsMetaRoomTalk,
       requestedCharacterIds: Array.isArray(perception.requestedCharacterIds) ? perception.requestedCharacterIds : []
     });
+    function exchangeContextForAisha(step = {}, plan = roomPlan) {
+      const exchangeMode = String(plan.exchangeMode || 'solo').trim() || 'solo';
+      const exchangeRole = String(step.exchangeRole || 'primary').trim() || 'primary';
+      const speakerOrder = (Array.isArray(plan.responseOrder) ? plan.responseOrder : [])
+        .map(id => String(id || '').trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 4);
+      return {
+        schemaVersion: 'studio-pulse.exchange.v0.6',
+        exchangeMode,
+        exchangeRole,
+        primarySpeakerId: String(plan.primarySpeakerId || speakerOrder[0] || '').trim(),
+        addendumSpeakerId: String(plan.addendumSpeakerId || '').trim(),
+        commandCloseSpeakerId: String(plan.commandCloseSpeakerId || '').trim(),
+        openFloorActive: exchangeMode === 'open-floor',
+        exchangeGoal: safeAishaText(plan.exchangeGoal || step.exchangeGoal || plan.trace || ''),
+        addendumConstraint: safeAishaText(step.addendumConstraint || plan.addendumConstraint || ''),
+        speakerOrder,
+        constraints: [
+          exchangeRole === 'addendum' ? 'Write one short side note only.' : 'Write only the planned speaker line.',
+          exchangeMode === 'open-floor' ? 'Do not add speakers beyond the supplied speakerOrder.' : 'Do not turn a solo exchange into a group answer.',
+          exchangeRole === 'command-close' ? 'Close with one concise command frame.' : 'Stay topically anchored and non-repetitive.'
+        ],
+        maxBubbleLength: Number(step.maxBubbleLength || 0) || (exchangeRole === 'addendum' ? 220 : exchangeRole === 'command-close' ? 180 : 420)
+      };
+    }
     function buildAishaRequestForRoomStep(step = {}, plan = roomPlan, perception = roomPerception, state = roomIntelligenceState, messageText = effectiveQuestion) {
       const speakerId = String(step.speakerId || '').trim().toLowerCase();
+      const exchangeContextV06 = exchangeContextForAisha(step, plan);
       const dialogueQualityV02 = dialogueQualityPayloadFor({
         step,
         plan,
@@ -2688,8 +2726,10 @@ router.post('/pulse', async (req, res) => {
             plannedSpeakerId: speakerId,
             plan,
             perception,
-            socialImpulses: plan.socialImpulses || socialImpulses
+            socialImpulses: plan.socialImpulses || socialImpulses,
+            exchangeContext: exchangeContextV06
           }),
+          exchangeContextV06,
           dialogueQualityV02,
           responseIntent: step.responseIntent || '',
           selectionReason: step.reason || plan.trace || 'room-intelligence-v0',
@@ -2722,8 +2762,56 @@ router.post('/pulse', async (req, res) => {
         providerMode: 'aisha-accepted',
         validationFallbackReason: '',
         engineMode: 'aisha',
-        aishaEngineConnected: true
+        aishaEngineConnected: true,
+        stepIndex: Number.isInteger(step.stepIndex) ? step.stepIndex : undefined,
+        exchangeMode: String(step.exchangeMode || ''),
+        exchangeRole: String(step.exchangeRole || ''),
+        exchangeLabel: exchangeLabelForStep(step)
       };
+    }
+    function exchangeLabelForStep(step = {}) {
+      const mode = String(step.exchangeMode || '').trim();
+      const role = String(step.exchangeRole || '').trim();
+      if (role === 'command-close') return 'Close';
+      if (mode === 'open-floor') return 'Open Floor';
+      if (role === 'addendum') return 'Adds';
+      return '';
+    }
+    function exchangeTurnRejectionReason(turn = {}, step = {}, previousTurns = [], perception = roomPerception) {
+      const role = String(step.exchangeRole || '').trim();
+      if (!['addendum', 'command-close'].includes(role)) return '';
+      const content = String(turn.content || '').replace(/\s+/g, ' ').trim();
+      const normalized = content
+        .toLowerCase()
+        .replace(/[’']/g, '')
+        .replace(/[^a-z0-9\s]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!content) return 'exchange-empty';
+      if (content.length > (Number(step.maxBubbleLength || 0) || (role === 'command-close' ? 180 : 220))) return 'exchange-too-long';
+      if (/^(i agree|agree|same|same here|good point|exactly|yes|yeah|sure|okay|ok)\.?$/i.test(content)) return 'exchange-generic';
+      const priorText = (Array.isArray(previousTurns) ? previousTurns : [])
+        .map(item => String(item?.content || '').trim())
+        .filter(Boolean)
+        .join(' ');
+      if (priorText) {
+        const priorWords = new Set(priorText.toLowerCase().replace(/[^a-z0-9\s]+/g, ' ').split(/\s+/).filter(word => word.length > 3));
+        const currentWords = normalized.split(/\s+/).filter(word => word.length > 3);
+        const overlap = currentWords.filter(word => priorWords.has(word)).length;
+        if (currentWords.length >= 6 && overlap / currentWords.length > 0.72) return 'exchange-repetitive';
+      }
+      const prompt = String(perception.text || '').toLowerCase();
+      const topic = String(perception.topicFocus || '').toLowerCase();
+      const topicWords = `${topic} ${prompt}`
+        .replace(/[^a-z0-9\s]+/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length > 4 && !['open', 'floor', 'whole', 'room', 'perspective', 'about', 'think', 'again'].includes(word))
+        .slice(0, 8);
+      if (topicWords.length && !topicWords.some(word => normalized.includes(word))) return 'exchange-topic-ignored';
+      if (role === 'addendum' && /\b(feels?|land|human|warm|soften)\b/i.test(content) && !/\b(owner|deadline|risk|pattern|evidence|taste|delivery|constraint|next|failure|structure)\b/i.test(content)) {
+        return 'exchange-soft-without-signal';
+      }
+      return '';
     }
     function aishaRoomOutputRejectionReason(turn = {}, step = {}, perception = roomPerception, state = roomIntelligenceState) {
       const content = String(turn.content || '').trim();
@@ -2742,15 +2830,19 @@ router.post('/pulse', async (req, res) => {
       if (wordCount > 0 && wordCount < 4) return 'aisha-low-context-output';
       return validateRoomCharacterTurn(turn, step, perception, state);
     }
-    async function aishaTurnForRoomStep(step = {}) {
+    async function aishaTurnForRoomStep(step = {}, previousTurns = []) {
       const request = buildAishaRequestForRoomStep(step);
       const response = await callAishaEngine(request, aishaRuntimeCredentialOptions());
       aishaAttempt = response;
+      const optionalExchange = step.optional === true && step.deterministicRequired !== true;
       const usability = getAishaResponseUsability(response);
       if (!usability.usable) {
         const { content } = firstAishaContent(response);
         const reason = response?.fallbackReason || usability.reason || 'aisha-runtime-unusable-response';
         recordAishaRejectionDebug({ request, response, reason, content });
+        if (optionalExchange) {
+          return { accepted: false, omitted: true, response, reason, turn: null };
+        }
         return {
           accepted: false,
           response,
@@ -2762,9 +2854,13 @@ router.post('/pulse', async (req, res) => {
         };
       }
       const turn = turnFromAishaResponseForStep(response, step);
-      const rejectionReason = aishaRoomOutputRejectionReason(turn, step, roomPerception, roomIntelligenceState);
+      const rejectionReason = aishaRoomOutputRejectionReason(turn, step, roomPerception, roomIntelligenceState)
+        || exchangeTurnRejectionReason(turn, step, previousTurns, roomPerception);
       if (rejectionReason) {
         recordAishaRejectionDebug({ request, response, reason: rejectionReason, content: turn.content });
+        if (optionalExchange) {
+          return { accepted: false, omitted: true, response, reason: rejectionReason, turn: null };
+        }
         return {
           accepted: false,
           response,
@@ -2843,10 +2939,15 @@ router.post('/pulse', async (req, res) => {
         roomRuntime: committed.roomRuntime
       }));
     };
+    const indexedRoomSteps = () => (Array.isArray(roomPlan.steps) ? roomPlan.steps : [])
+      .map((step, index) => ({ ...step, stepIndex: index }));
     if (roomPlan.deterministic) {
       const turnResults = [];
-      for (const step of (Array.isArray(roomPlan.steps) ? roomPlan.steps : [])) {
-        turnResults.push(await aishaTurnForRoomStep(step));
+      const acceptedTurns = [];
+      for (const step of indexedRoomSteps()) {
+        const result = await aishaTurnForRoomStep(step, acceptedTurns);
+        if (result?.turn) acceptedTurns.push(result.turn);
+        turnResults.push(result);
       }
       const turns = turnResults
         .map(item => item?.turn)
@@ -2869,16 +2970,21 @@ router.post('/pulse', async (req, res) => {
       let lastGeneration = null;
       let aishaFallbackReason = '';
       let aishaAcceptedCount = 0;
-      for (const step of (Array.isArray(roomPlan.steps) ? roomPlan.steps : []).slice(0, 3)) {
-        const aishaStep = await aishaTurnForRoomStep(step);
+      for (const step of indexedRoomSteps().slice(0, 4)) {
+        const optionalExchange = step.optional === true && step.deterministicRequired !== true;
+        const aishaStep = await aishaTurnForRoomStep(step, providerTurns);
         if (aishaStep.accepted) {
           aishaAcceptedCount += 1;
           providerTurns.push(aishaStep.turn);
           continue;
         }
+        if (aishaStep.omitted && optionalExchange && aishaStep.response?.aishaEngineConnected === true) {
+          if (aishaStep.reason) aishaFallbackReason = aishaFallbackReason || aishaStep.reason;
+          continue;
+        }
         if (aishaStep.reason) aishaFallbackReason = aishaFallbackReason || aishaStep.reason;
         if (aishaStep.response?.aishaEngineConnected === true) {
-          providerTurns.push(aishaStep.turn);
+          if (aishaStep.turn) providerTurns.push(aishaStep.turn);
           continue;
         }
         const roomPrompt = buildRoomCharacterPrompt({
@@ -2894,6 +3000,9 @@ router.post('/pulse', async (req, res) => {
         });
         lastGeneration = generation;
         if (!generation.ok) {
+          if (optionalExchange) {
+            continue;
+          }
           providerTurns.push(fallbackTurnFromStep(step, roomPerception, {
             providerMode: 'provider-unavailable-fallback',
             validationFallbackReason: generation.timeout ? 'provider-timeout' : 'provider-unavailable'
@@ -2901,8 +3010,12 @@ router.post('/pulse', async (req, res) => {
           continue;
         }
         const turn = parseRoomCharacterOutput(generation.text, step);
-        const validation = validateRoomCharacterTurn(turn, step, roomPerception, roomIntelligenceState);
+        const validation = validateRoomCharacterTurn(turn, step, roomPerception, roomIntelligenceState)
+          || exchangeTurnRejectionReason(turn, step, providerTurns, roomPerception);
         if (validation) {
+          if (optionalExchange) {
+            continue;
+          }
           providerTurns.push(fallbackTurnFromStep(step, roomPerception, {
             providerMode: 'provider-rejected-fallback',
             validationFallbackReason: validation
@@ -2913,7 +3026,11 @@ router.post('/pulse', async (req, res) => {
           ...turn,
           source: 'provider-accepted',
           providerMode: 'provider-accepted',
-          validationFallbackReason: ''
+          validationFallbackReason: '',
+          stepIndex: Number.isInteger(step.stepIndex) ? step.stepIndex : undefined,
+          exchangeMode: String(step.exchangeMode || ''),
+          exchangeRole: String(step.exchangeRole || ''),
+          exchangeLabel: exchangeLabelForStep(step)
         });
       }
       if (providerTurns.length) {
