@@ -2030,6 +2030,14 @@
 	  }
 	  function roomMessageMetaMarkup(meta){
 	    const bits = [];
+	    const seen = new Set();
+	    const addChip = (label) => {
+	      const text = String(label || '').trim();
+	      const key = text.toLowerCase();
+	      if (!text || seen.has(key)) return;
+	      seen.add(key);
+	      bits.push(`<span>${esc(text)}</span>`);
+	    };
 	    const presence = String(meta?.presence || '').trim();
 	    const intent = String(meta?.roomIntent || meta?.responseIntent || '').trim();
 	    const emotional = String(meta?.emotionalState || '').trim();
@@ -2038,10 +2046,10 @@
 	    const humanIntent = humanRoomChipLabel(intent, 'intent');
 	    const humanEmotional = humanRoomChipLabel(emotional, 'mood');
 	    const humanExchange = humanRoomChipLabel(exchange, 'exchange');
-	    if (humanExchange) bits.push(`<span>${esc(humanExchange)}</span>`);
-	    if (humanPresence) bits.push(`<span>${esc(humanPresence)}</span>`);
-	    if (humanIntent) bits.push(`<span>${esc(humanIntent)}</span>`);
-	    if (humanEmotional && humanEmotional !== humanIntent) bits.push(`<span>${esc(humanEmotional)}</span>`);
+	    addChip(humanExchange);
+	    addChip(humanPresence);
+	    addChip(humanIntent);
+	    addChip(humanEmotional);
 	    return bits.length ? `<div class="sp-room-msg-meta">${bits.join('')}</div>` : '';
 	  }
 	  function humanSpeakingPresenceLabel(presence, intent){

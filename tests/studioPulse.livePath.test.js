@@ -1064,6 +1064,8 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
     const uiSource = read('studio_pulse_v400.js');
     assert.match(uiSource, /humanSpeakingPresenceLabel/);
     assert.match(uiSource, /room-call-in['"]:\s*['"]Called in/);
+    assert.match(uiSource, /const seen = new Set\(\)/);
+    assert.match(uiSource, /addChip\(humanIntent\)/);
     assert.match(uiSource, /pulseChipsMarkup\(habitat, room\)/);
     const stripStart = uiSource.indexOf('function roomPresenceStripMarkup');
     const stripEnd = uiSource.indexOf('function roomMessageMetaMarkup', stripStart);

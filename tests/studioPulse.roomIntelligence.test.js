@@ -807,6 +807,14 @@ test('explicit Open Floor stays bounded and does not replace ordinary everyone r
   assert.ok(plan.steps.some(step => step.exchangeRole === 'command-close'));
   assert.notDeepEqual(plan.responseOrder, ['aisha', 'leah', 'claudia', 'grok', 'vanya']);
 
+  const teamWeighIn = perceiveRoomMessage('team, weigh in on this campaign direction', state);
+  const teamWeighInPlan = planRoomTurn({ perception: teamWeighIn, roomState: state });
+  assert.equal(teamWeighIn.asksOpenFloor, true);
+  assert.equal(teamWeighIn.asksEveryone, false);
+  assert.equal(teamWeighInPlan.intentFamily, 'open-floor');
+  assert.equal(teamWeighInPlan.exchangeMode, 'open-floor');
+  assert.ok(teamWeighInPlan.steps.filter(step => step.exchangeRole !== 'command-close').length <= 3);
+
   const everyone = perceiveRoomMessage('everyone give me your honest opinion on this logo', state);
   const everyonePlan = planRoomTurn({ perception: everyone, roomState: state });
   assert.equal(everyone.asksOpenFloor, false);
