@@ -1575,6 +1575,10 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(studio, /Active Engine/);
   assert.match(studio, /A\.I\.S\.H\.A/);
   assert.match(studio, /Not connected/);
+  assert.match(studio, /Rate limited/);
+  assert.match(studio, /hydrateAishaRuntimeStatus/);
+  assert.match(studio, /\/api\/studio\/pulse\/aisha-status/);
+  assert.match(studio, /applyAishaRuntimeStatusPayload/);
   assert.doesNotMatch(route, /A\.I\.S\.H\.A\s+global/i);
 });
 

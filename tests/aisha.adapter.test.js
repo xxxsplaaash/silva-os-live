@@ -152,6 +152,7 @@ test('callAishaEngine accepts mocked public host production response', async () 
           assert.equal(options.engineMode, 'production');
           assert.equal(Object.prototype.hasOwnProperty.call(options, 'deps'), false);
           assert.equal(options.productionGeminiApiKey, 'test-provider-vault-key');
+          assert.equal(options.productionGeminiTimeoutMs, 15000);
           return {
             ok: true,
             responses: [{ speakerId: 'vanya', content: 'A.I.S.H.A live response' }],
@@ -173,7 +174,7 @@ test('callAishaEngine accepts mocked public host production response', async () 
     });
     const response = await callAishaEngine(
       { sessionId: 'session-real', message: 'hi team' },
-      { productionGeminiApiKey: 'test-provider-vault-key', productionGeminiKeySource: 'Mock Gemini vault' }
+      { productionGeminiApiKey: 'test-provider-vault-key', productionGeminiKeySource: 'Mock Gemini vault', productionGeminiTimeoutMs: 15000 }
     );
 
     assert.equal(response.ok, true);
@@ -190,6 +191,7 @@ test('callAishaEngine accepts mocked public host production response', async () 
     assert.equal(response.diagnostics.runtimeCredentialProvided, true);
     assert.equal(response.diagnostics.runtimeCredentialLength, 'test-provider-vault-key'.length);
     assert.equal(response.diagnostics.runtimeCredentialSource, 'Mock Gemini vault');
+    assert.equal(response.diagnostics.runtimeTimeoutMs, 15000);
     assert.equal(response.diagnostics.responseOk, true);
     assert.equal(response.diagnostics.responseEngineMode, 'production');
     assert.equal(response.diagnostics.responseConnected, true);
