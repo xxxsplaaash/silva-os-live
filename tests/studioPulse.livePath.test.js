@@ -9,6 +9,7 @@ const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
 
 const ROOT = path.resolve(__dirname, '..');
+const FORBIDDEN_FALLBACK_QUALITY_RX = /\b(I hear |I will keep this human|Say the thing plainly|Give me the thing|I need the object|if that is the object|the actual break|Room read on that|Taste read:\s*if|Delivery read:\s*that|hold the useful signal on that)\b/i;
 
 async function withAishaFlag(value, fn) {
   const original = process.env.AISHA_ENGINE_ENABLED;
@@ -72,6 +73,10 @@ function countMemory(items = [], value = '') {
 
 function exchangeLabelOf(event = {}) {
   return String(event.exchangeLabel || event.metadata?.exchangeLabel || '');
+}
+
+function visibleText(events = []) {
+  return (Array.isArray(events) ? events : []).map(event => String(event.text || event.content || '')).join('\n');
 }
 
 async function withMockProvider(output, fn) {
@@ -282,6 +287,7 @@ test('aisha_success_does_not_bypass_room_planner', async () => {
           assert.equal(request.activeCharacterId, 'vanya');
           assert.equal(options.engineMode, 'production');
           assert.equal(options.productionGeminiApiKey, 'test-room-provider-key');
+          assert.equal(options.productionGeminiTimeoutMs, 15000);
           assert.equal(Object.prototype.hasOwnProperty.call(options, 'deps'), false);
           assert.ok(request.localRoomState && typeof request.localRoomState === 'object');
           assert.ok(request.characterStates && typeof request.characterStates === 'object');
@@ -330,9 +336,71 @@ test('aisha_success_does_not_bypass_room_planner', async () => {
         assert.ok(capturedRequest, 'A.I.S.H.A request was captured');
         assert.doesNotMatch(JSON.stringify(data), /\[Mock A\.I\.S\.H\.A\]/);
         assert.doesNotMatch(JSON.stringify(data.response), /aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+        const statusResponse = await fetch(`${baseUrl}/api/studio/pulse/aisha-status`);
+        assert.equal(statusResponse.status, 200);
+        const status = await statusResponse.json();
+        assert.equal(status.ok, true);
+        assert.equal(status.statusKnown, true);
+        assert.equal(status.aishaAttempted, true);
+        assert.equal(status.aishaEngineConnected, true);
+        assert.equal(status.aishaEngineMode, 'production');
+        assert.equal(status.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(status.runtimeCredentialProvided, true);
+        assert.equal(status.runtimeCredentialLength, 'test-room-provider-key'.length);
+        assert.equal(status.runtimeCredentialSource, 'Mock Gemini');
+        assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
       });
     } finally {
       global.fetch = originalFetch;
+    }
+  });
+});
+
+test('A.I.S.H.A status endpoint hydrates fresh UI from a safe runtime health check', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async (request, options) => {
+            assert.equal(request.messageText, 'status check');
+            assert.equal(request.activeSpeakerId, 'vanya');
+            assert.equal(options.engineMode, 'production');
+            assert.equal(options.productionGeminiApiKey, 'test-room-provider-key');
+            assert.equal(options.productionGeminiTimeoutMs, 15000);
+            return {
+              ok: true,
+              responses: [{ speakerId: 'vanya', content: 'Status is online.' }],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: { status: 'succeeded' },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.88
+            };
+          }
+        };
+      });
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse/aisha-status`);
+        assert.equal(response.status, 200);
+        const status = await response.json();
+        assert.equal(status.ok, true);
+        assert.equal(status.statusKnown, true);
+        assert.equal(status.aishaAttempted, true);
+        assert.equal(status.aishaEngineConnected, true);
+        assert.equal(status.aishaEngineMode, 'production');
+        assert.equal(status.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(status.runtimeCredentialProvided, true);
+        assert.equal(status.runtimeCredentialLength, 'test-room-provider-key'.length);
+        assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
     }
   });
 });
@@ -1122,7 +1190,7 @@ test('Studio Pulse roll-call and call-in polish keeps presence humanized', async
         assert.equal(social.response.messageEvents.length, 1);
         assert.equal(social.response.messageEvents[0].speakerId, 'vanya');
         assert.equal(social.response.messageEvents[0].roomIntent, 'social-read');
-        assert.match(social.response.messageEvents[0].text, /Room read on/i);
+        assert.match(social.response.messageEvents[0].text, /Room read:/i);
         assert.doesNotMatch(social.response.messageEvents[0].text, /Pizza roll call/i);
       });
     } finally {
@@ -1201,6 +1269,77 @@ test('Studio Pulse falls back locally when A.I.S.H.A returns disconnected conten
         assert.equal(data.fallbackReason, 'not-connected');
         assert.equal(data.provider, 'studio-room-intelligence-v0');
         assert.doesNotMatch(text, /Disconnected A\\.I\\.S\\.H\\.A content|\\[Mock A\\.I\\.S\\.H\\.A\\]/);
+      });
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+test('Studio Pulse v0.6.2 degraded fallback is product-grade for live prompts', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => ({
+        ok: true,
+        responses: [{ speakerId: request.activeSpeakerId, content: 'Disconnected A.I.S.H.A content should not show' }],
+        memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+        stateEnvelope: { mood: 0.2 },
+        relationshipDeltas: [],
+        trace: { status: 'succeeded' },
+        engineMode: 'production',
+        aishaEngineConnected: false,
+        confidence: 0.88
+      })
+    }));
+    const originalFetch = global.fetch;
+    try {
+      global.fetch = async (url, options) => {
+        if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+        throw new Error('external provider should not be called for v0.6.2 degraded fallback smoke');
+      };
+      await withStudioServer(async baseUrl => {
+        const first = await pulsePost(baseUrl, 'ok what the nex t highest valuable move');
+        let events = first.response.messageEvents || [];
+        let text = visibleText(events);
+        assert.equal(first.activeEngine, 'local-room-intelligence');
+        assert.match(text, /highest-value move|live feel-pass|first thing that breaks/i);
+        assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+        assert.doesNotMatch(text, /^ok what the nex t highest valuable move/i);
+
+        const threadId = first.thread?.id || first.response?.threadMeta?.id;
+        const followUp = await pulsePost(baseUrl, 'what?', { threadId });
+        events = followUp.response.messageEvents || [];
+        text = visibleText(events);
+        assert.match(text, /verification, not another layer|fix the live seam/i);
+        assert.doesNotMatch(text, /ok what the nex t highest valuable move what/i);
+        assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+        assert.notEqual(text, visibleText(first.response.messageEvents || []));
+
+        const open = await pulsePost(baseUrl, 'open floor');
+        events = open.response.messageEvents || [];
+        text = visibleText(events);
+        assert.equal(open.roomIntelligence.exchangeMode, 'open-floor');
+        assert.deepEqual(events.map(event => event.speakerId), ['vanya']);
+        assert.match(text, /Open floor needs a subject/i);
+        assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+        assert.doesNotMatch(text, /\b(that|object)\b/i);
+
+        const banter = await pulsePost(baseUrl, 'is that it, whos hungry?');
+        events = banter.response.messageEvents || [];
+        text = visibleText(events);
+        assert.match(text, /voting food|pretend not to care|scheduling problem/i);
+        assert.doesNotMatch(text, /is that it, whos hungry/i);
+        assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+        assert.doesNotMatch(JSON.stringify(banter.roomRuntime?.roomIntelligenceV0?.characterContinuityV0?.characterMemories || {}), /hungry|food/i);
+
+        const rollCall = await pulsePost(baseUrl, 'can everyone come online for a role call');
+        events = rollCall.response.messageEvents || [];
+        text = visibleText(events);
+        assert.deepEqual(events.map(event => event.speakerId), ['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+        assert.equal(events.every(event => event.roomIntent === 'available-roll-call'), true);
+        assert.match(text, /Aisha here|Vanya here|Leah here|Claudia here|Grok here/i);
+        assert.doesNotMatch(text, /quiet\/listening|not absent/i);
+        assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
       });
     } finally {
       global.fetch = originalFetch;

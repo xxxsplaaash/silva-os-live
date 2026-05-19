@@ -28,9 +28,14 @@ const {
 } = require('../lib/studio/roomIntelligence');
 
 const FORBIDDEN_ARCHITECTURE_RX = /\b(labels are not presence|assistant cosplay|architecture|implementation|selection|validation|generation|presence system|room intelligence|real room has rhythm)\b/i;
+const FORBIDDEN_FALLBACK_QUALITY_RX = /\b(I hear |I will keep this human|Say the thing plainly|Give me the thing|I need the object|if that is the object|the actual break|Room read on that|Taste read:\s*if|Delivery read:\s*that|hold the useful signal on that)\b/i;
 
 function plannedTexts(plan) {
   return plan.steps.map(deterministicTurnFromStep).map(item => item.content).join('\n');
+}
+
+function fallbackTexts(plan, perception, options = {}) {
+  return plan.steps.map(step => fallbackTurnFromStep(step, perception, options)).map(item => item.content).join('\n');
 }
 
 function countMemory(items = [], value = '') {
@@ -773,7 +778,7 @@ test('casual social preference questions route through generic room-social plann
     assert.equal(plan.requiresProvider, true, prompt);
     assert.deepEqual(plan.responseOrder, ['vanya'], prompt);
     assert.equal(plan.steps[0].responseIntent, 'social-read', prompt);
-    assert.match(plan.steps[0].fallbackText, /Room read on/i, prompt);
+    assert.match(plan.steps[0].fallbackText, /Room read:/i, prompt);
     assert.doesNotMatch(plan.steps[0].fallbackText, /Pizza roll call/i, prompt);
     assert.doesNotMatch(plan.steps[0].fallbackText, FORBIDDEN_ARCHITECTURE_RX, prompt);
   });
@@ -891,6 +896,54 @@ test('provider-unavailable direct fallback stays anchored to the user problem', 
   assert.equal(turn.speakerId, 'grok');
   assert.doesNotMatch(turn.content, /I need the object|Give me the thing|Say the thing plainly/i);
   assert.match(turn.content, /falling apart after five messages|exact turn|response events|patch that seam/i);
+});
+
+test('v0.6.2 fallback quality handles live degraded prompts without template leakage', () => {
+  const state = createRoomIntelligenceContext({ threadId: 'room-test-live-quality-recovery' });
+
+  const nextMove = perceiveRoomMessage('ok what the nex t highest valuable move', state);
+  let plan = planRoomTurn({ perception: nextMove, roomState: state });
+  let text = fallbackTexts(plan, nextMove, { providerMode: 'provider-unavailable-fallback' });
+  assert.match(text, /highest-value move|live feel-pass|first thing that breaks the illusion/i);
+  assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+  assert.doesNotMatch(text, /^ok what the nex t highest valuable move/i);
+
+  const followUp = perceiveRoomMessage('ok what the nex t highest valuable move what?', state);
+  followUp.originalText = 'what?';
+  followUp.resolvedFromHistory = true;
+  followUp.previousQuestion = 'ok what the nex t highest valuable move';
+  plan = planRoomTurn({ perception: followUp, roomState: state });
+  text = fallbackTexts(plan, followUp, { providerMode: 'provider-unavailable-fallback' });
+  assert.match(text, /verification, not another layer|fix the live seam/i);
+  assert.doesNotMatch(text, /ok what the nex t highest valuable move what/i);
+  assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+
+  const openFloor = perceiveRoomMessage('open floor', state);
+  plan = planRoomTurn({ perception: openFloor, roomState: state });
+  text = fallbackTexts(plan, openFloor);
+  assert.equal(plan.intentFamily, 'open-floor');
+  assert.deepEqual(plan.responseOrder, ['vanya']);
+  assert.match(text, /Open floor needs a subject/i);
+  assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+  assert.doesNotMatch(text, /\b(that|object)\b/i);
+
+  const banter = perceiveRoomMessage('is that it, whos hungry?', state);
+  plan = planRoomTurn({ perception: banter, roomState: state });
+  text = fallbackTexts(plan, banter, { providerMode: 'provider-unavailable-fallback' });
+  assert.match(text, /voting food|pretend not to care|scheduling problem/i);
+  assert.doesNotMatch(text, /is that it, whos hungry/i);
+  assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
+
+  const roleCall = perceiveRoomMessage('can everyone come online for a role call', state);
+  plan = planRoomTurn({ perception: roleCall, roomState: state });
+  const turns = plan.steps.map(step => fallbackTurnFromStep(step, roleCall));
+  assert.equal(plan.intentFamily, 'room-roll-call');
+  assert.deepEqual(turns.map(turn => turn.speakerId), ['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+  assert.equal(turns.every(turn => turn.responseIntent === 'available-roll-call'), true);
+  text = turns.map(turn => turn.content).join('\n');
+  assert.match(text, /Aisha here|Vanya here|Leah here|Claudia here|Grok here/i);
+  assert.doesNotMatch(text, /quiet\/listening|not absent/i);
+  assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
 });
 
 test('normal_help_request_one_speaker', () => {

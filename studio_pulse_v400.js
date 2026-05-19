@@ -381,6 +381,8 @@
 	    providerAutosaveTimer: null,
 	    sparkTimer: null,
 	    sparkInFlight: false,
+	    aishaStatusHydrationInFlight: false,
+	    aishaStatusHydratedAt: 0,
 	    pendingThreadMessages: null,
 	    scrollAutoFollow: true,
 	    scrollGap: 0,
@@ -1449,6 +1451,47 @@
 	    bridgePulseHomesIntoState();
 	  }
 
+	  function applyAishaRuntimeStatusPayload(payload){
+	    if (!payload || payload.ok !== true) return false;
+	    const statusKnown = payload.statusKnown === true || payload.aishaAttempted === true;
+	    if (!statusKnown && payload.aishaEngineEnabled === true) return false;
+	    const existing = pulseState.lastMeta && typeof pulseState.lastMeta === 'object' ? pulseState.lastMeta : {};
+	    const connected = payload.aishaEngineConnected === true;
+	    pulseState.lastMeta = {
+	      ...existing,
+	      provider: connected ? 'aisha' : (existing.provider || 'studio'),
+	      model: connected ? 'aisha-runtime-pack1' : (existing.model || ''),
+	      aishaAttempted: payload.aishaAttempted === true,
+	      aishaEngineConnected: connected,
+	      aishaEngineMode: String(payload.aishaEngineMode || existing.aishaEngineMode || (payload.aishaEngineEnabled ? 'production' : 'mock')),
+	      activeEngine: String(payload.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')),
+	      fallbackReason: String(payload.fallbackReason || ''),
+	      aishaTraceStatus: String(payload.aishaTraceStatus || existing.aishaTraceStatus || ''),
+	      aishaTraceFailureReason: String(payload.aishaTraceFailureReason || existing.aishaTraceFailureReason || '')
+	    };
+	    return true;
+	  }
+
+	  async function hydrateAishaRuntimeStatus(options){
+	    const opts = options && typeof options === 'object' ? options : {};
+	    if (pulseRuntime.aishaStatusHydrationInFlight) return;
+	    const now = Date.now();
+	    if (!opts.force && pulseRuntime.aishaStatusHydratedAt && now - pulseRuntime.aishaStatusHydratedAt < 10000) return;
+	    pulseRuntime.aishaStatusHydrationInFlight = true;
+	    try {
+	      const res = await fetch('/api/studio/pulse/aisha-status', { cache: 'no-store' });
+	      const payload = await res.json();
+	      pulseRuntime.aishaStatusHydratedAt = Date.now();
+	      if (applyAishaRuntimeStatusPayload(payload) && opts.render !== false) {
+	        renderStudioPulseHome();
+	      }
+	    } catch(e) {
+	      pulseRuntime.aishaStatusHydratedAt = Date.now();
+	    } finally {
+	      pulseRuntime.aishaStatusHydrationInFlight = false;
+	    }
+	  }
+
   function ensureState(){
     window.STATE = window.STATE || {};
     STATE.consistencyLab = STATE.consistencyLab || pulseState.homes || {};
@@ -2009,9 +2052,15 @@
 	    const meta = pulseState.lastMeta && typeof pulseState.lastMeta === 'object' ? pulseState.lastMeta : {};
 	    const active = String(meta.activeEngine || 'local-room-intelligence').trim();
 	    const aishaConnected = meta.aishaEngineConnected === true;
+	    const failureText = `${meta.fallbackReason || ''} ${meta.aishaTraceFailureReason || ''}`.toLowerCase();
+	    const aishaLabel = aishaConnected
+	      ? 'Connected'
+	      : /\b(quota|rate.?limit|resource_exhausted|resource exhausted)\b/i.test(failureText)
+	        ? 'Rate limited'
+	        : 'Not connected';
 	    return {
 	      activeLabel: active === 'aisha' || active === 'aisha-runtime-pack1' ? 'A.I.S.H.A' : 'Local Room Intelligence',
-	      aishaLabel: aishaConnected ? 'Connected' : 'Not connected'
+	      aishaLabel
 	    };
 	  }
 	  function roomPresenceStripMarkup(){
@@ -2056,6 +2105,7 @@
 	    const presenceKey = String(presence || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
 	    const intentKey = String(intent || '').trim().toLowerCase().replace(/[_\s]+/g, '-');
 	    if (presenceKey === 'quiet') {
+	      if (intentKey === 'available-roll-call') return 'Available';
 	      if (intentKey === 'room-call-in') return 'Called in';
 	      if (intentKey === 'roll-call' || intentKey === 'presence-summary' || intentKey === 'wellbeing-check') return 'Listening';
 	      if (intentKey) return 'Responding';
@@ -2084,6 +2134,7 @@
 	      'wellbeing-check': 'Playful',
 	      'presence-summary': 'Listening',
 	      'roll-call': 'Listening',
+	      'available-roll-call': 'Available',
 	      'room-call-in': 'Called in',
 	      'direct-acknowledgement': 'Leaning in',
 	      'host-presence-explain': 'Listening',
@@ -3147,13 +3198,21 @@
       window.__V395_NAV_WRAPPED = true;
       window.nav = function(page){
         const out = oldNav.call(this, page);
-        if (page === 'home') setTimeout(renderStudioPulseHome, 0);
+        if (page === 'home') setTimeout(() => {
+          renderStudioPulseHome();
+          hydrateAishaRuntimeStatus({ render:true });
+        }, 0);
         return out;
       };
     }
 
     setTimeout(() => {
-      try { if (document.getElementById('page-home')?.classList.contains('active')) renderStudioPulseHome({ immediate:true }); } catch(e){}
+      try {
+        if (document.getElementById('page-home')?.classList.contains('active')) {
+          renderStudioPulseHome({ immediate:true });
+          hydrateAishaRuntimeStatus({ render:true, force:true });
+        }
+      } catch(e){}
     }, 0);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) clearSparkTimer();

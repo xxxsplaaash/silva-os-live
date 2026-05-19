@@ -94,6 +94,20 @@ const {
   vertexLocationConfigs
 } = require('../lib/imageGeneration/providers/google');
 const HARD_CUT_REBUILD = process.env.STUDIO_PULSE_HARD_CUT !== '0';
+const AISHA_PRODUCTION_GEMINI_TIMEOUT_MS = 15000;
+let lastAishaRuntimeStatus = {
+  aishaAttempted: false,
+  aishaEngineConnected: false,
+  aishaEngineMode: 'mock',
+  activeEngine: 'local-room-intelligence',
+  fallbackReason: '',
+  aishaTraceStatus: '',
+  aishaTraceFailureReason: '',
+  runtimeCredentialProvided: false,
+  runtimeCredentialLength: 0,
+  runtimeCredentialSource: '',
+  updatedAt: ''
+};
 let legacyStudioFallback = null;
 
 function getLegacyStudioFallback() {
@@ -726,6 +740,58 @@ function resolveStudioKeyChain(providerConfig) {
   geminiVaultKeyEntries().forEach(item => add(item, item.label || 'Provider vault'));
   if (process.env.GEMINI_API_KEY) add({ provider: 'gemini', model: '', apiKey: process.env.GEMINI_API_KEY, label: 'Server env' }, 'Server env');
   return chain;
+}
+
+function safeRuntimeStatusText(value = '') {
+  return String(value || '')
+    .replace(/AIza[0-9A-Za-z_-]+/g, '[redacted-key]')
+    .replace(/\b[A-Za-z0-9_-]{32,}\b/g, '[redacted-token]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
+function updateLastAishaRuntimeStatus(status = {}) {
+  lastAishaRuntimeStatus = {
+    aishaAttempted: status.aishaAttempted === true,
+    aishaEngineConnected: status.aishaEngineConnected === true,
+    aishaEngineMode: safeRuntimeStatusText(status.aishaEngineMode || 'mock') || 'mock',
+    activeEngine: safeRuntimeStatusText(status.activeEngine || 'local-room-intelligence') || 'local-room-intelligence',
+    fallbackReason: safeRuntimeStatusText(status.fallbackReason || ''),
+    aishaTraceStatus: safeRuntimeStatusText(status.aishaTraceStatus || ''),
+    aishaTraceFailureReason: safeRuntimeStatusText(status.aishaTraceFailureReason || ''),
+    runtimeCredentialProvided: status.runtimeCredentialProvided === true,
+    runtimeCredentialLength: Number(status.runtimeCredentialLength || 0) || 0,
+    runtimeCredentialSource: safeRuntimeStatusText(status.runtimeCredentialSource || ''),
+    updatedAt: new Date().toISOString()
+  };
+  return lastAishaRuntimeStatus;
+}
+
+function publicAishaRuntimeStatus(providerConfig = {}) {
+  const keyChain = resolveStudioKeyChain(providerConfig);
+  const primary = keyChain.find(item => String(item?.apiKey || '').trim());
+  const enabled = String(process.env.AISHA_ENGINE_ENABLED || '').trim().toLowerCase() === 'true';
+  return {
+    ok: true,
+    statusKnown: !!lastAishaRuntimeStatus.updatedAt,
+    aishaEngineEnabled: enabled,
+    ...lastAishaRuntimeStatus,
+    runtimeCredentialProvided: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialProvided : !!primary,
+    runtimeCredentialLength: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialLength : (primary ? String(primary.apiKey || '').trim().length : 0),
+    runtimeCredentialSource: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialSource : safeRuntimeStatusText(primary?.label || primary?.provider || '')
+  };
+}
+
+function resolveAishaRuntimeCredentialOptions(providerConfig = {}) {
+  const keyChain = resolveStudioKeyChain(providerConfig);
+  const primary = keyChain.find(item => String(item?.apiKey || '').trim());
+  if (!primary) return {};
+  return {
+    productionGeminiApiKey: String(primary.apiKey || '').trim(),
+    productionGeminiKeySource: String(primary.label || primary.provider || 'Studio Pulse Gemini key chain').trim(),
+    productionGeminiTimeoutMs: AISHA_PRODUCTION_GEMINI_TIMEOUT_MS
+  };
 }
 
 function mergeStudioProviderConfig(primary = {}, fallback = {}) {
@@ -2011,6 +2077,48 @@ router.post('/pulse/workflows/:id/commit', async (req, res) => {
   }
 });
 
+router.get('/pulse/aisha-status', async (req, res) => {
+  let status = publicAishaRuntimeStatus({});
+  if (!status.statusKnown && status.aishaEngineEnabled && status.runtimeCredentialProvided) {
+    const runtimeOptions = resolveAishaRuntimeCredentialOptions({});
+    if (runtimeOptions.productionGeminiApiKey) {
+      try {
+        const response = await callAishaEngine({
+          sessionId: 'studio-pulse-aisha-status',
+          threadId: 'studio-pulse-aisha-status',
+          roomId: 'studio-pulse',
+          userId: 'studio-pulse-ui',
+          activeCharacterId: 'vanya',
+          activeSpeakerId: 'vanya',
+          message: 'status check',
+          recentMessages: [],
+          localRoomState: { statusCheck: true, roomMood: 'neutral' },
+          characterStates: { vanya: { presence: 'active' }, aisha: { presence: 'active' } },
+          projectContext: { source: 'studio-pulse-aisha-status' },
+          modality: { channel: 'status' }
+        }, runtimeOptions);
+        const diagnostics = response?.diagnostics || response?.trace?.aishaDiagnostics || {};
+        updateLastAishaRuntimeStatus({
+          aishaAttempted: true,
+          aishaEngineConnected: response?.aishaEngineConnected === true,
+          aishaEngineMode: String(response?.engineMode || 'mock'),
+          activeEngine: response?.aishaEngineConnected === true ? 'aisha-runtime-pack1' : 'local-room-intelligence',
+          fallbackReason: response?.aishaEngineConnected === true ? '' : String(response?.fallbackReason || 'not-connected'),
+          aishaTraceStatus: diagnostics.responseTraceStatus || response?.trace?.status || '',
+          aishaTraceFailureReason: diagnostics.responseTraceFailureReason || response?.trace?.failureReason || response?.trace?.reason || '',
+          runtimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
+          runtimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
+          runtimeCredentialSource: diagnostics.runtimeCredentialSource || ''
+        });
+        status = publicAishaRuntimeStatus({});
+      } catch {
+        status = publicAishaRuntimeStatus({});
+      }
+    }
+  }
+  res.json(status);
+});
+
 router.post('/pulse', async (req, res) => {
   const question = textValue(req.body?.question || req.body?.message || '').trim();
   const modeContext = String(req.body?.modeContext || '').trim();
@@ -2353,27 +2461,29 @@ router.post('/pulse', async (req, res) => {
   }
 
   function aishaRuntimeCredentialOptions() {
-    const keyChain = resolveStudioKeyChain(providerConfig);
-    const primary = keyChain.find(item => String(item?.apiKey || '').trim());
-    if (!primary) return {};
-    return {
-      productionGeminiApiKey: String(primary.apiKey || '').trim(),
-      productionGeminiKeySource: String(primary.label || primary.provider || 'Studio Pulse Gemini key chain').trim()
-    };
+    return resolveAishaRuntimeCredentialOptions(providerConfig);
   }
 
   function aishaHostMetadata(base = {}) {
     const connected = aishaAttempt?.aishaEngineConnected === true;
     const activeEngine = String(base.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')).trim();
-    return {
+    const diagnostics = aishaAttempt?.diagnostics || aishaAttempt?.trace?.aishaDiagnostics || {};
+    const status = {
       aishaAttempted: true,
       aishaEngineConnected: connected,
       aishaEngineMode: String(aishaAttempt?.engineMode || 'mock').trim() || 'mock',
       activeEngine: activeEngine || 'local-room-intelligence',
+      aishaTraceStatus: safeRuntimeStatusText(diagnostics.responseTraceStatus || aishaAttempt?.trace?.status || ''),
+      aishaTraceFailureReason: safeRuntimeStatusText(diagnostics.responseTraceFailureReason || aishaAttempt?.trace?.failureReason || aishaAttempt?.trace?.reason || ''),
+      runtimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
+      runtimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
+      runtimeCredentialSource: safeRuntimeStatusText(diagnostics.runtimeCredentialSource || ''),
       fallbackReason: connected
         ? String(base.fallbackReason || '').trim()
         : String(aishaAttempt?.fallbackReason || 'aisha-not-connected').trim() || 'aisha-not-connected'
     };
+    updateLastAishaRuntimeStatus(status);
+    return status;
   }
 
   function aishaDebugEnabled() {
@@ -2628,6 +2738,9 @@ router.post('/pulse', async (req, res) => {
     });
     roomIntelligenceState.openFloorRequested = openFloorRequested;
     const roomPerception = perceiveRoomMessage(effectiveQuestion, roomIntelligenceState);
+    roomPerception.originalText = question;
+    roomPerception.resolvedFromHistory = resolution.resolvedFromHistory === true;
+    roomPerception.previousQuestion = resolution.previousQuestion || '';
     const socialImpulses = calculateSocialImpulses({
       perception: roomPerception,
       roomState: roomIntelligenceState,
@@ -2849,7 +2962,8 @@ router.post('/pulse', async (req, res) => {
           reason,
           turn: fallbackTurnFromStep(step, roomPerception, {
             providerMode: response?.aishaEngineConnected === true ? 'aisha-rejected-fallback' : 'deterministic-fallback',
-            validationFallbackReason: response?.aishaEngineConnected === true ? reason : ''
+            validationFallbackReason: response?.aishaEngineConnected === true ? reason : '',
+            recentTurns: [...(system.currentThreadMessages || []), ...previousTurns]
           })
         };
       }
@@ -2867,7 +2981,8 @@ router.post('/pulse', async (req, res) => {
           reason: rejectionReason,
           turn: fallbackTurnFromStep(step, roomPerception, {
             providerMode: 'aisha-rejected-fallback',
-            validationFallbackReason: rejectionReason
+            validationFallbackReason: rejectionReason,
+            recentTurns: [...(system.currentThreadMessages || []), ...previousTurns]
           })
         };
       }
@@ -3005,7 +3120,8 @@ router.post('/pulse', async (req, res) => {
           }
           providerTurns.push(fallbackTurnFromStep(step, roomPerception, {
             providerMode: 'provider-unavailable-fallback',
-            validationFallbackReason: generation.timeout ? 'provider-timeout' : 'provider-unavailable'
+            validationFallbackReason: generation.timeout ? 'provider-timeout' : 'provider-unavailable',
+            recentTurns: [...(system.currentThreadMessages || []), ...providerTurns]
           }));
           continue;
         }
@@ -3018,7 +3134,8 @@ router.post('/pulse', async (req, res) => {
           }
           providerTurns.push(fallbackTurnFromStep(step, roomPerception, {
             providerMode: 'provider-rejected-fallback',
-            validationFallbackReason: validation
+            validationFallbackReason: validation,
+            recentTurns: [...(system.currentThreadMessages || []), ...providerTurns]
           }));
           continue;
         }
