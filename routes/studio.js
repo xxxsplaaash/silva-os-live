@@ -64,6 +64,7 @@ const {
   callAishaEngine,
   getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
+const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
 const { createAishaStudioPulseRequest } = require('../lib/aisha/aishaTypes');
 const {
   inferWorkflowIntent,
@@ -2117,6 +2118,23 @@ router.get('/pulse/aisha-status', async (req, res) => {
     }
   }
   res.json(status);
+});
+
+router.post('/pulse-social', async (req, res) => {
+  try {
+    const result = await runSocialDirectorTurn({
+      body: req.body || {},
+      callAishaEngine,
+      runtimeOptions: resolveAishaRuntimeCredentialOptions(req.body?.providerConfig || {})
+    });
+    res.status(result.statusCode || 200).json(result.payload);
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      mode: 'social-director-experiment',
+      error: 'social-director-route-failed'
+    });
+  }
 });
 
 router.post('/pulse', async (req, res) => {
