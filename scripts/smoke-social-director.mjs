@@ -108,6 +108,9 @@ for (const prompt of PROMPTS) {
     httpStatus: status,
     activeEngine: body.activeEngine,
     aishaConnected: body.aishaConnected,
+    aishaEngineMode: body.debugSummary?.aishaEngineMode || '',
+    aishaTraceStatus: body.debugSummary?.aishaTraceStatus || '',
+    failureReason: body.debugSummary?.aishaTraceFailureReason || body.debugSummary?.responseFallbackReason || '',
     responseMode: body.responseMode,
     roomBeat: body.roomBeat,
     roomMood: body.roomMood,
@@ -118,7 +121,13 @@ for (const prompt of PROMPTS) {
     repeatedPointRisk: repeatedPointRisk(events),
     rawInternalLeak: RAW_INTERNAL_RX.test(visible),
     feelsTaskRouterRisk: feelsTaskRouterRisk(visible),
-    validation: body.validation
+    validation: body.validation,
+    debugSummary: {
+      failureCategory: body.debugSummary?.failureCategory || '',
+      runtimeTimeoutMs: body.debugSummary?.runtimeTimeoutMs || 0,
+      responseCount: body.debugSummary?.responseCount || 0,
+      firstResponseHasContent: body.debugSummary?.firstResponseHasContent === true
+    }
   });
 }
 

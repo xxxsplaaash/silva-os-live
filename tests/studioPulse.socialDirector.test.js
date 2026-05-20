@@ -70,6 +70,17 @@ function mockAishaJson(output) {
   };
 }
 
+function mockAishaContent(content, overrides = {}) {
+  return {
+    ok: overrides.ok !== false,
+    aishaEngineConnected: overrides.aishaEngineConnected !== false,
+    engineMode: overrides.engineMode || 'production',
+    responses: [{ speakerId: 'aisha', content }],
+    trace: overrides.trace || { status: 'succeeded' },
+    fallbackReason: overrides.fallbackReason || ''
+  };
+}
+
 test('social director route exists and returns sandbox schema with local fallback', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
@@ -194,7 +205,32 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
       assert.equal(body.activeEngine, 'aisha-runtime-pack1');
       assert.equal(body.aishaConnected, true);
       assert.equal(body.validation.source, 'aisha');
+      assert.equal(body.validation.repaired, false);
+      assert.equal(body.validation.fallbackUsed, false);
+      assert.equal(body.debugSummary.failureCategory, '');
       assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['vanya', 'grok']);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('mocked A.I.S.H.A fenced JSON is parsed and accepted', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async () => mockAishaContent(`\`\`\`json\n${JSON.stringify({
+        roomBeat: 'The room opens socially.',
+        roomMood: 'playful',
+        responseMode: 'single',
+        speakers: [{ speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Girl, I am here. The room can stop acting surprised.' }],
+        silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+        stateUpdates: { notes: [] }
+      })}\n\`\`\``)
+    }));
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'Leah, girl?');
+      assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+      assert.equal(body.validation.source, 'aisha');
+      assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['leah']);
       assertCleanVisible(body);
     });
   });
@@ -232,6 +268,75 @@ test('invalid A.I.S.H.A output gets one repair attempt before fallback', async (
       assert.equal(body.activeEngine, 'aisha-runtime-pack1');
       assert.equal(body.validation.source, 'aisha-repair');
       assert.equal(body.debugSummary.repairAttempted, true);
+      assert.equal(body.validation.repaired, true);
+      assert.equal(body.validation.fallbackUsed, false);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('live A.I.S.H.A parse/schema/validator failures fall back with safe categories', async () => {
+  const cases = [
+    {
+      prompt: 'hi team',
+      content: 'not json at all',
+      category: 'json-parse-failed'
+    },
+    {
+      prompt: 'open floor',
+      content: JSON.stringify({ roomBeat: 'Empty room', roomMood: 'warm', responseMode: 'single', speakers: [], silentReactions: [], stateUpdates: { notes: [] } }),
+      category: 'schema-invalid'
+    },
+    {
+      prompt: 'who’s hungry?',
+      content: JSON.stringify({
+        roomBeat: 'Bad visible text',
+        roomMood: 'playful',
+        responseMode: 'single',
+        speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'bad', text: 'I hear who is hungry. I need the object.' }],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      }),
+      category: 'validator-rejected'
+    }
+  ];
+
+  for (const item of cases) {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async () => mockAishaContent(item.content)
+      }));
+      await withStudioServer(async baseUrl => {
+        const { body } = await postSocial(baseUrl, item.prompt);
+        assert.equal(body.activeEngine, 'local-social-director');
+        assert.equal(body.validation.fallbackUsed, true);
+        assert.equal(body.validation.failureCategory, item.category);
+        assert.equal(body.debugSummary.failureCategory, item.category);
+        assertCleanVisible(body);
+      });
+    });
+  }
+});
+
+test('A.I.S.H.A unavailable and invalid-key failures are diagnosed safely', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async () => ({
+        ok: false,
+        aishaEngineConnected: false,
+        engineMode: 'production',
+        responses: [],
+        trace: { status: 'failed', failureReason: 'Gemini API key invalid' },
+        fallbackReason: 'Gemini API key invalid'
+      })
+    }));
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'hi team');
+      assert.equal(body.activeEngine, 'local-social-director');
+      assert.equal(body.validation.fallbackUsed, true);
+      assert.equal(body.validation.failureCategory, 'invalid-key');
+      assert.equal(body.debugSummary.failureCategory, 'invalid-key');
+      assert.equal(typeof body.debugSummary.runtimeCredentialProvided, 'boolean');
       assertCleanVisible(body);
     });
   });
