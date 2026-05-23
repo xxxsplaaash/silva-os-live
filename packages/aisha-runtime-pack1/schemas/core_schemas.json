@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://aisha.example.com/schemas/core_schemas.json",
+  "title": "R.A.D.S. Core Data Schemas",
+  "type": "object",
+  "description": "Collection of JSON Schema definitions for the Pack 1 runtime.",
+  "definitions": {
+    "SourceModality": {
+      "type": "string",
+      "enum": ["text"],
+      "description": "Enumerated input modalities.  Only 'text' is allowed in Pack 1."
+    },
+    "ConsentStatus": {
+      "type": "string",
+      "enum": ["unknown", "consented", "denied"],
+      "description": "Possible consent statuses.  Used across turns and relationship events."
+    },
+    "RelationshipScope": {
+      "type": "string",
+      "enum": ["personal", "professional", "familial", "unknown"],
+      "description": "Possible scopes for a relationship (e.g. personal or professional)."
+    },
+    "Turn": {
+      "type": "object",
+      "description": "A single exchange within a session.  Immutable once written.",
+      "properties": {
+        "turn_id": { "type": "string", "description": "Unique identifier for this turn." },
+        "session_id": { "type": "string", "description": "Identifier of the session this turn belongs to." },
+        "episode_id": { "type": ["string", "null"], "description": "Optional episode identifier if this turn is part of a bounded episode." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time the turn was recorded in ISO 8601 format." },
+        "source_modality": {
+          "$ref": "#/definitions/SourceModality",
+          "description": "Modality of the input.  See SourceModality definition."
+        },
+        "speaker_id": { "type": "string", "description": "Identifier of the speaking agent (may be a system role or an external party)." },
+        "content": { "type": "string", "description": "Raw textual content of the turn." },
+        "co_present_entities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Other participant identifiers present during the turn.  Future‑safe hook; empty in Pack 1."
+        },
+        "consent_status": {
+          "oneOf": [
+            { "$ref": "#/definitions/ConsentStatus" },
+            { "type": "null" }
+          ],
+          "description": "Consent status for storing or analysing this turn.  Null indicates unspecified."
+        }
+      },
+      "required": ["turn_id", "session_id", "timestamp", "source_modality", "speaker_id", "content"],
+      "additionalProperties": false
+    },
+    "Episode": {
+      "type": "object",
+      "description": "A bounded collection of turns grouped under OR‑gate logic.",
+      "properties": {
+        "episode_id": { "type": "string", "description": "Unique identifier for the episode." },
+        "session_id": { "type": "string", "description": "Identifier of the parent session." },
+        "start_turn_id": { "type": "string", "description": "Identifier of the first turn in the episode." },
+        "end_turn_id": { "type": ["string", "null"], "description": "Identifier of the final turn in the episode; null until episode concludes." },
+        "turn_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of turns contained in the episode."
+        },
+        "created_at": { "type": "string", "format": "date-time", "description": "Timestamp when the episode was created." }
+      },
+      "required": ["episode_id", "session_id", "start_turn_id", "created_at"],
+      "additionalProperties": false
+    },
+    "Note": {
+      "type": "object",
+      "description": "An extracted observation or summary derived from one or more turns.",
+      "properties": {
+        "note_id": { "type": "string", "description": "Unique identifier for the note." },
+        "turn_id": { "type": "string", "description": "Identifier of the turn this note was derived from." },
+        "content": { "type": "string", "description": "Body of the note in free text." },
+        "created_at": { "type": "string", "format": "date-time", "description": "Timestamp when the note was created." },
+        "version_of": { "type": ["string", "null"], "description": "If this note supersedes an earlier note, this holds the previous note’s id." },
+        "status": {
+          "type": "string",
+          "enum": ["current", "superseded", "contradicted"],
+          "description": "Version status of the note for versioning and contradiction handling."
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identifiers of related notes or turns providing evidence for this note."
+        }
+      },
+      "required": ["note_id", "turn_id", "content", "created_at", "status"],
+      "additionalProperties": false
+    },
+    "NoteLink": {
+      "type": "object",
+      "description": "Represents a relationship between two notes or between a note and a turn.",
+      "properties": {
+        "link_id": { "type": "string", "description": "Unique identifier for the link." },
+        "from_id": { "type": "string", "description": "Identifier of the origin note or turn." },
+        "to_id": { "type": "string", "description": "Identifier of the target note or turn." },
+        "relation_type": {
+          "type": "string",
+          "enum": ["evidence", "contradiction", "supersession", "reference", "context"],
+          "description": "The semantic relation connecting the two entities."
+        },
+        "created_at": { "type": "string", "format": "date-time", "description": "Timestamp when the link was created." }
+      },
+      "required": ["link_id", "from_id", "to_id", "relation_type"],
+      "additionalProperties": false
+    },
+    "StateSnapshot": {
+      "type": "object",
+      "description": "Captures the full deterministic state at a moment in the session.",
+      "properties": {
+        "snapshot_id": { "type": "string", "description": "Unique identifier for the state snapshot." },
+        "session_id": { "type": "string", "description": "Identifier of the session for which this snapshot was taken." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time the snapshot was recorded." },
+        "state": {
+          "type": "object",
+          "description": "Opaque deterministic state representation to be interpreted by the state engine."
+        },
+        "note_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identifiers of notes relevant to this snapshot."
+        }
+      },
+      "required": ["snapshot_id", "session_id", "timestamp", "state"],
+      "additionalProperties": false
+    },
+    "Session": {
+      "type": "object",
+      "description": "Represents an ongoing interaction session between a person and the system.",
+      "properties": {
+        "session_id": { "type": "string", "description": "Unique identifier for the session." },
+        "person_id": { "type": "string", "description": "Identifier of the person this session is associated with." },
+        "start_time": { "type": "string", "format": "date-time", "description": "When the session started." },
+        "end_time": { "type": ["string", "null"], "format": "date-time", "description": "When the session ended; null if ongoing." },
+        "episode_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Episodes that belong to this session."
+        },
+        "active": { "type": "boolean", "description": "Whether the session is currently active." }
+      },
+      "required": ["session_id", "person_id", "start_time", "active"],
+      "additionalProperties": false
+    },
+    "SpeakerProfile": {
+      "type": "object",
+      "description": "Metadata about a speaker within a conversation.  May map to a PersonProfile if identity is recognised.",
+      "properties": {
+        "speaker_id": { "type": "string", "description": "Unique speaker identifier." },
+        "display_name": { "type": ["string", "null"], "description": "Human‑readable name for the speaker." },
+        "language_preference": { "type": ["string", "null"], "description": "Preferred language for communication." },
+        "person_id": {
+          "type": ["string", "null"],
+          "description": "Reference to the associated PersonProfile when identity recognition is available."
+        },
+        "confidence": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence that the speaker has been matched to a person."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Arbitrary key–value pairs for extensibility."
+        }
+      },
+      "required": ["speaker_id"],
+      "additionalProperties": false
+    },
+    "PersonProfile": {
+      "type": "object",
+      "description": "Persistent record for an individual person in the system.",
+      "properties": {
+        "person_id": { "type": "string", "description": "Unique identifier for the person." },
+        "name": { "type": ["string", "null"], "description": "Full name of the person." },
+        "preferred_name": { "type": ["string", "null"], "description": "Person’s preferred name." },
+        "pronouns": { "type": ["string", "null"], "description": "Pronouns used by the person." },
+        "metadata": {
+          "type": "object",
+          "description": "Arbitrary user attributes (e.g. email, locale)."
+        }
+      },
+      "required": ["person_id"],
+      "additionalProperties": false
+    },
+    "RelationshipEvent": {
+      "type": "object",
+      "description": "Captures an interaction or relationship state change between two persons.",
+      "properties": {
+        "event_id": { "type": "string", "description": "Unique identifier for the event." },
+        "from_person_id": { "type": "string", "description": "Identifier of the initiating person." },
+        "to_person_id": { "type": "string", "description": "Identifier of the affected person." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Time of the event." },
+        "relationship_scope": {
+          "$ref": "#/definitions/RelationshipScope",
+          "description": "Scope of the relationship.  See RelationshipScope definition."
+        },
+        "event_type": { "type": "string", "description": "Categorisation of the event (e.g. meeting, call, gift)." },
+        "source_modality": {
+          "$ref": "#/definitions/SourceModality",
+          "description": "Modality of the interaction giving rise to the event.  See SourceModality definition."
+        },
+        "co_present_entities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Identifiers for other entities present during the event."
+        },
+        "consent_status": {
+          "oneOf": [
+            { "$ref": "#/definitions/ConsentStatus" },
+            { "type": "null" }
+          ],
+          "description": "Recorded consent status for capturing this relationship event.  Null indicates unspecified."
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Extensible key–value data for future relationship policy engines."
+        }
+      },
+      "required": ["event_id", "from_person_id", "to_person_id", "timestamp", "relationship_scope", "event_type"],
+      "additionalProperties": false
+    }
+  }
+}

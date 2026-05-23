@@ -1,0 +1,27 @@
+# runtime_pack1 file tree
+
+- config/
+  - rads_config.yaml
+- schemas/
+  - core_schemas.json
+- src/
+  - memory/
+    - types.ts
+    - turnStore.ts
+    - snapshotStore.ts
+    - episodeBoundary.ts
+    - episodeStore.ts
+    - threadStore.ts
+    - noteExtractionSandbox.ts
+    - noteVersioning.ts
+    - retrievalPlanner.ts
+    - contextBuilder.ts
+  - runtime/
+    - transaction.ts
+    - rollback.ts
+    - parser.ts
+    - validator.ts
+    - trace.ts
+    - errors.ts
+  - governance/
+    - fallback.ts

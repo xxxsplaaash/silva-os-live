@@ -1,0 +1,72 @@
+[P34A] Cleared previous NDJSON run file for fresh run.
+[P34A] Starting Pack 3.4a Frustration Subtype Eval. model=gemini-3.1-flash-lite-preview
+[P34A] Cells to execute: 12 of 12 total
+
+[P34A] subtype=P34A_S1_DIAGNOSTIC mode=PURE_A
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p34a_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=295 rawPreview={"response_text": "Your build environment is likely failing to resolve dependencies because the pathing configuration is
+[P34A_RESULT] mode=PURE_A subtype=P34A_S1_DIAGNOSTIC validity=VALID intent=null directives=[]
+
+[P34A] subtype=P34A_S1_DIAGNOSTIC mode=COMPRESSED_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p34a_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=1011 rawPreview={"response_text": "The 'module not found' error persists because your build environment's dependency resolution path is 
+[P34A_RESULT] mode=COMPRESSED_B subtype=P34A_S1_DIAGNOSTIC validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S1_DIAGNOSTIC mode=FULL_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p34a_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=860 rawPreview={
+  "response_text": "1. Dependency Resolution Failure: Your build tool is looking for a package in a local cache or reg
+[P34A_RESULT] mode=FULL_B subtype=P34A_S1_DIAGNOSTIC validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S2_EXECUTION mode=PURE_A
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p34a_s2
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=117 rawPreview={"response_text": "Check your database credentials in the configuration file, then run 'php artisan migrate' again."}
+[P34A_RESULT] mode=PURE_A subtype=P34A_S2_EXECUTION validity=VALID intent=null directives=[]
+
+[P34A] subtype=P34A_S2_EXECUTION mode=COMPRESSED_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p34a_s2
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=385 rawPreview={"response_text": "Verify your database service status and network connectivity first. If the service is active, execute
+[P34A_RESULT] mode=COMPRESSED_B subtype=P34A_S2_EXECUTION validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S2_EXECUTION mode=FULL_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p34a_s2
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=491 rawPreview={"response_text": "1. Verify your database service is active by running 'docker-compose ps' or 'systemctl status postgre
+[P34A_RESULT] mode=FULL_B subtype=P34A_S2_EXECUTION validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S3_JUST_FIX_IT mode=PURE_A
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p34a_s3
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=97 rawPreview={"response_text": "Provide the regex pattern and the target string you are attempting to match."}
+[P34A_RESULT] mode=PURE_A subtype=P34A_S3_JUST_FIX_IT validity=VALID intent=null directives=[]
+
+[P34A] subtype=P34A_S3_JUST_FIX_IT mode=COMPRESSED_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p34a_s3
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=326 rawPreview={"response_text": "To provide the exact working string, you must specify the target pattern and the input data. Without 
+[P34A_RESULT] mode=COMPRESSED_B subtype=P34A_S3_JUST_FIX_IT validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S3_JUST_FIX_IT mode=FULL_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p34a_s3
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=285 rawPreview={"response_text": "To provide the exact working string, you must specify the target pattern and the input data. Without 
+[P34A_RESULT] mode=FULL_B subtype=P34A_S3_JUST_FIX_IT validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S4_BLOCKED_UNCERTAIN mode=PURE_A
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p34a_s4
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=221 rawPreview={"response_text": "Stop. Step away from the keyboard. Frustration leads to more errors. List the last three changes you 
+[P34A_RESULT] mode=PURE_A subtype=P34A_S4_BLOCKED_UNCERTAIN validity=VALID intent=null directives=[]
+
+[P34A] subtype=P34A_S4_BLOCKED_UNCERTAIN mode=COMPRESSED_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p34a_s4
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=646 rawPreview={"response_text": "Stop editing code immediately. First, isolate the failure by running the existing test suite to estab
+[P34A_RESULT] mode=COMPRESSED_B subtype=P34A_S4_BLOCKED_UNCERTAIN validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,detail_tolerance:+concise_directive]
+
+[P34A] subtype=P34A_S4_BLOCKED_UNCERTAIN mode=FULL_B
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p34a_s4
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=648 rawPreview={"response_text": "1. Stop immediate development to prevent further regression. 2. Execute a git checkout to the last kn
+[P34A_RESULT] mode=FULL_B subtype=P34A_S4_BLOCKED_UNCERTAIN validity=VALID intent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive]
+
+[P34A] ══════════════ PACK 3.4a RUN COMPLETE ══════════════
+[P34A] Total cells: 12
+[P34A] Valid evidence: 12
+[P34A] Infra failures: 0
+[P34A] Posture-realization failures: 0
+[P34A] Posture mismatches: 0
+[P34A] Output: /Users/splaaash/Downloads/AISHA_Antigravity_Full_Handoff_2026-04-16/_audit_workspace/verified_repo/AISHA_37of37_probe/AISHA_Integrated_Repo_v2_SHIPPING_33of33/runtime_pack1/PACK_3_4A_FRUSTRATION_EVAL_RUN.json

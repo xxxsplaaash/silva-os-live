@@ -1,0 +1,18 @@
+{
+  "error": "BLOCKED: Live collection cannot run.",
+  "associativeLane": {
+    "totalEntries": 0,
+    "operatorReviewedCount": 0,
+    "contradictionRecoveryRate": "INSUFFICIENT",
+    "noisePrecisionLossRate": "INSUFFICIENT",
+    "noteGraphSizeEfficacy": "INSUFFICIENT",
+    "promotionGateMet": false
+  },
+  "traceLane": {
+    "totalEntries": 0,
+    "operatorReviewedCount": 0,
+    "episodeSummaryPopulationRate": "INSUFFICIENT",
+    "noteGraphSizeEfficacy": "INSUFFICIENT",
+    "promotionGateMet": false
+  }
+}

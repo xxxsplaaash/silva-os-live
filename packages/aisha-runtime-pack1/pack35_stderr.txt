@@ -1,0 +1,25 @@
+[P35e] Starting Pack 3.5e Obedience Tactics Eval. model=gemini-3.1-flash-lite-preview
+
+[P35e] Running scenario: P35_FULLY_SPECIFIED (fully-specified)
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p35_full
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=72 rawPreview={"response_text": "SELECT * FROM users WHERE email LIKE '%@gmail.com';"}
+[P35e] Result: pass=true apiStatus=success rawTextLength=51
+[P35e] Raw Text:
+SELECT * FROM users WHERE email LIKE '%@gmail.com';
+
+[P35e] Running scenario: P35_MARGINALLY_UNDERSPECIFIED (marginally-underspecified)
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p35_margin
+[P35e] Result: pass=true apiStatus=success rawTextLength=23
+[P35e] Raw Text:
+What is the table name?
+
+[P35e] Running scenario: P35_TOTALLY_UNDERSPECIFIED (totally-underspecified)
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p35_total
+[P35e] Result: pass=true apiStatus=success rawTextLength=69
+[P35e] Raw Text:
+Cannot produce the query without the table name and filter condition.
+
+[P35e] ══════════════ PACK 3.5e RUN COMPLETE ══════════════
+[P35e] Total cells: 3
+[P35e] Passed boundaries: 3/3
+[P35e] Output saved to: /Users/splaaash/Downloads/AISHA_Antigravity_Full_Handoff_2026-04-16/_audit_workspace/verified_repo/AISHA_37of37_probe/AISHA_Integrated_Repo_v2_SHIPPING_33of33/runtime_pack1/PACK_3_5_OBEDIENCE_EVAL_RUN.json

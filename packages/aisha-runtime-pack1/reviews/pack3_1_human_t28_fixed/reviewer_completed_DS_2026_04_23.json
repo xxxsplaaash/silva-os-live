@@ -1,0 +1,86 @@
+[
+  {
+    "scenarioId": "SCENARIO_1_LOOP_BREAK_PACE",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B at least re-establishes direction. A sounds controlled, but it is too thin and too cold for someone who is already frustrated in the middle of troubleshooting. I don't love the wording in B either, but it does more."
+  },
+  {
+    "scenarioId": "SCENARIO_2_DEPTH_TOLERANCE_BREVITY",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "A",
+    "note": "A is crisp and complete. B is still good, but the added question makes it feel like the answer stops one beat earlier than it should. If this were a follow-up turn, I might have liked B more."
+  },
+  {
+    "scenarioId": "SCENARIO_3_OVERWHELM_SPIRAL",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "The numbered sequence in B is a little rigid, but it meets the user's request head on. A points in the right direction without really holding the user's hand through the first move. Close call. B won because it is more explicit."
+  },
+  {
+    "scenarioId": "SCENARIO_5_NEGATIVE_NEUTRAL_UNFORMED",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "Identical wording. No preference."
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "evidenceId": "ev_000001",
+    "operatorReviewed": true,
+    "contradictionCaught": true,
+    "noiseFlagged": false,
+    "noteGraphSizeLogged": true,
+    "annotatedAt": "2026-04-29T09:18:12.549Z"
+  },
+  {
+    "evidenceId": "ev_000003",
+    "operatorReviewed": true,
+    "contradictionCaught": true,
+    "noiseFlagged": false,
+    "noteGraphSizeLogged": true,
+    "annotatedAt": "2026-04-29T09:18:12.551Z"
+  }
+]

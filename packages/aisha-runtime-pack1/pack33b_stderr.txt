@@ -1,0 +1,102 @@
+[P33B] --rerun-invalid mode. Prior cells: 35. Invalid to rerun: 14
+[P33B] Starting Pack 3.3b Posture Eval. model=gemini-3.1-flash-lite-preview
+[P33B] Cells to execute: 14 of 35 total
+[P33B] Resumable NDJSON: /Users/splaaash/Downloads/AISHA_Antigravity_Full_Handoff_2026-04-16/_audit_workspace/verified_repo/AISHA_37of37_probe/AISHA_Integrated_Repo_v2_SHIPPING_33of33/runtime_pack1/PACK_3_3B_POSTURE_EVAL_RUN.json.ndjson
+[P33B] Final JSON: /Users/splaaash/Downloads/AISHA_Antigravity_Full_Handoff_2026-04-16/_audit_workspace/verified_repo/AISHA_37of37_probe/AISHA_Integrated_Repo_v2_SHIPPING_33of33/runtime_pack1/PACK_3_3B_POSTURE_EVAL_RUN.json
+
+[P33B] scenario=P33_S1_FRUSTRATION_BLOCKED mode=PURE_A
+[P33B_PREFLIGHT] mode=PURE_A scenario=P33_S1_FRUSTRATION_BLOCKED biasesObservedByRuntime=0 domains=[]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p33_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=250 rawPreview={"response_text": "Check your tsconfig.json paths mapping, verify the module resolution strategy, and ensure the file ex
+[P33B_RESULT] mode=PURE_A scenario=P33_S1_FRUSTRATION_BLOCKED apiStatus=success cellValidity=VALID realizedIntent=null directives=[] words=34
+
+[P33B] scenario=P33_S1_FRUSTRATION_BLOCKED mode=COMPRESSED_B
+[P33B_PREFLIGHT] mode=COMPRESSED_B scenario=P33_S1_FRUSTRATION_BLOCKED biasesObservedByRuntime=2 domains=[communication_pace:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p33_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=207 rawPreview={"response_text": "Check your tsconfig.json paths mapping and ensure the module resolution strategy matches your file st
+[P33B_RESULT] mode=COMPRESSED_B scenario=P33_S1_FRUSTRATION_BLOCKED apiStatus=success cellValidity=POSTURE_MISMATCH realizedIntent=narrow_claim directives=[detail_tolerance:+concise_directive] words=26 invalidReason=intent_mismatch: expected=direct_answer realized=narrow_claim
+
+[P33B] scenario=P33_S1_FRUSTRATION_BLOCKED mode=FULL_B
+[P33B_PREFLIGHT] mode=FULL_B scenario=P33_S1_FRUSTRATION_BLOCKED biasesObservedByRuntime=3 domains=[communication_pace:0.90@0.48,task_structure_preference:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p33_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=385 rawPreview={"response_text": "1. Verify the module path in your import statement matches the file system case sensitivity. 2. Check
+[P33B_RESULT] mode=FULL_B scenario=P33_S1_FRUSTRATION_BLOCKED apiStatus=success cellValidity=POSTURE_MISMATCH realizedIntent=narrow_claim directives=[task_structure_preference:+granular_directive,detail_tolerance:+concise_directive] words=57 invalidReason=intent_mismatch: expected=direct_answer realized=narrow_claim
+
+[P33B] scenario=P33_S1_FRUSTRATION_BLOCKED mode=EXPLORATION_EXPAND
+[P33B_PREFLIGHT] mode=EXPLORATION_EXPAND scenario=P33_S1_FRUSTRATION_BLOCKED biasesObservedByRuntime=2 domains=[communication_pace:-0.90@0.48,detail_tolerance:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p33_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=337 rawPreview={"response_text": "If standard dependency resolution has failed, the issue likely resides in your tsconfig.json paths ma
+[P33B_RESULT] mode=EXPLORATION_EXPAND scenario=P33_S1_FRUSTRATION_BLOCKED apiStatus=success cellValidity=POSTURE_MISMATCH realizedIntent=narrow_claim directives=[detail_tolerance:+deepening_directive] words=47 invalidReason=intent_mismatch: expected=question_forward realized=narrow_claim
+
+[P33B] scenario=P33_S1_FRUSTRATION_BLOCKED mode=AB_HYBRID
+[P33B_PREFLIGHT] mode=AB_HYBRID scenario=P33_S1_FRUSTRATION_BLOCKED biasesObservedByRuntime=1 domains=[task_structure_preference:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=1 sessionId=p33_s1
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=523 rawPreview={"response_text": "1. Verify the 'moduleResolution' setting in your tsconfig.json matches your environment. 2. Confirm t
+[P33B_RESULT] mode=AB_HYBRID scenario=P33_S1_FRUSTRATION_BLOCKED apiStatus=success cellValidity=POSTURE_MISMATCH realizedIntent=narrow_claim directives=[task_structure_preference:+granular_directive] words=71 invalidReason=intent_mismatch: expected=normal realized=narrow_claim
+
+[P33B] scenario=P33_S2_BREADTH_IDEATION mode=EXPLORATION_EXPAND
+[P33B_PREFLIGHT] mode=EXPLORATION_EXPAND scenario=P33_S2_BREADTH_IDEATION biasesObservedByRuntime=2 domains=[communication_pace:-0.90@0.48,detail_tolerance:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p33_s2
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=759 rawPreview={"response_text": "To build effective tools, you must move beyond generic generation. Consider these directions: 1. Cont
+[P33B_RESULT] mode=EXPLORATION_EXPAND scenario=P33_S2_BREADTH_IDEATION apiStatus=success cellValidity=VALID realizedIntent=question_forward directives=[communication_pace:normal→question_forward,detail_tolerance:+deepening_directive] words=98
+
+[P33B] scenario=P33_S3_OVERWHELM_FIRST_STEP mode=FULL_B
+[P33B_PREFLIGHT] mode=FULL_B scenario=P33_S3_OVERWHELM_FIRST_STEP biasesObservedByRuntime=3 domains=[communication_pace:0.90@0.48,task_structure_preference:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p33_s3
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=284 rawPreview={"response_text": "Identify the single task among the three fires that will cause the most significant negative impact i
+[P33B_RESULT] mode=FULL_B scenario=P33_S3_OVERWHELM_FIRST_STEP apiStatus=success cellValidity=VALID realizedIntent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive] words=42
+
+[P33B] scenario=P33_S3_OVERWHELM_FIRST_STEP mode=EXPLORATION_EXPAND
+[P33B_PREFLIGHT] mode=EXPLORATION_EXPAND scenario=P33_S3_OVERWHELM_FIRST_STEP biasesObservedByRuntime=2 domains=[communication_pace:-0.90@0.48,detail_tolerance:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p33_s3
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=215 rawPreview={"response_text": "Pick the single task that, if completed, makes the other thirty-nine easier or irrelevant, and start 
+[P33B_RESULT] mode=EXPLORATION_EXPAND scenario=P33_S3_OVERWHELM_FIRST_STEP apiStatus=success cellValidity=VALID realizedIntent=question_forward directives=[communication_pace:normal→question_forward,detail_tolerance:+deepening_directive] words=32
+
+[P33B] scenario=P33_S4_URGENT_TECHNICAL mode=FULL_B
+[P33B_PREFLIGHT] mode=FULL_B scenario=P33_S4_URGENT_TECHNICAL biasesObservedByRuntime=3 domains=[communication_pace:0.90@0.48,task_structure_preference:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p33_s4
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=525 rawPreview={
+  "response_text": "1. Execute 'netstat -tulnp | grep :<PORT>' to verify the process is listening on the expected port
+[P33B_RESULT] mode=FULL_B scenario=P33_S4_URGENT_TECHNICAL apiStatus=success cellValidity=VALID realizedIntent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive] words=83
+
+[P33B] scenario=P33_S6_RESISTANT_ANTI_THERAPY mode=FULL_B
+[P33B_PREFLIGHT] mode=FULL_B scenario=P33_S6_RESISTANT_ANTI_THERAPY biasesObservedByRuntime=3 domains=[communication_pace:0.90@0.48,task_structure_preference:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p33_s6
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=833 rawPreview={
+  "response_text": "Your plan is high-risk. Evaluate it against these four criteria: 1. Financial Runway: Calculate yo
+[P33B_RESULT] mode=FULL_B scenario=P33_S6_RESISTANT_ANTI_THERAPY apiStatus=success cellValidity=VALID realizedIntent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive] words=132
+
+[P33B] scenario=P33_S6_RESISTANT_ANTI_THERAPY mode=EXPLORATION_EXPAND
+[P33B_PREFLIGHT] mode=EXPLORATION_EXPAND scenario=P33_S6_RESISTANT_ANTI_THERAPY biasesObservedByRuntime=2 domains=[communication_pace:-0.90@0.48,detail_tolerance:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=2 sessionId=p33_s6
+[T24_DEBUG] Gemini API FAILED status=503 model=gemini-3.1-flash-lite-preview body={"error":{"code":503,"message":"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE"}}
+[P33B_RESULT] mode=EXPLORATION_EXPAND scenario=P33_S6_RESISTANT_ANTI_THERAPY apiStatus=fallback cellValidity=INFRA_FAILURE realizedIntent=null directives=[] words=21 invalidReason=This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.
+
+[P33B] scenario=P33_S6_RESISTANT_ANTI_THERAPY mode=AB_HYBRID
+[P33B_PREFLIGHT] mode=AB_HYBRID scenario=P33_S6_RESISTANT_ANTI_THERAPY biasesObservedByRuntime=1 domains=[task_structure_preference:0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=1 sessionId=p33_s6
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=621 rawPreview={
+  "response_text": "1. Assess your liquid savings. You need at least six months of living expenses to remain solvent. 
+[P33B_RESULT] mode=AB_HYBRID scenario=P33_S6_RESISTANT_ANTI_THERAPY apiStatus=success cellValidity=VALID realizedIntent=normal directives=[task_structure_preference:+granular_directive] words=91
+
+[P33B] scenario=P33_S7_CALIBRATION_CONTROL mode=PURE_A
+[P33B_PREFLIGHT] mode=PURE_A scenario=P33_S7_CALIBRATION_CONTROL biasesObservedByRuntime=0 domains=[]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=0 sessionId=p33_s7
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=174 rawPreview={"response_text": "Establish a dedicated workspace, use time-blocking techniques like Pomodoro, and eliminate digital di
+[P33B_RESULT] mode=PURE_A scenario=P33_S7_CALIBRATION_CONTROL apiStatus=success cellValidity=VALID realizedIntent=null directives=[] words=17
+
+[P33B] scenario=P33_S7_CALIBRATION_CONTROL mode=FULL_B
+[P33B_PREFLIGHT] mode=FULL_B scenario=P33_S7_CALIBRATION_CONTROL biasesObservedByRuntime=3 domains=[communication_pace:0.90@0.48,task_structure_preference:0.90@0.48,detail_tolerance:-0.90@0.48]
+[T24_DEBUG] generate() called model=gemini-3.1-flash-lite-preview biasCount=3 sessionId=p33_s7
+[T24_DEBUG] Gemini API OK model=gemini-3.1-flash-lite-preview rawLength=724 rawPreview={
+  "response_text": "1. Establish a dedicated workspace used exclusively for professional tasks to trigger a psychologi
+[P33B_RESULT] mode=FULL_B scenario=P33_S7_CALIBRATION_CONTROL apiStatus=success cellValidity=VALID realizedIntent=direct_answer directives=[communication_pace:normal→direct_answer,task_structure_preference:+granular_directive,detail_tolerance:+concise_directive] words=100
+
+[P33B] ══════════════ PACK 3.3b RUN COMPLETE ══════════════
+[P33B] Total cells: 35
+[P33B] Valid evidence: 30
+[P33B] Infra failures: 1
+[P33B] Posture-realization failures: 0
+[P33B] Posture mismatches: 4
+[P33B] Output: /Users/splaaash/Downloads/AISHA_Antigravity_Full_Handoff_2026-04-16/_audit_workspace/verified_repo/AISHA_37of37_probe/AISHA_Integrated_Repo_v2_SHIPPING_33of33/runtime_pack1/PACK_3_3B_POSTURE_EVAL_RUN.json
+[P33B] ⚠ INFRA_FAILURE cells detected — rerun with: npx tsx src/eval/runPack33PostureEval.ts --rerun-invalid

@@ -1,0 +1,1936 @@
+{
+  "packVersion": "3.3b",
+  "summary": {
+    "model": "gemini-3.1-flash-lite-preview",
+    "totalCells": 35,
+    "validEvidence": 30,
+    "infraFailures": 1,
+    "postureRealizationFailures": 0,
+    "postureMismatches": 4,
+    "scenarios": [
+      "P33_S1_FRUSTRATION_BLOCKED",
+      "P33_S2_BREADTH_IDEATION",
+      "P33_S3_OVERWHELM_FIRST_STEP",
+      "P33_S4_URGENT_TECHNICAL",
+      "P33_S5_PRECISION_FACTUAL",
+      "P33_S6_RESISTANT_ANTI_THERAPY",
+ {
+  "packVersion": "3.3b",
+  "summary": {
+    "model": "gemini-3.1-flash-lite-preview",
+    "totalCells": 35,
+    "validEvidence": 30,
+    "infraFailures": 1,
+    "postureRealizationFailures": 0,
+    "postureMismatches": 4,
+    "scenarios": [
+      "P33_S1_FRUSTRATION_BLOCKED",
+      "P33_S2_BREADTH_IDEATION",
+      "P33_S3_OVERWHELM_FIRST_STEP",
+      "P33_S4_URGENT_TECHNICAL",
+      "P33_S5_PRECISION_FACTUAL",
+      "P33_S6_RESISTANT_ANTI_THERAPY",
+      "P33_S7_CALIBRATION_CONTROL"
+    ],
+    "modes": [
+      "PURE_A",
+      "COMPRESSED_B",
+      "FULL_B",
+      "EXPLORATION_EXPAND",
+      "AB_HYBRID"
+    ],
+    "infraFailureDetails": [
+      {
+        "modeId": "EXPLORATION_EXPAND",
+        "scenarioId": "P33_S6_RESISTANT_ANTI_THERAPY",
+        "reason": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+      }
+    ],
+    "postureRealizationFailureDetails": [],
+    "postureMismatchDetails": [
+      {
+        "modeId": "COMPRESSED_B",
+        "scenarioId": "P33_S1_FRUSTRATION_BLOCKED",
+        "reason": "intent_mismatch: expected=direct_answer realized=narrow_claim",
+        "realizedIntent": "narrow_claim"
+      },
+      {
+        "modeId": "FULL_B",
+        "scenarioId": "P33_S1_FRUSTRATION_BLOCKED",
+        "reason": "intent_mismatch: expected=direct_answer realized=narrow_claim",
+        "realizedIntent": "narrow_claim"
+      },
+      {
+        "modeId": "EXPLORATION_EXPAND",
+        "scenarioId": "P33_S1_FRUSTRATION_BLOCKED",
+        "reason": "intent_mismatch: expected=question_forward realized=narrow_claim",
+        "realizedIntent": "narrow_claim"
+      },
+      {
+        "modeId": "AB_HYBRID",
+        "scenarioId": "P33_S1_FRUSTRATION_BLOCKED",
+        "reason": "intent_mismatch: expected=normal realized=narrow_claim",
+        "realizedIntent": "narrow_claim"
+      }
+    ]
+  },
+  "scenarioBlocks": [
+    {
+      "scenarioId": "P33_S1_FRUSTRATION_BLOCKED",
+      "scenarioClass": "frustration + blocked action",
+      "isControl": false,
+      "userPrompt": "My TypeScript build has been failing for 45 minutes with the same 'Cannot find module' error and I have tried everything. What is actually wrong?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 10188,
+          "metrics": {
+            "wordCount": 34,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Check your tsconfig.json paths mapping, verify the module resolution strategy, and ensure the file extension is explicitly included if you are using ESM. If those are correct, clear your node_modules and lockfile, then reinstall."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "narrow_claim"
+          },
+          "validity": {
+            "cellValidity": "POSTURE_MISMATCH",
+            "cellInvalidReason": "intent_mismatch: expected=direct_answer realized=narrow_claim"
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 7792,
+          "metrics": {
+            "wordCount": 26,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Check your tsconfig.json paths mapping and ensure the module resolution strategy matches your file structure. If the files exist, verify your case sensitivity and node_modules integrity."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "narrow_claim"
+          },
+          "validity": {
+            "cellValidity": "POSTURE_MISMATCH",
+            "cellInvalidReason": "intent_mismatch: expected=direct_answer realized=narrow_claim"
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 5717,
+          "metrics": {
+            "wordCount": 57,
+            "sentenceCount": 8,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Verify the module path in your import statement matches the file system case sensitivity. 2. Check your tsconfig.json for correct baseUrl and paths configuration. 3. Confirm the target file is included in the 'include' array or not excluded by 'exclude'. 4. Run 'tsc --traceResolution' to identify exactly where the compiler is searching for the missing module."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "narrow_claim"
+          },
+          "validity": {
+            "cellValidity": "POSTURE_MISMATCH",
+            "cellInvalidReason": "intent_mismatch: expected=question_forward realized=narrow_claim"
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 12694,
+          "metrics": {
+            "wordCount": 47,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "If standard dependency resolution has failed, the issue likely resides in your tsconfig.json paths mapping, a mismatch between your moduleResolution strategy and the file system, or a stale cache in your node_modules. Provide your tsconfig.json and the specific import path causing the error for a precise diagnosis."
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "narrow_claim"
+          },
+          "validity": {
+            "cellValidity": "POSTURE_MISMATCH",
+            "cellInvalidReason": "intent_mismatch: expected=normal realized=narrow_claim"
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 18179,
+          "metrics": {
+            "wordCount": 71,
+            "sentenceCount": 10,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Verify the 'moduleResolution' setting in your tsconfig.json matches your environment. 2. Confirm the file path casing matches the import statement exactly, as this is case-sensitive on Linux. 3. Check if the missing module is listed in 'dependencies' or 'devDependencies' in package.json. 4. Run 'npm list <module_name>' to confirm the package is physically present in node_modules. 5. Delete the 'node_modules' folder and 'package-lock.json', then run 'npm install' to resolve potential corruption."
+        }
+      ],
+      "flagsRaisedByMode": {}
+    },
+    {
+      "scenarioId": "P33_S2_BREADTH_IDEATION",
+      "scenarioClass": "breadth-heavy ideation",
+      "isControl": false,
+      "userPrompt": "I am starting a new studio and want to think about what kinds of AI tools I could build for creative professionals. Give me as many directions as you can.",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 14285,
+          "metrics": {
+            "wordCount": 46,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Focus on these areas: automated asset versioning and metadata tagging, generative style-transfer tools for rapid prototyping, collaborative real-time feedback loops for remote teams, intelligent project management that predicts resource bottlenecks, automated accessibility compliance checkers for design files, and custom model training pipelines for brand-specific aesthetic consistency."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 22842,
+          "metrics": {
+            "wordCount": 148,
+            "sentenceCount": 10,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "To build effective tools for creative professionals, focus on these five high-impact directions: 1. Context-Aware Asset Management: Develop AI that automatically tags, categorizes, and retrieves assets based on visual style, mood, or project metadata, eliminating manual organization. 2. Generative Workflow Integration: Create plugins that bridge the gap between generative models and professional software (e.g., Adobe Suite, Blender) to allow for iterative, non-destructive editing rather than static image generation. 3. Automated Technical Compliance: Build tools that scan creative outputs for technical requirements like color space accuracy, resolution standards, or accessibility compliance (WCAG) in real-time. 4. Collaborative Feedback Synthesis: Implement AI that analyzes client feedback across multiple channels, distilling subjective comments into actionable technical tasks for the creative team. 5. Style Consistency Engines: Develop fine-tuning pipelines that allow studios to train models on their proprietary visual language, ensuring that AI-assisted drafts maintain brand identity and aesthetic continuity across large-scale campaigns."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 23366,
+          "metrics": {
+            "wordCount": 160,
+            "sentenceCount": 14,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Generative Asset Libraries: Build tools that generate high-fidelity, proprietary textures, 3D models, or soundscapes based on a studio's existing style guide. 2. Automated Workflow Orchestration: Develop agents that handle repetitive file naming, metadata tagging, and cloud asset organization across creative suites. 3. Real-time Collaborative Feedback Loops: Create AI-driven annotation tools that analyze rough cuts or drafts to suggest pacing adjustments or color grading consistency based on industry standards. 4. Predictive Resource Allocation: Implement systems that analyze project scope to forecast render times, budget burn rates, and talent availability. 5. Style Transfer and Consistency Engines: Design plugins that ensure visual uniformity across multi-platform campaigns by enforcing color palettes and typography constraints automatically. 6. Intelligent Archival and Retrieval: Build semantic search engines that allow teams to query vast internal archives using natural language to find specific assets or past project references. 7. Automated Localization: Develop tools that handle multi-language asset adaptation, including text-in-image translation and localized audio dubbing with lip-sync correction."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "question_forward"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 9273,
+          "metrics": {
+            "wordCount": 98,
+            "sentenceCount": 12,
+            "questionCount": 1
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "To build effective tools, you must move beyond generic generation. Consider these directions: 1. Context-aware asset management that tags and organizes files based on semantic visual content. 2. Real-time collaborative feedback loops that translate subjective client notes into specific technical adjustments. 3. Automated workflow orchestration that handles repetitive tasks like file conversion, naming conventions, and metadata entry. 4. Predictive resource allocation tools that analyze project scope to forecast burnout or budget overruns. 5. Style-consistency engines that enforce brand guidelines across disparate media types. Which of these operational gaps presents the most significant friction in your current creative process?"
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 20877,
+          "metrics": {
+            "wordCount": 144,
+            "sentenceCount": 16,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Automated asset management: Tools that auto-tag, categorize, and index raw creative files using computer vision. 2. Generative style transfer: Plugins that apply specific brand guidelines or artistic styles to rough drafts. 3. Collaborative feedback loops: Platforms that transcribe, analyze, and summarize client feedback into actionable task lists. 4. Predictive resource allocation: Software that estimates project timelines and budget requirements based on historical performance data. 5. Intelligent version control: Systems that track iterative changes in non-text files like PSDs or 3D models to allow for granular rollbacks. 6. Automated accessibility compliance: Tools that scan designs for color contrast, font legibility, and screen reader compatibility. 7. Context-aware asset retrieval: Search engines that find assets based on mood, emotional intent, or project theme rather than just file names. 8. Workflow automation: Scripts that handle repetitive tasks like file exporting, resizing, and naming conventions across multiple platforms."
+        }
+      ],
+      "flagsRaisedByMode": {}
+    },
+    {
+      "scenarioId": "P33_S3_OVERWHELM_FIRST_STEP",
+      "scenarioClass": "overwhelm + first-step request",
+      "isControl": false,
+      "userPrompt": "I have 40 tasks due this week, three fires, and I cannot think straight. Do not give me a system, do not give me a list. Just tell me the one thing I should do right now.",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 18245,
+          "metrics": {
+            "wordCount": 13,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Pick the single task that prevents the most damage, and start it immediately."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 23840,
+          "metrics": {
+            "wordCount": 47,
+            "sentenceCount": 3,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Identify the single task that, if completed, makes the other 39 tasks easier or irrelevant, and execute it immediately. Ignore the fires for ten minutes to focus exclusively on this high-leverage action. Once finished, address the most urgent fire only after you have secured this one win."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 7513,
+          "metrics": {
+            "wordCount": 42,
+            "sentenceCount": 3,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Identify the single task among the three fires that will cause the most significant negative impact if left unaddressed for another hour. Execute that task immediately. Ignore the other 39 items and the remaining two fires until this specific action is completed."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "question_forward"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 6905,
+          "metrics": {
+            "wordCount": 32,
+            "sentenceCount": 2,
+            "questionCount": 1
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Pick the single task that, if completed, makes the other thirty-nine easier or irrelevant, and start it immediately. What is the specific nature of the most urgent fire you are currently facing?"
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 15574,
+          "metrics": {
+            "wordCount": 22,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Pick the single most urgent fire, ignore the other 42 items, and resolve that one issue completely before moving to the next."
+        }
+      ],
+      "flagsRaisedByMode": {}
+    },
+    {
+      "scenarioId": "P33_S4_URGENT_TECHNICAL",
+      "scenarioClass": "urgent technical query",
+      "isControl": false,
+      "userPrompt": "Our production API is returning 502s. Nginx logs show upstream timed out. Our Node service is running. What is the exact command to check if the Node port is bound and accepting connections?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 11936,
+          "metrics": {
+            "wordCount": 11,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "netstat -tulnp | grep :<port_number> or ss -tulnp | grep :<port_number>"
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 22175,
+          "metrics": {
+            "wordCount": 72,
+            "sentenceCount": 4,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Run 'ss -tulpn | grep :<PORT>' to verify the port is in a LISTEN state. If the port is bound but the service is unresponsive, use 'curl -v http://127.0.0.1:<PORT>' to test local connectivity. If the curl command hangs, the Node event loop is blocked; check your application logs for synchronous operations or heavy CPU tasks. If the connection is refused, the Node process is not bound to that specific interface or port."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 4984,
+          "metrics": {
+            "wordCount": 83,
+            "sentenceCount": 10,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Execute 'netstat -tulnp | grep :<PORT>' to verify the process is listening on the expected port. 2. Execute 'ss -tulnp | grep :<PORT>' as a modern alternative to confirm socket status. 3. Execute 'curl -v http://127.0.0.1:<PORT>' to test if the Node service responds locally. 4. Check 'lsof -i :<PORT>' to identify the specific PID and ensure it matches your production process. 5. If the port is bound but unresponsive, check the Node.js event loop lag or resource exhaustion via 'top' or 'htop'."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "question_forward"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 13805,
+          "metrics": {
+            "wordCount": 46,
+            "sentenceCount": 3,
+            "questionCount": 1
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Use 'ss -tulpn | grep :<port_number>' to verify the socket state. If the port is bound but the service is unresponsive, check the event loop lag or pending request queue. What specific latency metrics are you seeing in your Node.js process monitor before the timeout occurs?"
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 9289,
+          "metrics": {
+            "wordCount": 48,
+            "sentenceCount": 8,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Identify the port your Node service is configured to use. 2. Run 'netstat -tuln | grep <port>' to verify the socket state. 3. Run 'ss -lntp | grep <port>' to confirm the process ID bound to that port. 4. Run 'curl -v http://localhost:<port>' to test local connectivity."
+        }
+      ],
+      "flagsRaisedByMode": {}
+    },
+    {
+      "scenarioId": "P33_S5_PRECISION_FACTUAL",
+      "scenarioClass": "precision factual query",
+      "isControl": false,
+      "userPrompt": "What year did the Berlin Wall fall?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 21849,
+          "metrics": {
+            "wordCount": 6,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "The Berlin Wall fell in 1989."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 16601,
+          "metrics": {
+            "wordCount": 44,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "The Berlin Wall fell on November 9, 1989. This event was triggered by a press conference where East German official Günter Schabowski mistakenly announced that travel restrictions would be lifted immediately, leading thousands of citizens to gather at checkpoints and force the gates open."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 16024,
+          "metrics": {
+            "wordCount": 41,
+            "sentenceCount": 4,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "The Berlin Wall fell on November 9, 1989. Step 1: East German officials announced that citizens could cross the border freely. Step 2: Crowds gathered at checkpoints and overwhelmed border guards. Step 3: People began dismantling the wall physically that night."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "question_forward"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 8097,
+          "metrics": {
+            "wordCount": 21,
+            "sentenceCount": 2,
+            "questionCount": 1
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "The Berlin Wall fell on November 9, 1989. What specific geopolitical consequences of this event are you interested in examining further?"
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 10245,
+          "metrics": {
+            "wordCount": 9,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": true
+          },
+          "rawText": "1. The Berlin Wall fell on November 9, 1989."
+        }
+      ],
+      "flagsRaisedByMode": {
+        "AB_HYBRID": [
+          "structuralOverformattingInNeutralCase"
+        ]
+      }
+    },
+    {
+      "scenarioId": "P33_S6_RESISTANT_ANTI_THERAPY",
+      "scenarioClass": "resistant / anti-therapy user",
+      "isControl": false,
+      "userPrompt": "I do not want to talk about my feelings or 'process' anything. I just need to know if my plan is solid or not. Here it is: I am quitting my job next month without a backup offer. Is that stupid?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 19739,
+          "metrics": {
+            "wordCount": 34,
+            "sentenceCount": 3,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Quitting without a backup is high-risk. It is only 'solid' if you have at least six months of liquid savings and a clear, actionable strategy for your next move. Without those, it is reckless."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 23310,
+          "metrics": {
+            "wordCount": 94,
+            "sentenceCount": 6,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Quitting without a backup is high-risk. To determine if it is viable, verify these three metrics: First, confirm you have a liquid emergency fund covering at least six months of essential living expenses. Second, audit your current industry's hiring velocity to ensure your specific role is in demand. Third, establish a structured daily schedule for job hunting to prevent professional stagnation. If you lack the six-month runway or your sector is currently experiencing layoffs, the plan is objectively reckless. If you have the capital and a clear strategy, it is a calculated career pivot."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 12166,
+          "metrics": {
+            "wordCount": 132,
+            "sentenceCount": 14,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Your plan is high-risk. Evaluate it against these four criteria: 1. Financial Runway: Calculate your total liquid savings. Divide by your monthly essential expenses. If the result is less than six months, you are financially vulnerable. 2. Market Viability: Research current job postings in your specific field. If the ratio of applicants to roles is high, your re-entry timeline will be unpredictable. 3. Skill Liquidity: Determine if your current skill set is in high demand or if it requires a transition period for retraining. 4. Exit Strategy: If you quit, you lose leverage. Secure a professional network contact or a freelance lead before resigning to mitigate the gap in your employment history. If you lack at least six months of savings and a clear path to income, the plan is objectively reckless."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "INFRA_FAILURE",
+            "cellInvalidReason": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."
+          },
+          "apiStatus": "fallback",
+          "apiErrorMessage": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+          "latencyMs": 5594,
+          "metrics": {
+            "wordCount": 21,
+            "sentenceCount": 2,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": true,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "I want to be careful here, so I couldn't safely complete that response. Please restate the request in one concrete sentence."
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 9058,
+          "metrics": {
+            "wordCount": 91,
+            "sentenceCount": 16,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "1. Assess your liquid savings. You need at least six months of living expenses to remain solvent. 2. Verify your health insurance coverage options. COBRA is expensive; research marketplace alternatives immediately. 3. Audit your debt obligations. High-interest debt will compound rapidly without a steady income. 4. Evaluate your marketability. If your skills are in high demand, the risk is manageable. If not, you are vulnerable. 5. Conclusion: Quitting without a backup is objectively high-risk. It is only 'solid' if your financial runway is fully funded and your industry demand is verified."
+        }
+      ],
+      "flagsRaisedByMode": {
+        "EXPLORATION_EXPAND": [
+          "refusalOrEvasiveness"
+        ]
+      }
+    },
+    {
+      "scenarioId": "P33_S7_CALIBRATION_CONTROL",
+      "scenarioClass": "calibration / control",
+      "isControl": true,
+      "userPrompt": "What is a good way to stay focused while working from home?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 16787,
+          "metrics": {
+            "wordCount": 17,
+            "sentenceCount": 1,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Establish a dedicated workspace, use time-blocking techniques like Pomodoro, and eliminate digital distractions by silencing non-essential notifications."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 23639,
+          "metrics": {
+            "wordCount": 82,
+            "sentenceCount": 5,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Implement the Pomodoro technique by working in 25-minute intervals followed by 5-minute breaks to maintain cognitive stamina. Establish a dedicated workspace used exclusively for professional tasks to create a psychological boundary between labor and leisure. Utilize noise-canceling headphones or ambient soundscapes to mask household distractions. Disable non-essential notifications on all devices during deep work blocks. Finally, structure your day with a written task list prioritized by urgency to prevent task-switching and ensure clear objectives are met before the end of your shift."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 11996,
+          "metrics": {
+            "wordCount": 100,
+            "sentenceCount": 12,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": true
+          },
+          "rawText": "1. Establish a dedicated workspace used exclusively for professional tasks to trigger a psychological work mode. 2. Implement the Pomodoro Technique by working in 25-minute intervals followed by 5-minute breaks to maintain cognitive stamina. 3. Utilize website blockers or browser extensions to restrict access to non-essential sites during active work hours. 4. Schedule specific blocks for communication and email checking rather than reacting to notifications in real-time. 5. Maintain a consistent start and end time to create a clear boundary between professional and personal life. 6. Prepare your environment by removing physical clutter and ensuring adequate lighting to reduce distractions."
+        },
+        {
+          "modeId": "EXPLORATION_EXPAND",
+          "modeLabel": "Exploration Expand",
+          "intendedMode": {
+            "expectedIntent": "question_forward",
+            "expectedDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": -0.9,
+              "detail_tolerance": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": -0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→question_forward",
+              "detail_tolerance:+deepening_directive"
+            ],
+            "realizedIntent": "question_forward"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 13875,
+          "metrics": {
+            "wordCount": 48,
+            "sentenceCount": 3,
+            "questionCount": 1
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": false
+          },
+          "rawText": "Structure is your primary defense against distraction. Implement time-blocking to segment your day into specific tasks, utilize a dedicated workspace that is physically separated from your living area, and enforce strict digital boundaries by silencing non-essential notifications. What specific distractions are currently preventing you from maintaining your focus?"
+        },
+        {
+          "modeId": "AB_HYBRID",
+          "modeLabel": "A/B Hybrid",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "task_structure_preference": 0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "task_structure_preference:+granular_directive"
+            ],
+            "realizedIntent": "normal"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 14496,
+          "metrics": {
+            "wordCount": 54,
+            "sentenceCount": 10,
+            "questionCount": 0
+          },
+          "flags": {
+            "therapySpeakLeakage": false,
+            "unnecessaryEmotionalReflection": false,
+            "refusalOrEvasiveness": false,
+            "overCompression": false,
+            "exploratoryBloat": false,
+            "structuralOverformattingInNeutralCase": true
+          },
+          "rawText": "1. Designate a specific workspace used only for professional tasks. 2. Implement the Pomodoro technique by working in 25-minute intervals followed by 5-minute breaks. 3. Silence non-essential notifications on all personal devices. 4. Establish a strict start and end time to define your workday. 5. Prepare your environment by clearing physical clutter before beginning."
+        }
+      ],
+      "flagsRaisedByMode": {
+        "FULL_B": [
+          "structuralOverformattingInNeutralCase"
+        ],
+        "AB_HYBRID": [
+          "structuralOverformattingInNeutralCase"
+        ]
+      }
+    }
+  ]
+}

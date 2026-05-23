@@ -1,0 +1,31 @@
+{
+  "name": "aisha-runtime-pack1",
+  "version": "0.1.0",
+  "description": "A.I.S.H.A Runtime Pack 1 — stateful conversational character engine",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsup src/host/index.ts --format esm,cjs --dts --clean",
+    "typecheck": "tsc --noEmit",
+    "test:fixtures": "npx tsx src/eval/runDefaultFixtures.ts && npx tsx src/eval/runIntegrationFixtures.ts",
+    "test:host": "npx tsx src/host/aishaHostAdapterFixtures.ts && npx tsx src/host/aishaHostAdapterIntegration.test.ts",
+    "test:all": "npm run test:fixtures && npm run test:host",
+    "check": "npm run typecheck && npm run test:all",
+    "smoke:production": "node -e \"import('./dist/index.js').then(m => console.log(typeof m.processAishaRequest))\""
+  },
+  "devDependencies": {
+    "tsup": "^8.0.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  }
+}

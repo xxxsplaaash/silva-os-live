@@ -1,0 +1,16 @@
+[
+  {
+    "evidenceId": "ev_000002",
+    "operatorReviewed": true,
+    "episodeSummaryPopulationRate": 0.95,
+    "noteGraphSizeLogged": true,
+    "annotatedAt": "2026-04-29T09:18:12.552Z"
+  },
+  {
+    "evidenceId": "ev_000004",
+    "operatorReviewed": true,
+    "episodeSummaryPopulationRate": 0.95,
+    "noteGraphSizeLogged": true,
+    "annotatedAt": "2026-04-29T09:18:12.552Z"
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "pack": "8.1",
+  "title": "External Judge Demo Handoff Package",
+  "branch": "pack8-1-external-judge-demo-handoff",
+  "date": "2026-05-05",
+  "status": "static handoff artifact",
+  "runtimeIntegrated": false,
+  "liveEvidence": false,
+  "productionReady": false,
+  "files": [
+    { "path": "README.md", "description": "Package orientation guide, 30s summary, 90s judge explanation, local viewing instructions" },
+    { "path": "JUDGE_DEMO_ONEPAGER.md", "description": "Narrative one-pager for judges and stakeholders" },
+    { "path": "JUDGE_DEMO_SCRIPT.md", "description": "Scene-by-scene narrative script with Mertens, Mei, Beckett, and A.I.S.H.A recommendation" },
+    { "path": "GUARDRAIL_ATTESTATION.md", "description": "Formal attestation of all forbidden claims" },
+    { "path": "artifact_index.json", "description": "Machine-readable index of all source artifacts from Pack 7.1, 7.2, and 6.2" },
+    { "path": "handoff_manifest.json", "description": "This file" }
+  ]
+}

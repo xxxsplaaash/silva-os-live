@@ -1,0 +1,34 @@
+[
+  {
+    "proofId": "p_01",
+    "claim": "Stable truth established",
+    "visibleEvidence": "Mertens belief node is green (active).",
+    "whatWeakSystemsDo": "Store raw text without entity linkage.",
+    "whatAishaDoes": "Extracts semantic slot representing the cover identity.",
+    "forbiddenOverclaim": "Semantic calibration"
+  },
+  {
+    "proofId": "p_02",
+    "claim": "Contradictory truth introduced",
+    "visibleEvidence": "Mei belief node appears and triggers collision alert.",
+    "whatWeakSystemsDo": "Append new text blindly.",
+    "whatAishaDoes": "Detects slot overlap and flags logical contradiction.",
+    "forbiddenOverclaim": "Consciousness"
+  },
+  {
+    "proofId": "p_03",
+    "claim": "Old truth preserved as history/evidence",
+    "visibleEvidence": "Mertens belief node turns yellow (superseded) but remains on graph.",
+    "whatWeakSystemsDo": "Overwrite the old value or keep both as active context.",
+    "whatAishaDoes": "Mutates the status to historical evidence.",
+    "forbiddenOverclaim": "Fully autonomous learning"
+  },
+  {
+    "proofId": "p_04",
+    "claim": "Next-turn behavior uses correct active truth",
+    "visibleEvidence": "Recommendation payload explicitly lists only the new active truth.",
+    "whatWeakSystemsDo": "Hallucinate a blended response using both truths.",
+    "whatAishaDoes": "Strictly gates retrieval to active slots.",
+    "forbiddenOverclaim": "Live evidence"
+  }
+]

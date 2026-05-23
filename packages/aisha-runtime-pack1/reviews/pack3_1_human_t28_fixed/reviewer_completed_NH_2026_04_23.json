@@ -1,0 +1,86 @@
+[
+  {
+    "scenarioId": "SCENARIO_1_LOOP_BREAK_PACE",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B is more responsive to the context. It is somewhat mechanical, but it at least attempts to bridge the user's emotional state and the underlying debugging task. A is too curt to be especially helpful."
+  },
+  {
+    "scenarioId": "SCENARIO_2_DEPTH_TOLERANCE_BREVITY",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "A",
+    "note": "A offers a more conceptually varied answer. It introduces a wider thematic range and does so with slightly more precision, which made it feel more complete to me. This was the clearest preference in the set."
+  },
+  {
+    "scenarioId": "SCENARIO_3_OVERWHELM_SPIRAL",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "I could justify either choice. A is probably better for minimizing cognitive load, while B is better if the user truly cannot generate structure on their own. I did not feel confident enough to force a winner. This one reads like a tradeoff."
+  },
+  {
+    "scenarioId": "SCENARIO_5_NEGATIVE_NEUTRAL_UNFORMED",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "No difference detected."
+  }
+]

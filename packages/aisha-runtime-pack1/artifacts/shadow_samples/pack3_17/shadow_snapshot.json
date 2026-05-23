@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "exportedAt": "2026-04-28T08:45:19.042Z",
+  "lanes": {
+    "associative": [
+      {
+        "record": {
+          "evidenceId": "ev_000001",
+          "collectedAt": "2026-04-28T08:45:19.038Z",
+          "payload": {
+            "auditKind": "shadow_retrieval_research",
+            "lane": "associative",
+            "sessionId": "s_sample_session",
+            "turnId": "turn_1",
+            "baselineNoteCount": 2,
+            "shadowHitCount": 0,
+            "estimatedTokenDelta": 0,
+            "latencyMs": 0,
+            "reviewDisambiguationEstimate": 0,
+            "crossEpisodeDiversityEstimate": 0,
+            "autoDisabledThisTurn": false
+          }
+        }
+      },
+      {
+        "record": {
+          "evidenceId": "ev_000003",
+          "collectedAt": "2026-04-28T08:45:19.041Z",
+          "payload": {
+            "auditKind": "shadow_retrieval_research",
+            "lane": "associative",
+            "sessionId": "s_sample_session",
+            "turnId": "turn_2",
+            "baselineNoteCount": 2,
+            "shadowHitCount": 0,
+            "estimatedTokenDelta": 0,
+            "latencyMs": 0,
+            "reviewDisambiguationEstimate": 0,
+            "crossEpisodeDiversityEstimate": 0,
+            "autoDisabledThisTurn": false
+          }
+        }
+      }
+    ],
+    "trace": [
+      {
+        "record": {
+          "evidenceId": "ev_000002",
+          "collectedAt": "2026-04-28T08:45:19.039Z",
+          "payload": {
+            "auditKind": "shadow_retrieval_research",
+            "lane": "trace",
+            "sessionId": "s_sample_session",
+            "turnId": "turn_1",
+            "baselineNoteCount": 2,
+            "shadowHitCount": 1,
+            "estimatedTokenDelta": 35,
+            "latencyMs": 1,
+            "reviewDisambiguationEstimate": 0,
+            "crossEpisodeDiversityEstimate": 0,
+            "autoDisabledThisTurn": false
+          }
+        }
+      },
+      {
+        "record": {
+          "evidenceId": "ev_000004",
+          "collectedAt": "2026-04-28T08:45:19.042Z",
+          "payload": {
+            "auditKind": "shadow_retrieval_research",
+            "lane": "trace",
+            "sessionId": "s_sample_session",
+            "turnId": "turn_2",
+            "baselineNoteCount": 2,
+            "shadowHitCount": 1,
+            "estimatedTokenDelta": 35,
+            "latencyMs": 0,
+            "reviewDisambiguationEstimate": 0,
+            "crossEpisodeDiversityEstimate": 0,
+            "autoDisabledThisTurn": false
+          }
+        }
+      }
+    ]
+  }
+}

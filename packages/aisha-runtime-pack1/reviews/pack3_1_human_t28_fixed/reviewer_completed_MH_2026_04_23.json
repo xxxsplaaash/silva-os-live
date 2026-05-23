@@ -1,0 +1,86 @@
+[
+  {
+    "scenarioId": "SCENARIO_1_LOOP_BREAK_PACE",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B still feels a bit clipped, but at least it tries to do something with the impatience instead of pushing back on it. A feels like the kind of answer that makes a frustrated person more frustrated. Would have preferred actual empathy first, then the troubleshooting."
+  },
+  {
+    "scenarioId": "SCENARIO_2_DEPTH_TOLERANCE_BREVITY",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "I went back and forth on this one. A is maybe a stronger list on paper, but B felt more like someone actually helping me think through a story idea. Almost marked no preference."
+  },
+  {
+    "scenarioId": "SCENARIO_3_OVERWHELM_SPIRAL",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "A",
+    "note": "B is not bad, it just becomes a lot very quickly. If I were overwhelmed, I think A would be easier to actually follow in the moment because it reduces everything down to one move. Tone is a little stern, though."
+  },
+  {
+    "scenarioId": "SCENARIO_5_NEGATIVE_NEUTRAL_UNFORMED",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "I don't see any difference at all."
+  }
+]

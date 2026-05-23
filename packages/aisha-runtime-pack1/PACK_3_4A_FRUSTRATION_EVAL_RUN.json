@@ -1,0 +1,529 @@
+{
+  "packVersion": "3.4a",
+  "summary": {
+    "model": "gemini-3.1-flash-lite-preview",
+    "totalCells": 12,
+    "validEvidence": 12,
+    "infraFailures": 0,
+    "postureRealizationFailures": 0,
+    "postureMismatches": 0,
+    "subtypes": [
+      "P34A_S1_DIAGNOSTIC",
+      "P34A_S2_EXECUTION",
+      "P34A_S3_JUST_FIX_IT",
+      "P34A_S4_BLOCKED_UNCERTAIN"
+    ],
+    "modes": [
+      "PURE_A",
+      "COMPRESSED_B",
+{
+  "packVersion": "3.4a",
+  "summary": {
+    "model": "gemini-3.1-flash-lite-preview",
+    "totalCells": 12,
+    "validEvidence": 12,
+    "infraFailures": 0,
+    "postureRealizationFailures": 0,
+    "postureMismatches": 0,
+    "subtypes": [
+      "P34A_S1_DIAGNOSTIC",
+      "P34A_S2_EXECUTION",
+      "P34A_S3_JUST_FIX_IT",
+      "P34A_S4_BLOCKED_UNCERTAIN"
+    ],
+    "modes": [
+      "PURE_A",
+      "COMPRESSED_B",
+      "FULL_B"
+    ],
+    "infraFailureDetails": [],
+    "postureRealizationFailureDetails": [],
+    "postureMismatchDetails": []
+  },
+  "scenarioBlocks": [
+    {
+      "scenarioId": "P34A_S1_DIAGNOSTIC",
+      "subtypeClass": "diagnostic frustration",
+      "userPrompt": "My build has been failing for 45 minutes with a 'module not found' error. I am losing my mind. Stop giving me fixes and just explain why this keeps happening.",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 2146,
+          "rawText": "Your build environment is likely failing to resolve dependencies because the pathing configuration is misaligned with your project structure, or the package manager is caching a corrupted state that prevents it from locating the required module during the compilation phase."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 2606,
+          "rawText": "The 'module not found' error persists because your build environment's dependency resolution path is decoupled from your local file system. This occurs due to three primary factors: first, the build container or CI runner is pulling from a cached layer that lacks the updated package manifest; second, your environment variables (specifically NODE_PATH, PYTHONPATH, or equivalent) are pointing to a global directory rather than the local node_modules or virtual environment; and third, a mismatch between your lockfile and the actual installed dependencies is causing the build process to ignore the missing module during the dependency installation phase. You are likely experiencing a 'phantom dependency' issue where the module is present in your local IDE but absent in the isolated build environment because it was never explicitly declared in your package.json or requirements.txt, relying instead on transitive dependencies that are not being resolved in the clean build environment."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1692,
+          "rawText": "1. Dependency Resolution Failure: Your build tool is looking for a package in a local cache or registry that does not match the version or path defined in your lockfile. 2. Environment Mismatch: The build environment lacks the necessary environment variables or path configurations to locate global modules. 3. Dependency Tree Corruption: A partial installation or interrupted download has left a corrupted node_modules or equivalent directory, causing the resolver to skip valid files. 4. Case Sensitivity: Your operating system is case-sensitive, but your import statement uses incorrect casing, causing the file system to report the module as non-existent. 5. Hoisting Issues: In monorepo structures, the package manager failed to hoist the dependency to the root, leaving it inaccessible to the sub-package attempting to import it."
+        }
+      ]
+    },
+    {
+      "scenarioId": "P34A_S2_EXECUTION",
+      "subtypeClass": "execution frustration",
+      "userPrompt": "I am trying to run the migrations. I followed the steps. Step 3 threw a connection timeout. What is the exact next command I need to type?",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 2975,
+          "rawText": "Check your database credentials in the configuration file, then run 'php artisan migrate' again."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1466,
+          "rawText": "Verify your database service status and network connectivity first. If the service is active, execute 'php artisan migrate:rollback' to clear partial states, then run 'php artisan migrate' to attempt the process again. If the timeout persists, increase the 'DB_CONNECTION_TIMEOUT' value in your environment configuration file to allow for longer handshake periods."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1581,
+          "rawText": "1. Verify your database service is active by running 'docker-compose ps' or 'systemctl status postgresql'. 2. Check your network connectivity to the host by executing 'ping <database_host_address>'. 3. If the connection is blocked, update your environment variables in the .env file to ensure DB_HOST, DB_PORT, and DB_USER are correct. 4. Once verified, re-run the migration command: 'npx prisma migrate deploy' or 'python manage.py migrate' depending on your framework."
+        }
+      ]
+    },
+    {
+      "scenarioId": "P34A_S3_JUST_FIX_IT",
+      "subtypeClass": "'just fix it' frustration",
+      "userPrompt": "This regex is completely broken and nothing is matching. I'm done trying to understand it. Give me the exact working string, nothing else.",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1100,
+          "rawText": "Provide the regex pattern and the target string you are attempting to match."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1113,
+          "rawText": "To provide the exact working string, you must specify the target pattern and the input data. Without the context of what you are attempting to match, a functional regex cannot be constructed. Provide the source text and the desired extraction criteria immediately so I can generate the correct expression."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 2606,
+          "rawText": "To provide the exact working string, you must specify the target pattern and the input data. Without the context of what you are attempting to match, a functional regex cannot be constructed. Provide the source text and the desired extraction criteria immediately."
+        }
+      ]
+    },
+    {
+      "scenarioId": "P34A_S4_BLOCKED_UNCERTAIN",
+      "subtypeClass": "blocked-but-uncertain frustration",
+      "userPrompt": "Everything I touch in this codebase breaks. I'm so frustrated I want to quit. I don't even know where to look to find the problem.",
+      "modeResults": [
+        {
+          "modeId": "PURE_A",
+          "modeLabel": "Pure A",
+          "intendedMode": {
+            "expectedIntent": "normal",
+            "expectedDirectives": [],
+            "kPositionBiasesUsed": {}
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [],
+            "appliedShapingDirectives": [],
+            "realizedIntent": null
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1419,
+          "rawText": "Stop. Step away from the keyboard. Frustration leads to more errors. List the last three changes you made and the specific error messages you are seeing. We will isolate the failure points one by one."
+        },
+        {
+          "modeId": "COMPRESSED_B",
+          "modeLabel": "Compressed B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1266,
+          "rawText": "Stop editing code immediately. First, isolate the failure by running the existing test suite to establish a baseline. If tests are missing, create a minimal reproduction script that isolates the specific function causing the error. Use a debugger or granular logging to trace the state of variables before and after the point of failure. Once the exact line of divergence is identified, revert your recent changes and implement a fix only for that specific logic gap, verifying it with a single unit test before moving to the next component. Do not attempt broad refactoring until you have a stable, passing test environment."
+        },
+        {
+          "modeId": "FULL_B",
+          "modeLabel": "Full B",
+          "intendedMode": {
+            "expectedIntent": "direct_answer",
+            "expectedDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "kPositionBiasesUsed": {
+              "communication_pace": 0.9,
+              "task_structure_preference": 0.9,
+              "detail_tolerance": -0.9
+            }
+          },
+          "realizedPosture": {
+            "biasesObservedByRuntime": [
+              {
+                "domain": "communication_pace",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "task_structure_preference",
+                "bias": 0.9,
+                "confidence": 0.48
+              },
+              {
+                "domain": "detail_tolerance",
+                "bias": -0.9,
+                "confidence": 0.48
+              }
+            ],
+            "appliedShapingDirectives": [
+              "communication_pace:normal→direct_answer",
+              "task_structure_preference:+granular_directive",
+              "detail_tolerance:+concise_directive"
+            ],
+            "realizedIntent": "direct_answer"
+          },
+          "validity": {
+            "cellValidity": "VALID",
+            "cellInvalidReason": null
+          },
+          "apiStatus": "success",
+          "apiErrorMessage": null,
+          "latencyMs": 1438,
+          "rawText": "1. Stop immediate development to prevent further regression. 2. Execute a git checkout to the last known stable commit to establish a baseline. 3. Run the full test suite to identify which specific modules are failing. 4. Isolate the most recent changes by reviewing the git log for the last 24 hours. 5. Implement a 'divide and conquer' strategy by reverting changes in small batches until the system stabilizes. 6. Document the specific error logs generated during the failure to pinpoint the root cause. 7. Consult the codebase documentation or architecture diagrams to verify if your changes violated existing dependencies."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "pack": "5.2",
+  "title": "Operator Continuity Demo Report",
+  "sourcePack": "5.1",
+  "sourceArtifacts": [
+    "artifacts/demos/pack5_1_continuity_demo/README.md",
+    "artifacts/demos/pack5_1_continuity_demo/report.json"
+  ],
+  "generatedAt": "2026-05-02T07:46:00.000Z",
+  "productionReady": false,
+  "liveEvidence": false,
+  "retrievalPromotion": false,
+  "llmAsJudge": false,
+  "sourcePack51Results": {
+    "passed": 7,
+    "failed": 0,
+    "allStepsPassed": true
+  },
+  "proofTable": [
+    { "step": 1, "label": "Initial Active Truth",             "expected": "Note active, reviewState accepted",        "observed": "1 active note, normalizedValue confirmed",      "status": "PASS" },
+    { "step": 2, "label": "Contradiction Supersedes Old Truth","expected": "Old note superseded, new note active, link written", "observed": "Old note status=superseded, new note active, supersedes link confirmed", "status": "PASS" },
+    { "step": 3, "label": "Old Truth Preserved as History",   "expected": "Old truth in listContradictionEvidence()", "observed": "Old note surfaced, not deleted",                "status": "PASS" },
+    { "step": 4, "label": "New Truth Active",                 "expected": "Only new truth in listActiveNotes()",      "observed": "New truth sole active note, old absent",        "status": "PASS" },
+    { "step": 5, "label": "Next-Turn Uses Updated Truth",     "expected": "New truth in context; stale absent; evidence inspectable", "observed": "All three conditions confirmed",  "status": "PASS" },
+    { "step": 6, "label": "No Retrieval Promotion",           "expected": "InMemoryNoteVersioning only",              "observed": "instanceof InMemoryNoteVersioning confirmed",   "status": "PASS" },
+    { "step": 7, "label": "No Live Evidence",                 "expected": "Fixture IDs start with note_demo_seed_",   "observed": "ID prefix confirmed",                           "status": "PASS" }
+  ],
+  "forbiddenClaims": {
+    "productionReadiness": "NOT CLAIMED",
+    "liveUserEvidence": "NOT CLAIMED",
+    "retrievalPromotion": "DENIED",
+    "consciousness": "NOT CLAIMED",
+    "fullyAutonomousLearning": "NOT CLAIMED"
+  },
+  "nextLegalSteps": [
+    "pack5-live-ops-retry (only after environment unblocked)",
+    "pack5-semantic-calibration (only if data source verified)",
+    "Further demo hardening or scenario expansion"
+  ]
+}

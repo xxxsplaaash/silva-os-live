@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "notice": "CONTROLLED SAMPLE EVIDENCE ONLY. NOT PRODUCTION REAL-SESSION EVIDENCE.",
+    "generatedAt": "2026-04-29T09:18:12.554Z",
+    "pack": "3.18"
+  },
+  "associativeLane": {
+    "lane": "associative",
+    "totalEntries": 2,
+    "operatorReviewedCount": 2,
+    "contradictionRecoveryRate": 1,
+    "noisePrecisionLossRate": 0,
+    "p99LatencyMs": "INSUFFICIENT",
+    "tokenOverflowCount": 0,
+    "reviewDisambiguationRate": 0,
+    "utilisationRate": 0,
+    "noteGraphSizeEvidencePresent": true,
+    "episodeSummaryPopulationRate": "INSUFFICIENT",
+    "promotionGateMet": false,
+    "unmetGateCriteria": [
+      "operatorReviewedCount=2 (need >= 10)",
+      "p99LatencyMs=INSUFFICIENT (need >= 10 samples)"
+    ]
+  },
+  "traceLane": {
+    "lane": "trace",
+    "totalEntries": 2,
+    "operatorReviewedCount": 2,
+    "contradictionRecoveryRate": "INSUFFICIENT",
+    "noisePrecisionLossRate": "INSUFFICIENT",
+    "p99LatencyMs": "INSUFFICIENT",
+    "tokenOverflowCount": 0,
+    "reviewDisambiguationRate": 0,
+    "utilisationRate": 0.5,
+    "noteGraphSizeEvidencePresent": true,
+    "episodeSummaryPopulationRate": 0.95,
+    "promotionGateMet": false,
+    "unmetGateCriteria": [
+      "operatorReviewedCount=2 (need >= 10)",
+      "contradictionRecoveryRate=INSUFFICIENT (no operator annotations yet)",
+      "noisePrecisionLossRate=INSUFFICIENT (no operator annotations yet)",
+      "p99LatencyMs=INSUFFICIENT (need >= 10 samples)",
+      "reviewDisambiguationRate=0.000 (trace lane: need >= 0.50)"
+    ]
+  }
+}

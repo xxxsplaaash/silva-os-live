@@ -1,0 +1,21 @@
+{
+  "lane": "associative",
+  "totalEntries": 2,
+  "operatorReviewedCount": 0,
+  "contradictionRecoveryRate": "INSUFFICIENT",
+  "noisePrecisionLossRate": "INSUFFICIENT",
+  "p99LatencyMs": "INSUFFICIENT",
+  "tokenOverflowCount": 0,
+  "reviewDisambiguationRate": 0,
+  "utilisationRate": 0,
+  "noteGraphSizeEvidencePresent": false,
+  "episodeSummaryPopulationRate": "INSUFFICIENT",
+  "promotionGateMet": false,
+  "unmetGateCriteria": [
+    "operatorReviewedCount=0 (need >= 10)",
+    "contradictionRecoveryRate=INSUFFICIENT (no operator annotations yet)",
+    "noisePrecisionLossRate=INSUFFICIENT (no operator annotations yet)",
+    "p99LatencyMs=INSUFFICIENT (need >= 10 samples)",
+    "noteGraphSizeEvidencePresent=false (required for graph-density validation)"
+  ]
+}

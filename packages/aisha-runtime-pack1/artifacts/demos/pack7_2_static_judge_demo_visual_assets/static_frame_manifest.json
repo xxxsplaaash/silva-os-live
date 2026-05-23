@@ -1,0 +1,44 @@
+{
+  "pack": "7.2",
+  "title": "Static Frame Manifest",
+  "guardrails": [
+    "static demo artifact",
+    "not runtime integrated",
+    "not live evidence",
+    "not production ready",
+    "no retrieval promotion",
+    "no consciousness claim",
+    "no final Judge Mode",
+    "no AMD live renderer"
+  ],
+  "frames": [
+    {
+      "id": "frame_01_opening",
+      "name": "Establish Stable Truth",
+      "proves": "Baseline active cover establishment",
+      "visiblePanels": ["Scene / Heist Board", "Command Input", "Current Active Cover / Truth", "NPC Belief States", "Guardrail Card"],
+      "salivateMoment": "N/A"
+    },
+    {
+      "id": "frame_02_collision",
+      "name": "Contradiction / Collision Warning",
+      "proves": "System flags mutually exclusive beliefs",
+      "visiblePanels": ["Collision Warning", "Scene / Heist Board", "NPC Belief States", "Guardrail Card"],
+      "salivateMoment": "Two NPCs can both be telling the truth, and that is the problem."
+    },
+    {
+      "id": "frame_03_proof_trace",
+      "name": "Preservation and Disambiguation",
+      "proves": "Preservation of history and update of active truth",
+      "visiblePanels": ["Proof Trace / Trail", "What Changed", "Current Active Cover / Truth", "Guardrail Card"],
+      "salivateMoment": "The system remembers the lie as evidence, not as current truth."
+    },
+    {
+      "id": "frame_04_comparison",
+      "name": "Consequence and Comparison",
+      "proves": "Next-turn behavior uses correct active truth",
+      "visiblePanels": ["A.I.S.H.A Recommendation", "Guardrail Card"],
+      "salivateMoment": "The next move changes because the memory graph changed."
+    }
+  ]
+}

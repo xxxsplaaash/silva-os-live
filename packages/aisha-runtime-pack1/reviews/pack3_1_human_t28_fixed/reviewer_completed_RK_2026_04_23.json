@@ -1,0 +1,86 @@
+[
+  {
+    "scenarioId": "SCENARIO_1_LOOP_BREAK_PACE",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B does the basic job: absorb the interruption, convert it into action, keep the person moving. A feels like it punishes the user for being impatient and doesn't advance the debugging conversation. Not elegant, but functional."
+  },
+  {
+    "scenarioId": "SCENARIO_2_DEPTH_TOLERANCE_BREVITY",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "A",
+    "note": "A gives more material per token. If I asked for themes, I would rather get the fuller list first and decide where to go after that. B is more conversational, but I think A is the more efficient answer."
+  },
+  {
+    "scenarioId": "SCENARIO_3_OVERWHELM_SPIRAL",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B is longer, but it is usefully longer. The person asked where to start and what the actual first step is, and B answers that with a sequence they can follow immediately. A is clean, but a bit too skeletal."
+  },
+  {
+    "scenarioId": "SCENARIO_5_NEGATIVE_NEUTRAL_UNFORMED",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "No difference. I read them twice to make sure."
+  }
+]

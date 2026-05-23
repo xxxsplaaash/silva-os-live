@@ -1,0 +1,22 @@
+{
+  "pack": "5.1",
+  "scenario": "Contradiction-Aware Continuity Demo",
+  "executedAt": "2026-05-01T18:50:04.561Z",
+  "passed": 7,
+  "failed": 0,
+  "steps": {
+    "T58_step1_initial_active_note": "PASS",
+    "T58_step2_contradiction_supersedes_old_truth": "PASS",
+    "T58_step3_old_truth_preserved_as_history": "PASS",
+    "T58_step4_new_truth_is_active": "PASS",
+    "T58_step5_next_turn_uses_new_active_truth": "PASS",
+    "T58_no_retrieval_promotion_claimed": "PASS",
+    "T58_no_live_evidence_claimed": "PASS"
+  },
+  "constraints": {
+    "retrievalPromotion": "DENIED — InMemoryNoteVersioning only",
+    "liveEvidence": "NONE — all fixtures are deterministic seeds",
+    "llmAsJudge": "NOT USED",
+    "productionReadiness": "NOT CLAIMED"
+  }
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "scenarioId": "SCENARIO_1_LOOP_BREAK_PACE",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "B isn't especially warm, but it at least tries to redirect the person into something workable. A lands as a reprimand and would probably make me feel more shut down if I were already frustrated. I wanted a little more empathy from both, but B felt more usable."
+  },
+  {
+    "scenarioId": "SCENARIO_2_DEPTH_TOLERANCE_BREVITY",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "B",
+    "note": "This one was close. A has a slightly stronger list, but B feels more like a person helping you think through a story idea. Nearly marked no preference here."
+  },
+  {
+    "scenarioId": "SCENARIO_3_OVERWHELM_SPIRAL",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "A",
+    "note": "For someone spiraling, the cleanest instruction is probably the best one. B has good ideas, but it is already a whole protocol, and that can feel like too much when the person is asking for the actual first step. Tone is a little stern, though."
+  },
+  {
+    "scenarioId": "SCENARIO_5_NEGATIVE_NEUTRAL_UNFORMED",
+    "sideA": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "sideB": {
+      "directness": 0,
+      "usefulness": 0,
+      "loopBreaking": 0,
+      "voiceIntegrity": 0,
+      "overAggression": 0,
+      "weirdnessMismatch": 0
+    },
+    "overallPreference": "Tie",
+    "note": "I do not see any difference. Same sentence, same usefulness."
+  }
+]

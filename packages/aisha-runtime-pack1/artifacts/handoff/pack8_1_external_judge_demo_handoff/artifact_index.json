@@ -1,0 +1,33 @@
+{
+  "pack": "8.1",
+  "title": "External Judge Demo Handoff Package",
+  "generatedAt": "2026-05-05T00:00:00.000Z",
+  "guardrails": {
+    "productionReady": false,
+    "liveEvidence": false,
+    "retrievalPromotion": false,
+    "consciousness": false,
+    "fullyAutonomousLearning": false,
+    "semanticCalibration": false,
+    "runtimeIntegrated": false,
+    "finalJudgeMode": false,
+    "amdLiveRenderer": false
+  },
+  "labels": ["static handoff artifact", "non-runtime", "not live", "not production ready"],
+  "sourceArtifacts": {
+    "pack7_1": [
+      "artifacts/demos/pack7_1_judge_demo_experience/JUDGE_DEMO_SCRIPT.md",
+      "artifacts/demos/pack7_1_judge_demo_experience/demo_storyboard.json",
+      "artifacts/demos/pack7_1_judge_demo_experience/proof_beats.json"
+    ],
+    "pack7_2": [
+      "artifacts/demos/pack7_2_static_judge_demo_visual_assets/VISUAL_ASSET_PLAN.md",
+      "artifacts/demos/pack7_2_static_judge_demo_visual_assets/static_frame_manifest.json",
+      "artifacts/demos/pack7_2_static_judge_demo_visual_assets/judge_demo_onepager.md"
+    ],
+    "pack6_2": [
+      "artifacts/demos/pack6_2_static_ui_prototype/prototype.html",
+      "artifacts/demos/pack6_2_static_ui_prototype/prototype_payload.json"
+    ]
+  }
+}

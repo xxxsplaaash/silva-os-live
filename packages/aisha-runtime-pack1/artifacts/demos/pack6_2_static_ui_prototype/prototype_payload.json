@@ -1,0 +1,33 @@
+{
+  "pack": "6.2",
+  "title": "Continuity Demo UI Static Prototype",
+  "generatedAt": "2026-05-04T12:00:00.000Z",
+  "productionReady": false,
+  "liveEvidence": false,
+  "retrievalPromotion": false,
+  "runtimeIntegrated": false,
+  "consciousnessClaim": false,
+  "state": {
+    "historicalTruth": {
+      "status": "superseded",
+      "value": "drink preference: espresso",
+      "noteId": "note_v1"
+    },
+    "activeTruth": {
+      "status": "active",
+      "value": "drink preference: oat lattes",
+      "noteId": "note_v2"
+    },
+    "provenance": {
+      "linkType": "supersedes",
+      "from": "note_v2",
+      "to": "note_v1"
+    }
+  },
+  "labels": [
+    "deterministic demo artifact",
+    "static prototype",
+    "not live",
+    "not production"
+  ]
+}

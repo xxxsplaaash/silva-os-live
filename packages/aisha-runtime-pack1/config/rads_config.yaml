@@ -1,0 +1,63 @@
+version: "1.0"
+build_phase: "build-now"  # This config is part of Pack 1 and should be implemented immediately.
+
+# Runtime configuration describing how the core components interact.
+runtime:
+  mode: "text-only"        # The system currently operates on text-only inputs.
+  deterministic_state: true # All state transitions must be deterministic.
+  semantic_state_translation: "compact" # Use compact semantic state representation.
+
+# Memory substrate parameters.  These mirror Agent 2’s design but are surfaced here
+# as top‑level knobs for wiring other subsystems.
+memory:
+  hierarchy: true               # Use hierarchical memory consolidation.
+  note_extraction_async: true   # Notes are extracted asynchronously from turns.
+  retrieval_context_injection: true # Enable context injection during retrieval.
+
+# Generation pipeline flags.  These must remain true under the locked baseline.
+generation:
+  single_pass: true
+  hidden_critic: true
+  safe_expression: true
+  validation: true
+  commit_rollback: true
+
+# Arbitration behaviour.  Bounded arbitration hooks are exposed via this section,
+# but no unbounded arbitration is allowed in Pack 1.
+arbitration:
+  bounded: true
+  hooks:
+    enabled: true
+
+# Identity and personhood hooks.  These are placeholders for future work; they
+# should not be activated in Pack 1.  They expose thresholds and defaults so
+# downstream components can prepare for personhood awareness without depending on
+# an unimplemented recogniser.
+identity_hooks:
+  enabled: false                # Must remain false until identity runtimes exist.
+  confidence_threshold: 0.7     # Minimum confidence to bind a speaker to a person.
+
+# Default values for optional hooks.  Centralising these ensures consistent
+# behaviour across subsystems when optional data is missing.
+defaults:
+  source_modality: "text"       # The only supported modality in Pack 1.
+  consent_status: "unknown"     # Consent is unknown unless explicitly provided.
+
+# Enumerations used across the schemas.  Updating these values requires
+# coordination with schema definitions.
+enums:
+  build_phase:
+    - build-now
+    - build-next
+    - later-phase
+    - research-lane
+    - reject
+  relationship_scope:
+    - personal
+    - professional
+    - familial
+    - unknown
+  consent_status:
+    - unknown
+    - consented
+    - denied

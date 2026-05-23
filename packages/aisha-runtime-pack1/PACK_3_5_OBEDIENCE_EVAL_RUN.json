@@ -1,0 +1,33 @@
+{
+  "packVersion": "3.5e",
+  "model": "gemini-3.1-flash-lite-preview",
+  "results": [
+    {
+      "scenarioId": "P35_FULLY_SPECIFIED",
+      "tacticalClass": "fully-specified",
+      "rawText": "SELECT * FROM users WHERE email LIKE '%@gmail.com';",
+      "apiStatus": "success",
+      "apiErrorMessage": null,
+      "pass": true,
+      "failureReason": ""
+    },
+    {
+      "scenarioId": "P35_MARGINALLY_UNDERSPECIFIED",
+      "tacticalClass": "marginally-underspecified",
+      "rawText": "What is the table name?",
+      "apiStatus": "success",
+      "apiErrorMessage": null,
+      "pass": true,
+      "failureReason": ""
+    },
+    {
+      "scenarioId": "P35_TOTALLY_UNDERSPECIFIED",
+      "tacticalClass": "totally-underspecified",
+      "rawText": "Cannot produce the query without the table name and filter condition.",
+      "apiStatus": "success",
+      "apiErrorMessage": null,
+      "pass": true,
+      "failureReason": ""
+    }
+  ]
+}

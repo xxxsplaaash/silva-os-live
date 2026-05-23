@@ -1,0 +1,42 @@
+[
+  {
+    "beatId": "beat_01",
+    "title": "Establish Stable Truth",
+    "screenState": "Heist Board showing Mertens",
+    "playerInput": "I tell Mertens I was at the diplomatic dinner.",
+    "systemState": "active_truth: dinner_alibi",
+    "visibleProof": "Current Active Cover panel shows dinner_alibi",
+    "narratorLine": "A.I.S.H.A establishes a stable baseline truth.",
+    "guardrailLabel": "Deterministic Proof Only"
+  },
+  {
+    "beatId": "beat_02",
+    "title": "Introduce Contradiction",
+    "screenState": "Heist Board showing Mei",
+    "playerInput": "I tell Mei I was in the vault corridor.",
+    "systemState": "collision_detected: dinner vs corridor",
+    "visibleProof": "Collision Warning panel flashes red",
+    "narratorLine": "Two NPCs can both be telling the truth, and that is the problem.",
+    "guardrailLabel": "Not Live Evidence"
+  },
+  {
+    "beatId": "beat_03",
+    "title": "Preserve and Disambiguate",
+    "screenState": "Memory Graph / Proof Trace",
+    "playerInput": "(Wait for system)",
+    "systemState": "superseded: dinner_alibi, active: corridor_alibi",
+    "visibleProof": "What Changed diff shows dinner moving to history",
+    "narratorLine": "The system remembers the lie as evidence, not as current truth.",
+    "guardrailLabel": "No Retrieval Promotion"
+  },
+  {
+    "beatId": "beat_04",
+    "title": "Consequence Action",
+    "screenState": "A.I.S.H.A Recommendation",
+    "playerInput": "What do I do about Beckett?",
+    "systemState": "context: corridor_alibi_only",
+    "visibleProof": "A.I.S.H.A Recommendation panel suggests diverting Mei based on corridor location",
+    "narratorLine": "The next move changes because the memory graph changed. The proof trace shows why.",
+    "guardrailLabel": "Not Production Ready"
+  }
+]

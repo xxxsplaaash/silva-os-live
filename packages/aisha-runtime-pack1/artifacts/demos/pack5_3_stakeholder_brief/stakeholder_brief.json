@@ -1,0 +1,32 @@
+{
+  "pack": "5.3",
+  "title": "Stakeholder Continuity Demo Brief",
+  "sourcePacks": ["5.1", "5.2"],
+  "sourceArtifacts": [
+    "artifacts/demos/pack5_1_continuity_demo/README.md",
+    "artifacts/demos/pack5_1_continuity_demo/report.json",
+    "artifacts/demos/pack5_2_operator_report/OPERATOR_REPORT.md",
+    "artifacts/demos/pack5_2_operator_report/operator_report.json"
+  ],
+  "generatedAt": "2026-05-02T12:00:00.000Z",
+  "productionReady": false,
+  "liveEvidence": false,
+  "retrievalPromotion": false,
+  "consciousnessClaim": false,
+  "llmAsJudge": false,
+  "coreProblem": "Truth migration vs. fact recall",
+  "proofBeats": [
+    "Stable truth established",
+    "Truth contradicted / updated",
+    "Old truth superseded, not deleted",
+    "New truth becomes active",
+    "Next relevant turn uses new truth"
+  ],
+  "forbiddenClaims": {
+    "productionReadiness": "NOT CLAIMED",
+    "liveUserEvidence": "NOT CLAIMED",
+    "retrievalPromotion": "DENIED",
+    "consciousness": "NOT CLAIMED",
+    "fullyAutonomousLearning": "NOT CLAIMED"
+  }
+}
