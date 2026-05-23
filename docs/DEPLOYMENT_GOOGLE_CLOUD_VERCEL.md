@@ -5,75 +5,80 @@ This split keeps the Node/Express API on Google Cloud Run and ships the browser 
 ## Current Reality Check
 
 - The backend listens on `process.env.PORT`, so it is compatible with Cloud Run.
-- The local SQLite default should be treated as demo persistence only on Cloud Run. Cloud Run filesystems are ephemeral; use Cloud SQL/Postgres or another durable store before calling persistence production-grade.
-- `aisha-runtime-pack1` is currently a local `node_modules` symlink, not a package-lock dependency. A clean Cloud Run build will not include it until the runtime is published, vendored, or otherwise installed as a real dependency.
+- Local SQLite is demo persistence only on Cloud Run. Cloud Run filesystems are ephemeral, so use Cloud SQL/Postgres or another durable store before relying on cross-revision persistence.
+- `aisha-runtime-pack1` is vendored as a local file dependency and must ship with `packages/aisha-runtime-pack1/dist`.
 - Secrets must be provided through Google Secret Manager or Cloud Run secret env vars. Do not commit keys, print keys, or write them to shell startup files.
 
 ## Backend: Cloud Run
 
-Minimum deploy shape:
+Deploy the backend:
 
 ```bash
-PROJECT_ID="your-gcp-project"
-REGION="us-central1"
-SERVICE="silva-backend"
-SILVA_ALLOWED_ORIGINS="https://your-vercel-app.vercel.app"
-
-PROJECT_ID="$PROJECT_ID" \
-REGION="$REGION" \
-SERVICE="$SERVICE" \
-SILVA_ALLOWED_ORIGINS="$SILVA_ALLOWED_ORIGINS" \
+PROJECT_ID="project-be35f944-1782-4f27-86f" \
+REGION="us-central1" \
+SERVICE="silva-backend" \
+SILVA_ALLOWED_ORIGINS="https://silva-os-live.vercel.app" \
+AISHA_ENGINE_ENABLED=true \
 scripts/deploy-cloud-run.sh
 ```
 
-The deploy script intentionally stops if `aisha-runtime-pack1` is not packaged. If you only want to prove the backend shell in degraded Local Room Intelligence mode:
+The deploy script stops if the A.I.S.H.A runtime package is not present in `package-lock.json` or if `packages/aisha-runtime-pack1/dist` is missing. If you intentionally want to deploy only the degraded local-room fallback, set `ALLOW_LOCAL_ROOM_DEPLOY=1`.
+
+Attach Gemini/A.I.S.H.A secrets through Cloud Run secret env vars. Example shape:
 
 ```bash
-ALLOW_LOCAL_ROOM_DEPLOY=1 PROJECT_ID="$PROJECT_ID" scripts/deploy-cloud-run.sh
-```
-
-Add Gemini/A.I.S.H.A secrets after the service exists:
-
-```bash
-gcloud secrets create gemini-api-key --replication-policy="automatic"
-printf '%s' "$GEMINI_API_KEY" | gcloud secrets versions add gemini-api-key --data-file=-
-
-gcloud run services update "$SERVICE" \
-  --region "$REGION" \
+gcloud run services update silva-backend \
+  --region us-central1 \
   --set-secrets GEMINI_API_KEY=gemini-api-key:latest
 ```
 
-Smoke the backend:
+## A.I.S.H.A Runtime Verification
+
+Before deploying, prove a clean source package can import the runtime:
 
 ```bash
-BACKEND_URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')"
-curl "$BACKEND_URL/health"
-curl "$BACKEND_URL/api/studio/pulse/aisha-status"
+tmp="$(mktemp -d)"
+git archive HEAD | tar -x -C "$tmp"
+cd "$tmp"
+npm ci --omit=dev
+NODE_ENV=production AISHA_ENGINE_ENABLED=true node -e "import('aisha-runtime-pack1').then(m => console.log(typeof m.processAishaRequest))"
 ```
+
+After deploying, verify Cloud Run:
+
+```bash
+BACKEND_URL="https://silva-backend-799875816242.us-central1.run.app"
+
+curl -fsS "$BACKEND_URL/health"
+curl -fsS "$BACKEND_URL/api/studio/pulse/aisha-status"
+BACKEND_URL="$BACKEND_URL" node scripts/smoke-aisha-runtime-cloud-run.mjs
+```
+
+Success means `/api/studio/pulse/aisha-status` reports `aishaEngineConnected: true` and `activeEngine: "aisha-runtime-pack1"`. If it still reports `fallbackReason: "aisha-runtime-unavailable"`, Cloud Run did not load the vendored runtime package.
 
 ## Frontend: Vercel
 
-The static bundle is built into `dist/vercel` and receives the Cloud Run API base at build time:
+Build the static frontend with the Cloud Run API base:
 
 ```bash
-SILVA_API_BASE_URL="https://your-cloud-run-service.run.app" npm run build:vercel
+SILVA_API_BASE_URL="https://silva-backend-799875816242.us-central1.run.app" npm run build:vercel
 ```
 
 Vercel settings:
 
 - Build command: `npm run build:vercel`
 - Output directory: `dist/vercel`
-- Environment variable: `SILVA_API_BASE_URL=https://your-cloud-run-service.run.app`
+- Environment variable: `SILVA_API_BASE_URL=https://silva-backend-799875816242.us-central1.run.app`
 
 The deployed UI can also be pointed at a backend manually for a one-off smoke:
 
 ```text
-https://your-vercel-app.vercel.app/?apiBase=https://your-cloud-run-service.run.app
+https://silva-os-live.vercel.app/?apiBase=https://silva-backend-799875816242.us-central1.run.app
 ```
 
 ## Required Production Follow-Ups
 
-- Package `aisha-runtime-pack1` before claiming A.I.S.H.A connected in Cloud Run.
-- Move persistence off ephemeral SQLite before relying on cross-revision or long-lived state.
-- Replace temporary `*.vercel.app` origins with the final custom domain in `SILVA_ALLOWED_ORIGINS`.
+- Keep `packages/aisha-runtime-pack1/dist` committed whenever the runtime package source changes.
+- Move persistence off ephemeral SQLite before relying on cross-revision or long-lived Studio Pulse state.
+- Replace temporary Vercel origins with the final custom domain in `SILVA_ALLOWED_ORIGINS`.
 - Run the Studio Pulse browser feel-pass against the Vercel URL after backend secrets are attached.

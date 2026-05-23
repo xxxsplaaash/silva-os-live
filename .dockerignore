@@ -4,10 +4,10 @@
 .env
 .env.*
 node_modules
-dist
-build
-.next
-out
+/dist
+/build
+/.next
+/out
 coverage
 playwright-report
 test-results

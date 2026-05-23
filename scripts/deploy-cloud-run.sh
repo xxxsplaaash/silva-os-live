@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ID="${PROJECT_ID:?Set PROJECT_ID to your Google Cloud project id.}"
+PROJECT_ID="${PROJECT_ID:-project-be35f944-1782-4f27-86f}"
 REGION="${REGION:-us-central1}"
 SERVICE="${SERVICE:-silva-backend}"
 MEMORY="${MEMORY:-2Gi}"
@@ -23,6 +23,19 @@ MSG
     exit 1
   fi
   echo "Warning: deploying without packaged aisha-runtime-pack1; A.I.S.H.A will not connect on Cloud Run." >&2
+fi
+
+if [[ ! -f packages/aisha-runtime-pack1/dist/index.js || ! -f packages/aisha-runtime-pack1/dist/index.cjs ]]; then
+  if [[ "$ALLOW_LOCAL_ROOM_DEPLOY" != "1" ]]; then
+    cat >&2 <<'MSG'
+Deploy stopped before Cloud Run build:
+  packages/aisha-runtime-pack1/dist is missing required runtime entrypoints.
+
+Run npm --prefix packages/aisha-runtime-pack1 run build, commit the dist files, then deploy again.
+MSG
+    exit 1
+  fi
+  echo "Warning: deploying without A.I.S.H.A dist entrypoints; A.I.S.H.A will not connect on Cloud Run." >&2
 fi
 
 IMAGE="gcr.io/${PROJECT_ID}/${SERVICE}:$(git rev-parse --short HEAD 2>/dev/null || date +%s)"

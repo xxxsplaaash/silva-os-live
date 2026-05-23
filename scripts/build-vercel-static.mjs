@@ -33,10 +33,10 @@ function writeRuntimeIndex() {
     `window.SILVA_API_BASE_URL=${JSON.stringify(apiBase)};`,
     '</script>'
   ].join('');
-  const html = source.replace('<title>Silva Studios — AI Division OS v3.9.9</title>', [
+  const html = source.replace(
     '<title>Silva Studios — AI Division OS v3.9.9</title>',
-    configScript
-  ].join('\n'));
+    ['<title>Silva Studios — AI Division OS v3.9.9</title>', configScript].join('\n')
+  );
   fs.writeFileSync(path.join(outDir, 'index.html'), html);
 }
 
