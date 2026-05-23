@@ -20,6 +20,36 @@ const { db } = require('./db/sqlite');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+
+function allowedCorsOrigins() {
+  return String(process.env.SILVA_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return false;
+  const allowed = allowedCorsOrigins();
+  if (!allowed.length) return false;
+  if (allowed.includes('*')) return true;
+  return allowed.includes(origin);
+}
+
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (isAllowedCorsOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '600');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  return next();
+});
+
 app.use('/api/image-generation', express.json({ limit: '36mb' }));
 app.use('/api/gemini/image', express.json({ limit: '36mb' }));
 app.use('/api/state', express.json({ limit: '36mb' }));

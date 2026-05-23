@@ -7,6 +7,41 @@
 <script>
 (function(){
   try{
+    var params = new URLSearchParams(window.location.search || '');
+    var queryApiBase = params.get('apiBase') || params.get('api_base') || '';
+    var storedApiBase = '';
+    try{ storedApiBase = localStorage.getItem('silva_api_base_url') || ''; }catch(e){}
+    var configuredApiBase = String(queryApiBase || window.SILVA_API_BASE_URL || storedApiBase || '').trim().replace(/\/+$/, '');
+    if(queryApiBase && /^https?:\/\//i.test(configuredApiBase)){
+      try{ localStorage.setItem('silva_api_base_url', configuredApiBase); }catch(e){}
+    }
+    if(!/^https?:\/\//i.test(configuredApiBase) || typeof window.fetch !== 'function') return;
+    var nativeFetch = window.fetch.bind(window);
+    function rewrittenApiUrl(input){
+      if(typeof input !== 'string') return null;
+      if(input === '/api' || input.indexOf('/api/') === 0) return configuredApiBase + input;
+      try{
+        var parsed = new URL(input, window.location.href);
+        if(parsed.origin === window.location.origin && (parsed.pathname === '/api' || parsed.pathname.indexOf('/api/') === 0)){
+          return configuredApiBase + parsed.pathname + parsed.search + parsed.hash;
+        }
+      }catch(e){}
+      return null;
+    }
+    window.SILVA_API_BASE_URL = configuredApiBase;
+    window.fetch = function(resource, options){
+      var nextUrl = rewrittenApiUrl(typeof resource === 'string' ? resource : (resource && resource.url));
+      if(!nextUrl) return nativeFetch(resource, options);
+      if(typeof resource === 'string') return nativeFetch(nextUrl, options);
+      try{ return nativeFetch(new Request(nextUrl, resource), options); }
+      catch(e){ return nativeFetch(nextUrl, options); }
+    };
+  }catch(e){}
+})();
+</script>
+<script>
+(function(){
+  try{
     if (window.location.protocol === 'file:' && /index\.html$/i.test(window.location.pathname || '')) {
       var target = 'http://127.0.0.1:3225/' + (window.location.search || '') + (window.location.hash || '');
       var launched = false;
