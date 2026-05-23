@@ -34,9 +34,22 @@ function plannerRowWithPayload(row) {
   };
 }
 
+function plannerDateInRange(item, from, to) {
+  const date = normalizePlannerDateValue(item && (item.date || item.scheduledFor || item.scheduled_for));
+  if (!date) return false;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+
 router.get('/', (req, res) => {
-  const rows = statements.getPlanner.all();
-  res.json({ ok: true, items: rows.map(plannerRowWithPayload) });
+  const from = normalizePlannerDateValue(req.query.from);
+  const to = normalizePlannerDateValue(req.query.to);
+  let items = statements.getPlanner.all().map(plannerRowWithPayload);
+  if (from || to) {
+    items = items.filter(item => plannerDateInRange(item, from, to));
+  }
+  res.json({ ok: true, items, count: items.length, range: from || to ? { from: from || null, to: to || null } : null });
 });
 
 router.get('/:id', (req, res) => {
@@ -49,7 +62,7 @@ router.post('/', (req, res) => {
   const normalized = normalizePlanner(req.body || {});
   statements.upsertPlanner.run(normalized);
   const row = statements.getPlannerById.get(normalized.id);
-  res.status(201).json({ ok: true, item: rowWithPayload(row) });
+  res.status(201).json({ ok: true, item: plannerRowWithPayload(row) });
 });
 
 router.patch('/:id', (req, res) => {
@@ -60,6 +73,13 @@ router.patch('/:id', (req, res) => {
   statements.upsertPlanner.run(normalized);
   const row = statements.getPlannerById.get(req.params.id);
   res.json({ ok: true, item: plannerRowWithPayload(row) });
+});
+
+router.delete('/:id', (req, res) => {
+  const existing = statements.getPlannerById.get(req.params.id);
+  if (!existing) return res.status(404).json({ ok: false, error: 'Planner post not found.' });
+  statements.deletePlanner.run(req.params.id);
+  res.json({ ok: true, deleted: true, id: String(req.params.id || '') });
 });
 
 module.exports = router;

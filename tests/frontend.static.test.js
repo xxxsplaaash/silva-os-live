@@ -1062,10 +1062,20 @@ test('content planner uses indexed month board with collapsed overflow drawer', 
   assert.match(html, /STATE\.plannerView='month'/);
   assert.match(html, /buildPlannerIndex/);
   assert.match(html, /groupPlannerPostsForDisplay/);
+  assert.match(html, /function localPlannerDateKey/);
+  assert.match(html, /date\.getFullYear\(\) \+ '-' \+ String\(date\.getMonth\(\) \+ 1\)/);
+  assert.match(html, /function plannerVisibleDateRange/);
+  assert.match(html, /function hydratePlannerPostsForVisibleRange/);
+  assert.match(html, /\/api\/planner\?from=/);
+  assert.match(html, /function mergePlannerPostsById/);
+  assert.match(html, /deletePlannerPostFromModal/);
   assert.match(html, /renderPlannerMonthBoard/);
   assert.match(html, /renderPlannerWeekAgenda/);
   assert.match(html, /openPlannerDayDrawer/);
   assert.match(html, /renderPlannerOverflowSummary/);
+  assert.match(html, /planner-cell-empty/);
+  assert.match(html, /planner-count-pill/);
+  assert.match(html, /No matching posts for the current filters/);
   assert.match(html, /Review follow-ups/);
   assert.match(html, /planner-more-btn/);
   assert.match(html, /planner-day-drawer/);
@@ -1075,9 +1085,26 @@ test('content planner uses indexed month board with collapsed overflow drawer', 
   assert.match(css, /planner-month-board/);
   assert.match(css, /planner-week-agenda/);
   assert.match(css, /planner-drawer-panel/);
+  assert.match(css, /#page-planner \.planner-add-btn\{/);
+  assert.match(css, /appearance:none !important/);
+  assert.match(css, /-webkit-appearance:none !important/);
+  assert.match(css, /justify-self:start !important/);
+  assert.match(css, /background:linear-gradient/);
+  assert.match(css, /#page-planner \.planner-cell-empty/);
+  assert.match(css, /#page-planner \.month-date \.planner-count-pill/);
+  assert.match(css, /#page-planner \.planner-toggle \.toggle-chip\.active/);
   assert.match(css, /overflow:auto/);
   assert.match(js, /planner-month-board/);
   assert.match(js, /planner-week-agenda/);
+});
+
+test('content planner local date helpers avoid positive-timezone UTC key drift', () => {
+  const html = readIndex();
+  const plannerDateKeyBody = html.slice(html.indexOf('function plannerDateKey'), html.indexOf('function plannerCampaignId'));
+  assert.match(plannerDateKeyBody, /localPlannerDateKey\(date\)/);
+  assert.doesNotMatch(plannerDateKeyBody, /toISOString\(\)\.split\('T'\)/);
+  const localKey = date => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+  assert.equal(localKey(new Date(2026, 4, 1)), '2026-05-01');
 });
 
 test('Prompt Generator V3 avoids route-preview rerender stutter', () => {

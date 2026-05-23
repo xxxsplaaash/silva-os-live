@@ -2588,8 +2588,13 @@ function pushUnique(arr, value){
   if(!arr.includes(value)) arr.push(value);
 }
 
+function localPlannerDateKey(date){
+  if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+}
+
 function normalizePlannerDateValue(value){
-  if(value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0,10);
+  if(value instanceof Date && !Number.isNaN(value.getTime())) return localPlannerDateKey(value);
   const raw = String(value == null ? '' : value).trim();
   if(!raw) return '';
   const direct = raw.match(/^(\d{4})[-/](\d{2})[-/](\d{2})/);
@@ -4195,7 +4200,7 @@ function getGeneratorLearningContext(char, campaignId){
 window.openPromptPlannerFromContext = function(promptId){
   const prompt = (STATE.prompts || []).find(p => p.id === promptId);
   if(!prompt){ toast('Prompt not found'); return; }
-  openAddPlanModal(new Date().toISOString().slice(0,10), {
+  openAddPlanModal((typeof window.plannerTodayKey === 'function' ? window.plannerTodayKey() : new Date().toISOString().slice(0,10)), {
     promptId: prompt.id,
     char: prompt.char,
     title: prompt.title || 'Prompt follow-up',
@@ -4508,13 +4513,13 @@ function renderPlanner(){
   let html='';
   for(let i=0;i<7;i++){
     const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);
-    const dateStr=d.toISOString().split('T')[0];
+    const dateStr=typeof localPlannerDateKey === 'function' ? localPlannerDateKey(d) : d.toISOString().split('T')[0];
     const isToday=d.toDateString()===today.toDateString();
     let posts=STATE.plannerPosts.filter(p=>p.date===dateStr&&(charF==='all'||p.char===charF));
     html+=`<div class="day-col${isToday?' today':''}">
       <div class="day-label">${days[i]}<br><span style="font-size:var(--type-xs);color:var(--muted2)">${d.getDate()}</span></div>
-      ${posts.map(p=>`<div class="plan-post plan-post-${p.char}" title="${p.title}">${p.title.substring(0,22)}</div>`).join('')}
-      <div class="add-plan-btn" onclick="openAddPlanModal('${dateStr}')">+</div>
+      ${posts.length ? posts.map(p=>`<div class="plan-post plan-post-${p.char}" title="${p.title}">${p.title.substring(0,22)}</div>`).join('') : '<div class="planner-cell-empty">No posts yet</div>'}
+      <button type="button" class="add-plan-btn planner-add-btn" onclick="openAddPlanModal('${dateStr}')">+ Add</button>
     </div>`;
   }
   grid.innerHTML=html;
@@ -4530,7 +4535,7 @@ function openAddPlanModal(date){
     <div class="gen-label">Platform</div>
     <select class="gen-select" id="plan-platform"><option value="instagram">Instagram</option><option value="carousel">Carousel</option><option value="story">Story</option><option value="linkedin">LinkedIn</option></select>
     <div class="gen-label">Date</div>
-    <input class="field-input" id="plan-date" type="date" value="${date||new Date().toISOString().split('T')[0]}">
+    <input class="field-input" id="plan-date" type="date" value="${date||(typeof localPlannerDateKey === 'function' ? localPlannerDateKey(new Date()) : new Date().toISOString().split('T')[0])}">
     <button class="btn btn-primary" style="margin-top:6px" onclick="addPlanPost()">Add to Planner</button>`;
   openModal(html);
 }
@@ -6065,7 +6070,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
 
   window.copyProviderPayload=function(){ if(!window._lastGenerated){toast('Generate first');return;} var shell=buildProviderShell(window._lastGenerated.provider,window._lastGenerated.prompt,window._lastGenerated.negPrompt,window._lastGenerated.char,window._lastGenerated.campaign,window._lastGenerated.learningContext); navigator.clipboard.writeText(JSON.stringify(shell,null,2)).then(function(){toast('Provider payload copied');}); };
   window.copyFullKit=function(){ if(!window._lastGenerated){toast('Generate first');return;} var p=window._lastGenerated; var text='PROMPT:\n'+p.prompt+'\n\nNEGATIVE:\n'+p.negPrompt+'\n\nCAPTION:\n'+p.caption+'\n\nLI HOOK:\n'+p.liHook+'\n\nPROVIDER:\n'+p.provider+'\n\nCAMPAIGN:\n'+(p.campaign||'—'); navigator.clipboard.writeText(text).then(function(){toast('Full kit copied');}); };
-  window.quickAddLastToPlanner=function(){ if(!window._lastGenerated){toast('Generate first');return;} openAddPlanModal(new Date().toISOString().slice(0,10), window._lastGenerated); };
+  window.quickAddLastToPlanner=function(){ if(!window._lastGenerated){toast('Generate first');return;} openAddPlanModal((typeof localPlannerDateKey === 'function' ? localPlannerDateKey(new Date()) : new Date().toISOString().slice(0,10)), window._lastGenerated); };
 
   function patchPlannerControls(){
     var bar=document.querySelector('#page-planner .filter-bar'); if(!bar || document.getElementById('planner-view-toggle')) return;
@@ -6098,7 +6103,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       '<input type="hidden" id="plan-review-event-id" value="'+ESC(reviewEventId)+'">'+
       '<div class="provider-row"><div><div class="gen-label">Character</div><select class="gen-select" id="plan-char"><option value="leah">Leah</option><option value="claudia">Claudia</option><option value="grok">Grok</option><option value="vanya">Vanya</option></select></div><div><div class="gen-label">Platform</div><select class="gen-select" id="plan-platform"><option value="instagram">Instagram</option><option value="carousel">Carousel</option><option value="story">Story</option><option value="linkedin">LinkedIn</option><option value="reel">Reel</option></select></div></div>'+
       '<div class="gen-label">Post Title / Description</div><input class="field-input" id="plan-title" placeholder="e.g. Vanya — People Ops carousel">'+
-      '<div class="provider-row"><div><div class="gen-label">Date</div><input class="field-input" id="plan-date" type="date" value="'+(date||new Date().toISOString().split('T')[0])+'"></div><div><div class="gen-label">Campaign</div><select class="gen-select" id="plan-campaign"><option value="">No campaign</option>'+(CAMPAIGNS||[]).map(function(c){return '<option value="'+ESC(c.id)+'">'+ESC(c.name)+'</option>';}).join('')+'</select></div></div>'+
+      '<div class="provider-row"><div><div class="gen-label">Date</div><input class="field-input" id="plan-date" type="date" value="'+(date||plannerTodayKey())+'"></div><div><div class="gen-label">Campaign</div><select class="gen-select" id="plan-campaign"><option value="">No campaign</option>'+(CAMPAIGNS||[]).map(function(c){return '<option value="'+ESC(c.id)+'">'+ESC(c.name)+'</option>';}).join('')+'</select></div></div>'+
       (reviewNote?'<div class="small-note" style="margin-top:10px;color:var(--silver)">Linked review follow-up: '+ESC(reviewNote)+'</div>':'')+
       '<button class="btn btn-primary" style="margin-top:8px" onclick="addPlanPost()">Add to Planner</button>';
     openModal(html);
@@ -6143,6 +6148,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       }
     }).catch(function(err){
       console.warn('planner durable write failed', err);
+      toast('Planner post kept locally; backend save needs a retry');
     });
     if(reviewEvent){
       persistReviewEventDurably(reviewEvent).then(function(saved){
@@ -6166,8 +6172,16 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
   }
 
   function plannerDateKey(date){
-    return date.toISOString().split('T')[0];
+    if(typeof localPlannerDateKey === 'function') return localPlannerDateKey(date);
+    if(!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
   }
+
+  function plannerTodayKey(){
+    return plannerDateKey(new Date());
+  }
+  window.plannerDateKey = plannerDateKey;
+  window.plannerTodayKey = plannerTodayKey;
 
   function plannerCampaignId(post){
     return String((post && (post.campaign || post.campaignId)) || '').trim();
@@ -6206,6 +6220,81 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       byDate.get(date).push(post);
     });
     return { posts:posts, byDate:byDate, charFilter:charF, campaignFilter:campF };
+  }
+
+  function plannerVisibleDateRange(today, view){
+    var baseDate = today instanceof Date && !Number.isNaN(today.getTime()) ? today : new Date();
+    if(view === 'week'){
+      var startOfWeek = new Date(baseDate);
+      var dayOfWeek = baseDate.getDay();
+      startOfWeek.setDate(baseDate.getDate() + (dayOfWeek === 0 ? -6 : 1 - dayOfWeek) + plannerWeekOffset * 7);
+      var endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      return { from: plannerDateKey(startOfWeek), to: plannerDateKey(endOfWeek), view:'week' };
+    }
+    var base = new Date(baseDate.getFullYear(), baseDate.getMonth() + (STATE.plannerMonthOffset || 0), 1);
+    var firstDay = (base.getDay() + 6) % 7;
+    var start = new Date(base);
+    start.setDate(base.getDate() - firstDay);
+    var end = new Date(start);
+    end.setDate(start.getDate() + 41);
+    return { from: plannerDateKey(start), to: plannerDateKey(end), view:'month' };
+  }
+
+  function mergePlannerPostsById(items){
+    if(!Array.isArray(items) || !items.length) return false;
+    STATE.plannerPosts = Array.isArray(STATE.plannerPosts) ? STATE.plannerPosts : [];
+    var byId = new Map();
+    STATE.plannerPosts.forEach(function(post){ if(post && post.id) byId.set(String(post.id), post); });
+    var changed = false;
+    items.forEach(function(remote, idx){
+      var normalized = typeof normalizePlannerPostShape === 'function' ? normalizePlannerPostShape(remote, idx) : remote;
+      if(!normalized || !normalized.id) return;
+      normalized.persistedAt = normalized.persistedAt || new Date().toISOString();
+      var existing = byId.get(String(normalized.id));
+      if(existing){
+        var before = JSON.stringify(existing);
+        Object.assign(existing, normalized);
+        if(before !== JSON.stringify(existing)) changed = true;
+        return;
+      }
+      STATE.plannerPosts.push(normalized);
+      byId.set(String(normalized.id), normalized);
+      changed = true;
+    });
+    return changed;
+  }
+
+  function hydratePlannerPostsForVisibleRange(range){
+    if(!range || !range.from || !range.to || typeof fetch !== 'function') return Promise.resolve(false);
+    var cache = window.__SILVA_PLANNER_REMOTE_CACHE = window.__SILVA_PLANNER_REMOTE_CACHE || { ranges:{}, inFlight:{} };
+    var key = range.from + ':' + range.to;
+    if(cache.inFlight[key] || cache.ranges[key]) return Promise.resolve(false);
+    cache.inFlight[key] = true;
+    return fetch('/api/planner?from=' + encodeURIComponent(range.from) + '&to=' + encodeURIComponent(range.to), {
+      headers:{'Accept':'application/json'},
+      cache:'no-store'
+    }).then(function(res){
+      return res.json().then(function(data){ return { ok:res.ok, data:data }; }).catch(function(){ return { ok:res.ok, data:{} }; });
+    }).then(function(result){
+      if(!result.ok || !result.data || !Array.isArray(result.data.items)) throw new Error((result.data && result.data.error) || 'Planner hydration failed');
+      cache.ranges[key] = { at:Date.now(), count:result.data.items.length };
+      var changed = mergePlannerPostsById(result.data.items);
+      if(changed){
+        saveState({ skipSync:true, reason:'planner_range_hydration' });
+        if(document.getElementById('page-planner')?.classList.contains('active') && typeof renderPlanner === 'function'){
+          window.__SILVA_PLANNER_REMOTE_RENDERING = true;
+          try{ renderPlanner(); } finally { window.__SILVA_PLANNER_REMOTE_RENDERING = false; }
+        }
+      }
+      return changed;
+    }).catch(function(err){
+      cache.ranges[key] = { at:Date.now(), error:String(err) };
+      console.warn('planner range hydration failed', err);
+      return false;
+    }).finally(function(){
+      delete cache.inFlight[key];
+    });
   }
 
   function groupPlannerPostsForDisplay(posts){
@@ -6265,6 +6354,10 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
     return '<button type="button" class="planner-more-btn" onclick="openPlannerDayDrawer(\''+plannerEsc(dateStr)+'\')">'+plannerEsc(label)+'</button>';
   }
 
+  function renderPlannerCellEmptyLabel(text){
+    return '<div class="planner-cell-empty">'+plannerEsc(text || 'Clean day')+'</div>';
+  }
+
   function renderPlannerMonthBoard(index, today){
     var base = new Date(today.getFullYear(), today.getMonth() + (STATE.plannerMonthOffset || 0), 1);
     var label = document.getElementById('week-label');
@@ -6284,8 +6377,8 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       var hidden = groups.slice(3);
       var hiddenItems = hidden.reduce(function(sum, group){ return sum + group.count; }, 0);
       cells += '<div class="month-cell planner-month-cell'+(d.toDateString()===today.toDateString()?' today':'')+(d.getMonth()!==base.getMonth()?' other':'')+'" data-date="'+plannerEsc(dateStr)+'">'
-        + '<button type="button" class="month-date planner-date-btn" onclick="openPlannerDayDrawer(\''+plannerEsc(dateStr)+'\')">'+d.getDate()+'<span>'+dayPosts.length+'</span></button>'
-        + '<div class="planner-cell-events">'+visible.map(function(group){ return renderPlannerGroupChip(group, dateStr, 'month'); }).join('')+renderPlannerOverflowSummary(dateStr, hidden.length, hiddenItems)+'</div>'
+        + '<button type="button" class="month-date planner-date-btn" onclick="openPlannerDayDrawer(\''+plannerEsc(dateStr)+'\')"><span class="planner-day-number">'+d.getDate()+'</span>'+(dayPosts.length ? '<span class="planner-count-pill">'+dayPosts.length+' item'+(dayPosts.length===1?'':'s')+'</span>' : '')+'</button>'
+        + '<div class="planner-cell-events">'+(visible.length ? visible.map(function(group){ return renderPlannerGroupChip(group, dateStr, 'month'); }).join('')+renderPlannerOverflowSummary(dateStr, hidden.length, hiddenItems) : renderPlannerCellEmptyLabel('Clean day'))+'</div>'
         + '<button type="button" class="add-plan-btn planner-add-btn" onclick="openAddPlanModal(\''+plannerEsc(dateStr)+'\')">+ Add</button>'
         + '</div>';
     }
@@ -6309,8 +6402,8 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       var hidden = groups.slice(12);
       var hiddenItems = hidden.reduce(function(sum, group){ return sum + group.count; }, 0);
       html += '<div class="day-col planner-week-day'+(d.toDateString()===today.toDateString()?' today':'')+'" data-date="'+plannerEsc(dateStr)+'">'
-        + '<button type="button" class="day-label planner-date-btn" onclick="openPlannerDayDrawer(\''+plannerEsc(dateStr)+'\')">'+day+'<br><span>'+d.getDate()+'</span><strong>'+dayPosts.length+' item'+(dayPosts.length===1?'':'s')+'</strong></button>'
-        + '<div class="planner-day-scroll">'+visible.map(function(group){ return renderPlannerGroupChip(group, dateStr, 'week'); }).join('')+renderPlannerOverflowSummary(dateStr, hidden.length, hiddenItems)+'</div>'
+        + '<button type="button" class="day-label planner-date-btn" onclick="openPlannerDayDrawer(\''+plannerEsc(dateStr)+'\')">'+day+'<br><span>'+d.getDate()+'</span><strong>'+(dayPosts.length ? dayPosts.length+' item'+(dayPosts.length===1?'':'s') : 'No posts yet')+'</strong></button>'
+        + '<div class="planner-day-scroll">'+(visible.length ? visible.map(function(group){ return renderPlannerGroupChip(group, dateStr, 'week'); }).join('')+renderPlannerOverflowSummary(dateStr, hidden.length, hiddenItems) : renderPlannerCellEmptyLabel('No posts yet'))+'</div>'
         + '<button type="button" class="add-plan-btn planner-add-btn" onclick="openAddPlanModal(\''+plannerEsc(dateStr)+'\')">+ Add</button>'
         + '</div>';
     });
@@ -6345,6 +6438,12 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       follow.className = 'planner-warning';
       follow.textContent = 'Review follow-up pressure: ' + pendingFollowUps.length + ' review event' + (pendingFollowUps.length === 1 ? ' is' : 's are') + ' still asking for a scheduled correction or retry.';
       page.querySelector('.page-sub')?.insertAdjacentElement('afterend', follow);
+    }
+    if(index && index.posts && index.posts.length === 0 && (index.charFilter !== 'all' || index.campaignFilter !== 'all')){
+      var filtered = document.createElement('div');
+      filtered.className = 'planner-tip planner-filter-empty';
+      filtered.textContent = 'No matching posts for the current filters. Clear a filter or add a post to this view.';
+      page.querySelector('.page-sub')?.insertAdjacentElement('afterend', filtered);
     }
     var tip = document.createElement('div');
     tip.className = 'planner-tip';
@@ -6394,7 +6493,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       + '<div class="provider-row"><div><div class="gen-label">Character</div><select class="gen-select" id="plan-edit-char"><option value="aisha">Aisha</option><option value="leah">Leah</option><option value="claudia">Claudia</option><option value="grok">Grok</option><option value="vanya">Vanya</option></select></div><div><div class="gen-label">Platform</div><select class="gen-select" id="plan-edit-platform"><option value="instagram">Instagram</option><option value="carousel">Carousel</option><option value="story">Story</option><option value="linkedin">LinkedIn</option><option value="reel">Reel</option></select></div></div>'
       + '<div class="gen-label">Post Title / Description</div><input class="field-input" id="plan-edit-title" value="'+plannerEsc(item.title || '')+'">'
       + '<div class="provider-row"><div><div class="gen-label">Date</div><input class="field-input" id="plan-edit-date" type="date" value="'+plannerEsc(String(item.date || '').slice(0,10))+'"></div><div><div class="gen-label">Campaign</div><select class="gen-select" id="plan-edit-campaign"><option value="">No campaign</option>'+(CAMPAIGNS||[]).map(function(c){return '<option value="'+plannerEsc(c.id)+'">'+plannerEsc(c.name)+'</option>';}).join('')+'</select></div></div>'
-      + '<button class="btn btn-primary" style="margin-top:8px" onclick="savePlannerPostEdit()">Save planner item</button>';
+      + '<div class="planner-edit-actions"><button class="btn btn-ghost planner-delete-btn" onclick="deletePlannerPostFromModal()">Delete</button><button class="btn btn-primary" onclick="savePlannerPostEdit()">Save planner item</button></div>';
     openModal(html);
     setTimeout(function(){
       var charEl = document.getElementById('plan-edit-char');
@@ -6424,11 +6523,29 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
         Object.assign(item, saved, { persistedAt:new Date().toISOString() });
         saveState({ reason:'planner_edit_durable_write' });
       }
-    }).catch(function(err){ console.warn('planner edit durable write failed', err); });
+    }).catch(function(err){ console.warn('planner edit durable write failed', err); toast('Planner edit kept locally; backend save needs a retry'); });
     closeModal();
     closePlannerDayDrawer();
     renderPlanner();
     toast('Planner item updated');
+  };
+
+  window.deletePlannerPostFromModal=function(){
+    var id = document.getElementById('plan-edit-id')?.value || '';
+    if(!id) return toast('Planner item not found');
+    var before = Array.isArray(STATE.plannerPosts) ? STATE.plannerPosts.slice() : [];
+    STATE.plannerPosts = before.filter(function(post){ return String(post.id) !== String(id); });
+    saveState();
+    silvaApiJson('/api/planner/' + encodeURIComponent(id), { method:'DELETE' }).then(function(){
+      toast('Planner item deleted');
+    }).catch(function(err){
+      console.warn('planner delete durable write failed', err);
+      toast('Deleted locally; backend delete will need a retry');
+    });
+    closeModal();
+    closePlannerDayDrawer();
+    renderPlanner();
+    if(typeof renderCampaignsV35==='function') renderCampaignsV35();
   };
 
   window.__silvaCanonicalRenderPlanner = function(){
@@ -6438,6 +6555,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
     if(!grid) return;
     var today = new Date();
     var plannerView = STATE.plannerView === 'week' ? 'week' : 'month';
+    var visibleRange = plannerVisibleDateRange(today, plannerView);
     STATE.plannerView = plannerView;
     document.getElementById('planner-week-chip')?.classList.toggle('active', plannerView === 'week');
     document.getElementById('planner-month-chip')?.classList.toggle('active', plannerView === 'month');
@@ -6446,6 +6564,9 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       grid.className = plannerView === 'week' ? 'week-grid planner-week-agenda' : 'month-grid planner-month-board';
       grid.innerHTML = plannerView === 'week' ? renderPlannerWeekAgenda(index, today) : renderPlannerMonthBoard(index, today);
       renderPlannerHealth(index);
+      if(!window.__SILVA_PLANNER_REMOTE_RENDERING){
+        hydratePlannerPostsForVisibleRange(visibleRange);
+      }
     } catch(err){
       console.warn('planner render failed', err);
       grid.className = 'month-grid planner-month-board';
@@ -6458,10 +6579,13 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
   window.renderPlannerMonthBoard = renderPlannerMonthBoard;
   window.renderPlannerWeekAgenda = renderPlannerWeekAgenda;
   window.renderPlannerOverflowSummary = renderPlannerOverflowSummary;
+  window.plannerVisibleDateRange = plannerVisibleDateRange;
+  window.hydratePlannerPostsForVisibleRange = hydratePlannerPostsForVisibleRange;
+  window.mergePlannerPostsById = mergePlannerPostsById;
 
   window.renderCampaigns=function(){
     var grid=document.getElementById('campaigns-grid'); if(!grid) return;
-    grid.innerHTML=(CAMPAIGNS||[]).map(function(c){ var linked=(STATE.plannerPosts||[]).filter(function(p){return p.campaign===c.id;}); var owner=window.getChar(c.owner)?.name || defaultTeamRecords[c.owner]?.name || 'Studio'; return '<div class="campaign-card"><div class="campaign-name">'+ESC(c.name)+'</div><div class="campaign-desc">'+ESC(c.desc)+'</div><div class="small-note">Owner: '+ESC(owner)+' · '+linked.length+' planner item'+(linked.length!==1?'s':'')+'</div><div class="campaign-posts" style="margin-top:10px">'+linked.slice(0,5).map(function(p){return '<span class="campaign-post-pill">'+ESC(p.title.slice(0,26))+'</span>';}).join('')+(linked.length? '':'<span class="campaign-post-pill">Not yet linked</span>')+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="openAddPlanModal(\''+new Date().toISOString().slice(0,10)+'\',{campaign:\''+c.id+'\',title:\''+ESC(c.name).replace(/'/g,'&#39;')+'\',platform:\'carousel\',char:\''+(c.owner||'leah')+'\'})">▦ Schedule</button><button class="btn btn-ghost btn-sm" onclick="copyCampaignPrompt(\''+c.id+'\')">⎘ Copy brief</button></div></div>'; }).join('');
+    grid.innerHTML=(CAMPAIGNS||[]).map(function(c){ var linked=(STATE.plannerPosts||[]).filter(function(p){return p.campaign===c.id;}); var owner=window.getChar(c.owner)?.name || defaultTeamRecords[c.owner]?.name || 'Studio'; var todayKey=typeof plannerTodayKey === 'function' ? plannerTodayKey() : new Date().toISOString().slice(0,10); return '<div class="campaign-card"><div class="campaign-name">'+ESC(c.name)+'</div><div class="campaign-desc">'+ESC(c.desc)+'</div><div class="small-note">Owner: '+ESC(owner)+' · '+linked.length+' planner item'+(linked.length!==1?'s':'')+'</div><div class="campaign-posts" style="margin-top:10px">'+linked.slice(0,5).map(function(p){return '<span class="campaign-post-pill">'+ESC(p.title.slice(0,26))+'</span>';}).join('')+(linked.length? '':'<span class="campaign-post-pill">Not yet linked</span>')+'</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="openAddPlanModal(\''+todayKey+'\',{campaign:\''+c.id+'\',title:\''+ESC(c.name).replace(/'/g,'&#39;')+'\',platform:\'carousel\',char:\''+(c.owner||'leah')+'\'})">▦ Schedule</button><button class="btn btn-ghost btn-sm" onclick="copyCampaignPrompt(\''+c.id+'\')">⎘ Copy brief</button></div></div>'; }).join('');
   };
   window.copyCampaignPrompt=function(id){ var c=(CAMPAIGNS||[]).find(function(x){return x.id===id;}); if(!c) return; navigator.clipboard.writeText(c.name+'\n\n'+c.desc).then(function(){toast('Campaign brief copied');}); };
 
@@ -6832,11 +6956,11 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
         let html=heads;
         for(let i=0;i<42;i++){
           const d=new Date(start); d.setDate(start.getDate()+i);
-          const dateStr=d.toISOString().split('T')[0];
+          const dateStr=typeof window.plannerDateKey==='function' ? window.plannerDateKey(d) : (typeof localPlannerDateKey==='function' ? localPlannerDateKey(d) : d.toISOString().split('T')[0]);
           const dayPosts=(byDate.get(dateStr) || []);
           const isToday=d.toDateString()===today.toDateString();
           const isOther=d.getMonth()!==base.getMonth();
-          html += '<div class="month-cell'+(isToday?' today':'')+(isOther?' other':'')+'"><div class="month-date">'+d.getDate()+'</div>'+dayPosts.slice(0,3).map(function(p){ var pressure=typeof safePlannerPressure==='function' ? safePlannerPressure(p) : { requiresFollowUp:false, badge:'', title:String(p.title||'') }; return '<div class="month-post plan-post-'+ESC(p.char || 'studio')+(pressure.requiresFollowUp?' review-pending':'')+'" title="'+ESC(pressure.title||String(p.title||''))+'">'+ESC(typeof safePlannerPostTitle==='function' ? safePlannerPostTitle(p,20) : String(p.title||'Untitled').slice(0,20))+(pressure.badge?'<span style="margin-left:4px;color:var(--color-hex-ff8f8f);font-size:var(--type-2xs)">'+ESC(pressure.badge)+'</span>':'')+'</div>'; }).join('')+(dayPosts.length>3?'<div class="small-note">+'+(dayPosts.length-3)+' more</div>':'')+'<div class="add-plan-btn" onclick="openAddPlanModal(\''+dateStr+'\')">+</div></div>';
+          html += '<div class="month-cell'+(isToday?' today':'')+(isOther?' other':'')+'" data-date="'+dateStr+'"><div class="month-date"><span class="planner-day-number">'+d.getDate()+'</span></div><div class="planner-cell-events">'+(dayPosts.length ? dayPosts.slice(0,3).map(function(p){ var pressure=typeof safePlannerPressure==='function' ? safePlannerPressure(p) : { requiresFollowUp:false, badge:'', title:String(p.title||'') }; return '<div class="month-post plan-post-'+ESC(p.char || 'studio')+(pressure.requiresFollowUp?' review-pending':'')+'" title="'+ESC(pressure.title||String(p.title||''))+'">'+ESC(typeof safePlannerPostTitle==='function' ? safePlannerPostTitle(p,20) : String(p.title||'Untitled').slice(0,20))+(pressure.badge?'<span style="margin-left:4px;color:var(--color-hex-ff8f8f);font-size:var(--type-2xs)">'+ESC(pressure.badge)+'</span>':'')+'</div>'; }).join('')+(dayPosts.length>3?'<div class="small-note">+'+(dayPosts.length-3)+' more</div>':'') : '<div class="planner-cell-empty">Clean day</div>')+'</div><button type="button" class="add-plan-btn planner-add-btn" onclick="openAddPlanModal(\''+dateStr+'\')">+ Add</button></div>';
         }
         grid.className='month-grid';
         grid.innerHTML=html;
@@ -6851,10 +6975,10 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       let html='';
       for(let i=0;i<7;i++){
         const d=new Date(startOfWeek); d.setDate(startOfWeek.getDate()+i);
-        const dateStr=d.toISOString().split('T')[0];
+        const dateStr=typeof window.plannerDateKey==='function' ? window.plannerDateKey(d) : (typeof localPlannerDateKey==='function' ? localPlannerDateKey(d) : d.toISOString().split('T')[0]);
         const dayPosts=(byDate.get(dateStr) || []);
         const isToday=d.toDateString()===today.toDateString();
-        html += '<div class="day-col'+(isToday?' today':'')+'"><div class="day-label">'+labels[i]+'<br><span style="font-size:var(--type-xs);color:var(--muted2)">'+d.getDate()+'</span></div>'+dayPosts.map(function(p){ var pressure=typeof safePlannerPressure==='function' ? safePlannerPressure(p) : { requiresFollowUp:false, badge:'', title:String(p.title||'') }; var camp=(CAMPAIGNS||[]).find(function(c){return c.id===(p.campaign||p.campaignId);}); return '<div class="plan-post plan-post-'+ESC(p.char || 'studio')+(pressure.requiresFollowUp?' review-pending':'')+'" title="'+ESC(pressure.title||String(p.title||''))+'">'+ESC(typeof safePlannerPostTitle==='function' ? safePlannerPostTitle(p,20) : String(p.title||'Untitled').slice(0,20))+(camp?' ·':'')+(pressure.badge?'<span style="margin-left:4px;color:var(--color-hex-ff8f8f);font-size:var(--type-2xs)">'+ESC(pressure.badge)+'</span>':'')+'</div>'; }).join('')+'<div class="add-plan-btn" onclick="openAddPlanModal(\''+dateStr+'\')">+</div></div>';
+        html += '<div class="day-col'+(isToday?' today':'')+'" data-date="'+dateStr+'"><div class="day-label">'+labels[i]+'<br><span style="font-size:var(--type-xs);color:var(--muted2)">'+d.getDate()+'</span><strong>'+(dayPosts.length ? dayPosts.length+' item'+(dayPosts.length===1?'':'s') : 'No posts yet')+'</strong></div><div class="planner-day-scroll">'+(dayPosts.length ? dayPosts.map(function(p){ var pressure=typeof safePlannerPressure==='function' ? safePlannerPressure(p) : { requiresFollowUp:false, badge:'', title:String(p.title||'') }; var camp=(CAMPAIGNS||[]).find(function(c){return c.id===(p.campaign||p.campaignId);}); return '<div class="plan-post plan-post-'+ESC(p.char || 'studio')+(pressure.requiresFollowUp?' review-pending':'')+'" title="'+ESC(pressure.title||String(p.title||''))+'">'+ESC(typeof safePlannerPostTitle==='function' ? safePlannerPostTitle(p,20) : String(p.title||'Untitled').slice(0,20))+(camp?' ·':'')+(pressure.badge?'<span style="margin-left:4px;color:var(--color-hex-ff8f8f);font-size:var(--type-2xs)">'+ESC(pressure.badge)+'</span>':'')+'</div>'; }).join('') : '<div class="planner-cell-empty">No posts yet</div>')+'</div><button type="button" class="add-plan-btn planner-add-btn" onclick="openAddPlanModal(\''+dateStr+'\')">+ Add</button></div>';
       }
       grid.className='week-grid';
       grid.innerHTML=html;
@@ -6868,7 +6992,7 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       } else {
         if(label) label.textContent='Week of '+base.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
         grid.className='week-grid';
-        grid.innerHTML=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(day){ return '<div class="day-col"><div class="day-label">'+day+'</div><div class="add-plan-btn">+</div></div>'; }).join('');
+        grid.innerHTML=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(day){ return '<div class="day-col"><div class="day-label">'+day+'</div><div class="planner-cell-empty">No posts yet</div><button type="button" class="add-plan-btn planner-add-btn">+ Add</button></div>'; }).join('');
       }
     }
   }
@@ -6881,7 +7005,8 @@ function savePreviewDraft(kind){ var char=document.getElementById('g-char')?.val
       const linkedGallery=(STATE.gallery||[]).filter(g=>(g.campaignId||g.campaign)===c.id || linkedPrompts.some(p=>g.promptId===p.id));
       const reviewSummary=campaignReviewSummarySafe(c.id);
       const owner=(window.getChar(c.owner)?.name)||(STATE.teamRecords[c.owner]?.name)||'Studio';
-      return `<div class="campaign-card"><div class="campaign-name">${esc(c.name)}</div><div class="campaign-desc">${esc(c.desc)}</div><div class="small-note">Owner: ${esc(owner)} · ${linkedPlans.length} planner item${linkedPlans.length!==1?'s':''} · ${linkedPrompts.length} linked prompt${linkedPrompts.length!==1?'s':''} · ${linkedGallery.length} gallery item${linkedGallery.length!==1?'s':''} · ${reviewSummary.total} review${reviewSummary.total!==1?'s':''}</div>${reviewSummary.pending ? `<div class="small-note" style="margin-top:8px;color:var(--color-hex-ffb6b6)">Review pressure: ${reviewSummary.pending} follow-up${reviewSummary.pending!==1?'s':''} still not scheduled.</div>` : reviewSummary.planned ? `<div class="small-note" style="margin-top:8px;color:var(--silver)">Review follow-ups already scheduled: ${reviewSummary.planned}</div>` : ''}<div class="campaign-posts" style="margin-top:10px">${linkedPrompts.slice(0,3).map(p=>`<span class="campaign-post-pill">${esc((p.title||'').slice(0,26))}</span>`).join('') || '<span class="campaign-post-pill">No prompt links yet</span>'}${linkedGallery.slice(0,2).map(g=>`<span class="campaign-post-pill" style="border-color:var(--color-white-a14);color:var(--silver)">Output · ${esc((g.title||'').slice(0,20))}</span>`).join('')}${reviewSummary.pending ? `<span class="campaign-post-pill" style="border-color:var(--color-rgba-255-143-143-35);color:var(--color-hex-ffb6b6)">Pending review follow-up</span>` : ''}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="openAddPlanModal('${new Date().toISOString().slice(0,10)}',{campaign:'${c.id}',title:'${esc(c.name).replace(/'/g,'&#39;')}',platform:'carousel',char:'${c.owner||'leah}'})">▦ Schedule</button><button class="btn btn-ghost btn-sm" onclick="copyCampaignPrompt('${c.id}')">⎘ Copy brief</button></div></div>`;
+      const todayKey=typeof window.plannerTodayKey === 'function' ? window.plannerTodayKey() : new Date().toISOString().slice(0,10);
+      return `<div class="campaign-card"><div class="campaign-name">${esc(c.name)}</div><div class="campaign-desc">${esc(c.desc)}</div><div class="small-note">Owner: ${esc(owner)} · ${linkedPlans.length} planner item${linkedPlans.length!==1?'s':''} · ${linkedPrompts.length} linked prompt${linkedPrompts.length!==1?'s':''} · ${linkedGallery.length} gallery item${linkedGallery.length!==1?'s':''} · ${reviewSummary.total} review${reviewSummary.total!==1?'s':''}</div>${reviewSummary.pending ? `<div class="small-note" style="margin-top:8px;color:var(--color-hex-ffb6b6)">Review pressure: ${reviewSummary.pending} follow-up${reviewSummary.pending!==1?'s':''} still not scheduled.</div>` : reviewSummary.planned ? `<div class="small-note" style="margin-top:8px;color:var(--silver)">Review follow-ups already scheduled: ${reviewSummary.planned}</div>` : ''}<div class="campaign-posts" style="margin-top:10px">${linkedPrompts.slice(0,3).map(p=>`<span class="campaign-post-pill">${esc((p.title||'').slice(0,26))}</span>`).join('') || '<span class="campaign-post-pill">No prompt links yet</span>'}${linkedGallery.slice(0,2).map(g=>`<span class="campaign-post-pill" style="border-color:var(--color-white-a14);color:var(--silver)">Output · ${esc((g.title||'').slice(0,20))}</span>`).join('')}${reviewSummary.pending ? `<span class="campaign-post-pill" style="border-color:var(--color-rgba-255-143-143-35);color:var(--color-hex-ffb6b6)">Pending review follow-up</span>` : ''}</div><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="openAddPlanModal('${todayKey}',{campaign:'${c.id}',title:'${esc(c.name).replace(/'/g,'&#39;')}',platform:'carousel',char:'${c.owner||'leah}'})">▦ Schedule</button><button class="btn btn-ghost btn-sm" onclick="copyCampaignPrompt('${c.id}')">⎘ Copy brief</button></div></div>`;
     }).join('');
   }
   window.renderCampaignsV35=renderCampaignsV35;
@@ -12307,7 +12432,7 @@ body.light-mode .v396-review-grid input,body.light-mode .v396-review-grid select
   window.openReviewFollowUpPlanner = function(reviewEventId){
     const event = (STATE.reviewEvents || []).find(ev => ev.id === reviewEventId);
     if(!event){ toastSafe('Review event not found'); return; }
-    openAddPlanModal(new Date().toISOString().slice(0,10), buildReviewFollowUpPrefill(event));
+    openAddPlanModal((typeof window.plannerTodayKey === 'function' ? window.plannerTodayKey() : new Date().toISOString().slice(0,10)), buildReviewFollowUpPrefill(event));
   };
 
   window.openImageReviewModal = function(id){
@@ -12406,7 +12531,7 @@ body.light-mode .v396-review-grid input,body.light-mode .v396-review-grid select
     if(typeof window.renderPlannerV35==='function') window.renderPlannerV35();
     if(typeof window.renderCampaignsV35==='function') window.renderCampaignsV35();
     if(planAfter){
-      openAddPlanModal(new Date().toISOString().slice(0,10), buildReviewFollowUpPrefill(event));
+      openAddPlanModal((typeof window.plannerTodayKey === 'function' ? window.plannerTodayKey() : new Date().toISOString().slice(0,10)), buildReviewFollowUpPrefill(event));
       toastSafe('Output review saved');
       return;
     }
@@ -12481,7 +12606,7 @@ body.light-mode .v396-review-grid input,body.light-mode .v396-review-grid select
     if(typeof window.renderPlannerV35==='function') window.renderPlannerV35();
     if(typeof window.renderCampaignsV35==='function') window.renderCampaignsV35();
     if(planAfter){
-      openAddPlanModal(new Date().toISOString().slice(0,10), buildReviewFollowUpPrefill(event));
+      openAddPlanModal((typeof window.plannerTodayKey === 'function' ? window.plannerTodayKey() : new Date().toISOString().slice(0,10)), buildReviewFollowUpPrefill(event));
       toastSafe('Prompt review saved');
       return;
     }

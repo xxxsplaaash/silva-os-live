@@ -70,8 +70,8 @@
 }
 
 #page-planner .month-cell.today{
-  border-color:var(--color-rgba-255-47-84-35) !important;
-  box-shadow:inset 0 0 0 1px var(--color-rgba-255-47-84-14),0 18px 44px var(--color-black-a22) !important;
+  border-color:rgba(255,47,84,.24) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,47,84,.10),0 16px 38px var(--color-black-a18) !important;
 }
 
 #page-planner .planner-date-btn{
@@ -94,16 +94,25 @@
   color:var(--silver) !important;
 }
 
-#page-planner .month-date span{
+#page-planner .month-date .planner-count-pill{
   display:inline-flex !important;
   align-items:center !important;
   justify-content:center !important;
-  min-width:20px !important;
-  height:16px !important;
+  min-width:0 !important;
+  height:18px !important;
+  padding:0 7px !important;
   border-radius:999px !important;
   background:var(--color-white-a6) !important;
   color:var(--muted2) !important;
   font-size:var(--type-2xs) !important;
+  letter-spacing:var(--tracking-wide) !important;
+  white-space:nowrap !important;
+}
+
+#page-planner .month-date .planner-day-number{
+  display:inline-flex !important;
+  align-items:center !important;
+  min-width:2ch !important;
 }
 
 #page-planner .planner-cell-events{
@@ -166,11 +175,109 @@
 }
 
 #page-planner .planner-add-btn{
+  appearance:none !important;
+  -webkit-appearance:none !important;
+  justify-self:start !important;
   align-self:flex-start !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
   width:auto !important;
+  max-width:max-content !important;
+  min-height:28px !important;
+  margin:0 !important;
+  padding:6px 10px !important;
+  border:1px solid var(--color-white-a10) !important;
+  border-radius:999px !important;
+  background:linear-gradient(180deg,var(--color-white-a7),var(--color-white-a2_6)) !important;
   color:var(--muted2) !important;
   font-family:"DM Mono",monospace !important;
   font-size:var(--type-2xs) !important;
+  letter-spacing:var(--tracking-wide) !important;
+  line-height:1 !important;
+  box-shadow:inset 0 1px 0 var(--color-white-a8) !important;
+  cursor:pointer !important;
+}
+
+#page-planner .planner-add-btn:hover{
+  color:var(--silver) !important;
+  border-color:var(--color-white-a18) !important;
+  background:linear-gradient(180deg,var(--color-white-a10),var(--color-white-a4)) !important;
+}
+
+#page-planner .planner-add-btn:focus-visible,
+#page-planner .planner-date-btn:focus-visible,
+#page-planner .toggle-chip:focus-visible{
+  outline:2px solid rgba(255,47,84,.42) !important;
+  outline-offset:3px !important;
+}
+
+#page-planner .planner-cell-empty{
+  min-height:30px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  padding:7px 8px !important;
+  border:1px dashed var(--color-white-a7_5) !important;
+  border-radius:12px !important;
+  color:var(--muted) !important;
+  background:var(--color-white-a2_6) !important;
+  font-family:"DM Mono",monospace !important;
+  font-size:var(--type-2xs) !important;
+  letter-spacing:var(--tracking-wide) !important;
+}
+
+#page-planner .planner-filter-empty{
+  border-color:var(--color-white-a10) !important;
+  color:var(--silver) !important;
+}
+
+#page-planner .planner-edit-actions{
+  display:flex !important;
+  gap:8px !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  margin-top:12px !important;
+}
+
+#page-planner .planner-delete-btn{
+  border-color:rgba(255,47,84,.24) !important;
+  color:var(--color-hex-ffb6b6) !important;
+}
+
+.planner-edit-actions{
+  display:flex !important;
+  gap:8px !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
+  margin-top:12px !important;
+}
+
+.planner-delete-btn{
+  border-color:rgba(255,47,84,.24) !important;
+  color:var(--color-hex-ffb6b6) !important;
+}
+
+#page-planner .planner-toggle .toggle-chip{
+  appearance:none !important;
+  -webkit-appearance:none !important;
+  border-color:var(--color-white-a10) !important;
+  background:var(--color-white-a3_5) !important;
+  color:var(--muted2) !important;
+}
+
+#page-planner .planner-toggle .toggle-chip:hover{
+  color:var(--silver) !important;
+  border-color:var(--color-white-a16) !important;
+}
+
+#page-planner .planner-toggle .toggle-chip.active{
+  border-color:rgba(255,47,84,.34) !important;
+  background:rgba(255,47,84,.10) !important;
+  color:var(--white) !important;
 }
 
 #page-planner #planner-grid.week-grid,

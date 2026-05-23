@@ -504,6 +504,7 @@ const statements = {
   getGalleryById: db.prepare(`SELECT * FROM gallery_items WHERE id = ?`),
   getPlanner: db.prepare(`SELECT * FROM planner_posts ORDER BY COALESCE(scheduled_for, updated_at) ASC, updated_at DESC`),
   getPlannerById: db.prepare(`SELECT * FROM planner_posts WHERE id = ?`),
+  deletePlanner: db.prepare(`DELETE FROM planner_posts WHERE id = ?`),
   getReviewEvents: db.prepare(`SELECT * FROM review_events ORDER BY created_at DESC, updated_at DESC`),
   getReviewEventById: db.prepare(`SELECT * FROM review_events WHERE id = ?`),
   countPrompts: db.prepare(`SELECT COUNT(*) AS count FROM prompts`),
