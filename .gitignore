@@ -7,6 +7,10 @@ build/
 .next/
 out/
 
+# Vendored A.I.S.H.A runtime bundle required by Cloud Run.
+!packages/aisha-runtime-pack1/dist/
+!packages/aisha-runtime-pack1/dist/**
+
 # logs
 *.log
 npm-debug.log*
@@ -63,3 +67,4 @@ exports/
 *.rescue.*.bak
 *.syntaxfix.bak.*
 skills-lock.json
+packages/aisha-runtime-pack1/package-lock.json
