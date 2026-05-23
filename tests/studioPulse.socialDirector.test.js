@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const express = require('express');
+const { spawn } = require('node:child_process');
+const path = require('node:path');
 
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
@@ -44,6 +46,43 @@ async function postSocial(baseUrl, message, extra = {}) {
   });
   const body = await response.json();
   return { status: response.status, body };
+}
+
+async function postPulse(baseUrl, message, extra = {}) {
+  const response = await fetch(`${baseUrl}/api/studio/pulse`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ message, ...extra })
+  });
+  const body = await response.json();
+  return { status: response.status, body };
+}
+
+async function withEnvVar(name, value, fn) {
+  const original = process.env[name];
+  if (value == null) delete process.env[name];
+  else process.env[name] = String(value);
+  try {
+    await fn();
+  } finally {
+    if (original == null) delete process.env[name];
+    else process.env[name] = original;
+  }
+}
+
+function runNodeScript(args = {}, env = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, args, {
+      cwd: path.resolve(__dirname, '..'),
+      env: { ...process.env, ...env },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('close', code => resolve({ code, stdout, stderr }));
+  });
 }
 
 function visibleText(body = {}) {
@@ -214,6 +253,67 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
   });
 });
 
+test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async () => {
+  await withAishaFlag('true', async () => {
+    await withEnvVar('SOCIAL_DIRECTOR_MODEL', 'gemini-2.5-flash-lite', async () => {
+      let socialOptions = null;
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async (_request, options) => {
+          socialOptions = options;
+          return mockAishaJson({
+            roomBeat: 'Vanya opens the room socially.',
+            roomMood: 'playful',
+            responseMode: 'single',
+            speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'The room is awake without turning this into a task queue.' }],
+            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+            stateUpdates: { notes: [] }
+          });
+        }
+      }));
+      await withStudioServer(async baseUrl => {
+        const providerConfig = { textPrimary: { provider: 'gemini', apiKey: 'test-room-provider-key', label: 'Mock Gemini' } };
+        const { body } = await postSocial(baseUrl, 'hi team', { providerConfig });
+        assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(socialOptions.productionGeminiModel, 'gemini-2.5-flash-lite');
+        assert.equal(body.debugSummary.modelUsed, 'gemini-2.5-flash-lite');
+      });
+
+      let pulseOptions = null;
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async (request, options) => {
+          pulseOptions = options;
+          return {
+            ok: true,
+            responses: [{ speakerId: request.activeSpeakerId || 'vanya', content: 'Hey team. I am in the room and keeping this warm without turning it into a meeting.' }],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: { status: 'succeeded' },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.88
+          };
+        }
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for model isolation test');
+        };
+        await withStudioServer(async baseUrl => {
+          const providerConfig = { textPrimary: { provider: 'gemini', apiKey: 'test-room-provider-key', label: 'Mock Gemini' } };
+          const { body } = await postPulse(baseUrl, 'hi team', { providerConfig });
+          assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+          assert.equal(Object.prototype.hasOwnProperty.call(pulseOptions, 'productionGeminiModel'), false);
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  });
+});
+
 test('mocked A.I.S.H.A fenced JSON is parsed and accepted', async () => {
   await withAishaFlag('true', async () => {
     __setAishaRuntimeImporterForTests(async () => ({
@@ -340,6 +440,82 @@ test('A.I.S.H.A unavailable and invalid-key failures are diagnosed safely', asyn
       assertCleanVisible(body);
     });
   });
+});
+
+test('quota and rate-limit failures are diagnosed as quota-exceeded', async () => {
+  const failures = [
+    'RESOURCE_EXHAUSTED quota exceeded',
+    'quota exceeded for metric Gemini 2.5 Flash RPM',
+    'rate-limit exceeded, please retry later',
+    'Gemini 2.5 Flash RPD exceeded'
+  ];
+
+  for (const failure of failures) {
+    await withAishaFlag('true', async () => {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async () => ({
+          ok: false,
+          aishaEngineConnected: false,
+          engineMode: 'production',
+          responses: [],
+          trace: { status: 'failed', failureReason: failure },
+          fallbackReason: failure
+        })
+      }));
+      await withStudioServer(async baseUrl => {
+        const { body } = await postSocial(baseUrl, 'hi team');
+        assert.equal(body.activeEngine, 'local-social-director');
+        assert.equal(body.validation.fallbackUsed, true);
+        assert.equal(body.validation.failureCategory, 'quota-exceeded');
+        assert.equal(body.debugSummary.failureCategory, 'quota-exceeded');
+        assert.equal(body.debugSummary.providerFailureReason, 'quota exceeded / resource exhausted');
+        assertCleanVisible(body);
+      });
+    });
+  }
+});
+
+test('social director smoke script supports --limit and summary counts', async () => {
+  const app = express();
+  app.use(express.json({ limit: '2mb' }));
+  let calls = 0;
+  app.post('/api/studio/pulse-social', (req, res) => {
+    calls += 1;
+    res.json({
+      ok: true,
+      mode: 'social-director-experiment',
+      activeEngine: 'local-social-director',
+      aishaConnected: false,
+      roomBeat: 'Tiny room beat.',
+      roomMood: 'warm',
+      responseMode: 'single',
+      messageEvents: [{ speakerId: 'vanya', speakerName: 'Vanya Khumalo', role: 'primary', tone: 'warm', text: 'The room is here and bounded.', visibleState: 'Reading' }],
+      silentReactions: [],
+      validation: { ok: true, fallbackUsed: true },
+      debugSummary: { failureCategory: 'quota-exceeded', providerFailureReason: 'quota exceeded / resource exhausted' }
+    });
+  });
+  const server = http.createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const result = await runNodeScript([
+      path.resolve(__dirname, '../scripts/smoke-social-director.mjs'),
+      `http://127.0.0.1:${port}`,
+      '--limit',
+      '2',
+      '--fallback-ok'
+    ]);
+    assert.equal(result.code, 0, result.stderr || result.stdout);
+    assert.equal(calls, 2);
+    const parsed = JSON.parse(result.stdout);
+    assert.equal(parsed.summary.attemptedCalls, 2);
+    assert.equal(parsed.summary.liveAcceptedCount, 0);
+    assert.equal(parsed.summary.fallbackUsedCount, 2);
+    assert.equal(parsed.summary.quotaExceededCount, 2);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });
 
 test('Aisha takeover is short and single-speaker in fallback', async () => {

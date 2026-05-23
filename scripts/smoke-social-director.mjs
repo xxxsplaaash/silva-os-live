@@ -1,6 +1,26 @@
 import http from 'node:http';
 
-const BASE_URL = process.env.SOCIAL_DIRECTOR_BASE_URL || process.argv[2] || 'http://localhost:4335';
+const args = process.argv.slice(2);
+let positionalBaseUrl = '';
+let limit = null;
+let liveOnly = false;
+let fallbackOk = false;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === '--limit') {
+    limit = Number(args[i + 1]);
+    i += 1;
+  } else if (arg === '--live-only') {
+    liveOnly = true;
+  } else if (arg === '--fallback-ok') {
+    fallbackOk = true;
+  } else if (!arg.startsWith('--') && !positionalBaseUrl) {
+    positionalBaseUrl = arg;
+  }
+}
+
+const BASE_URL = process.env.SOCIAL_DIRECTOR_BASE_URL || positionalBaseUrl || 'http://localhost:4335';
 
 const PROMPTS = [
   'hi team',
@@ -91,8 +111,16 @@ function feelsTaskRouterRisk(text = '') {
   return /\b(artifact|object|nothing to evaluate|needs a subject|there is no .*(brief|bug|campaign|object)|I need)\b/i.test(text);
 }
 
+const selectedPrompts = Number.isFinite(limit)
+  ? PROMPTS.slice(0, Math.max(0, Math.min(PROMPTS.length, Math.floor(limit))))
+  : PROMPTS;
+
+if (selectedPrompts.length === PROMPTS.length && liveOnly) {
+  console.error('[social-director-smoke] warning: running all 30 prompts against a live provider can burn quota; prefer --limit N.');
+}
+
 const results = [];
-for (const prompt of PROMPTS) {
+for (const prompt of selectedPrompts) {
   const { status, body } = await postJson(`${BASE_URL.replace(/\/$/, '')}/api/studio/pulse-social`, {
     message: prompt,
     threadId: `social-smoke-${Date.now()}`
@@ -103,6 +131,10 @@ for (const prompt of PROMPTS) {
     ...events.map(event => event.text),
     ...(Array.isArray(body.silentReactions) ? body.silentReactions.map(item => item.visibleState) : [])
   ].join('\n');
+  const fallbackUsed = body.validation?.fallbackUsed === true || body.activeEngine !== 'aisha-runtime-pack1';
+  const liveAccepted = body.activeEngine === 'aisha-runtime-pack1'
+    && body.aishaConnected === true
+    && body.validation?.fallbackUsed !== true;
   results.push({
     prompt,
     httpStatus: status,
@@ -122,8 +154,12 @@ for (const prompt of PROMPTS) {
     rawInternalLeak: RAW_INTERNAL_RX.test(visible),
     feelsTaskRouterRisk: feelsTaskRouterRisk(visible),
     validation: body.validation,
+    liveAccepted,
+    fallbackUsed,
     debugSummary: {
       failureCategory: body.debugSummary?.failureCategory || '',
+      providerFailureReason: body.debugSummary?.providerFailureReason || '',
+      modelUsed: body.debugSummary?.modelUsed || '',
       runtimeTimeoutMs: body.debugSummary?.runtimeTimeoutMs || 0,
       responseCount: body.debugSummary?.responseCount || 0,
       firstResponseHasContent: body.debugSummary?.firstResponseHasContent === true
@@ -131,4 +167,19 @@ for (const prompt of PROMPTS) {
   });
 }
 
-console.log(JSON.stringify(results, null, 2));
+const summary = {
+  attemptedCalls: selectedPrompts.length,
+  liveAcceptedCount: results.filter(item => item.liveAccepted).length,
+  fallbackUsedCount: results.filter(item => item.fallbackUsed).length,
+  quotaExceededCount: results.filter(item => item.debugSummary.failureCategory === 'quota-exceeded').length,
+  liveOnly,
+  fallbackOk
+};
+
+console.log(JSON.stringify({ summary, results }, null, 2));
+
+const qualityFailed = results.some(item => item.bannedPhraseFound || item.rawInternalLeak || item.repeatedPointRisk || item.feelsTaskRouterRisk);
+const liveOnlyFailed = liveOnly && !fallbackOk && results.some(item => !item.liveAccepted);
+if (qualityFailed || liveOnlyFailed) {
+  process.exitCode = 1;
+}

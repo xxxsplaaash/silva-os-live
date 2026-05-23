@@ -795,6 +795,13 @@ function resolveAishaRuntimeCredentialOptions(providerConfig = {}) {
   };
 }
 
+function resolveSocialDirectorRuntimeOptions(providerConfig = {}) {
+  const options = resolveAishaRuntimeCredentialOptions(providerConfig);
+  const model = String(process.env.SOCIAL_DIRECTOR_MODEL || '').trim();
+  if (model) options.productionGeminiModel = model;
+  return options;
+}
+
 function mergeStudioProviderConfig(primary = {}, fallback = {}) {
   const override = primary && typeof primary === 'object' ? primary : {};
   const base = fallback && typeof fallback === 'object' ? fallback : {};
@@ -2125,7 +2132,7 @@ router.post('/pulse-social', async (req, res) => {
     const result = await runSocialDirectorTurn({
       body: req.body || {},
       callAishaEngine,
-      runtimeOptions: resolveAishaRuntimeCredentialOptions(req.body?.providerConfig || {})
+      runtimeOptions: resolveSocialDirectorRuntimeOptions(req.body?.providerConfig || {})
     });
     res.status(result.statusCode || 200).json(result.payload);
   } catch (err) {
