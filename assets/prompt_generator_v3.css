@@ -11439,3 +11439,374 @@ body:has(#page-generator.active.pg52-generator-owned) .status-bar {
     min-width: 0;
   }
 }
+
+/* Prompt Generator V2.2: atelier hero merge. The prompt canvas becomes the room. */
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell {
+  position: relative;
+  display: grid;
+  gap: clamp(16px, 2vw, 28px);
+  padding: clamp(16px, 2.2vw, 30px);
+  border-radius: 38px;
+  overflow: clip;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, .08), transparent 29%),
+    radial-gradient(circle at 74% 4%, rgba(232, 0, 30, .14), transparent 32%),
+    linear-gradient(145deg, #111114 0%, #08090b 48%, #151012 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 38px 120px rgba(0,0,0,.5);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255,255,255,.026) 1px, transparent 1px);
+  background-size: 84px 84px;
+  mask-image: radial-gradient(circle at 50% 5%, black, transparent 74%);
+  opacity: .38;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-command-bar {
+  position: relative;
+  z-index: 2;
+  display: grid !important;
+  grid-template-columns: auto minmax(230px, .75fr) minmax(230px, .8fr) minmax(460px, 1.45fr) minmax(230px, .7fr);
+  gap: 14px;
+  align-items: stretch;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 30px;
+  background: rgba(6, 7, 9, .72);
+  backdrop-filter: blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 18px 44px rgba(0,0,0,.28);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-ref-block,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-identity-lock-card {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 24px;
+  background: rgba(255,255,255,.04);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 14px 16px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block .pg52-char-name {
+  font-size: clamp(1.55rem, 2.5vw, 2.4rem);
+  line-height: .92;
+  letter-spacing: -.065em;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block .pg52-char-tags {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  max-height: none;
+  overflow: visible;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block .pg52-character-fact {
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block .pg52-character-fact strong {
+  font-size: .72rem;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-char-block .pg52-character-fact span {
+  font-size: .72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-ref-block {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-ref-block .pg52-ref-grid {
+  margin: 0;
+  min-width: 0;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-readiness-row {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip {
+  padding: 8px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-card {
+  min-height: 72px;
+  padding: 9px 10px;
+  border-radius: 18px;
+  background: rgba(0,0,0,.22);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-card span {
+  font-size: .58rem;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-select,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-card strong {
+  font-size: .82rem;
+  letter-spacing: -.02em;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-identity-lock-card {
+  display: none !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-layout {
+  position: relative;
+  z-index: 1;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: clamp(16px, 2vw, 24px);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-identity-data {
+  display: none !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  display: grid;
+  gap: clamp(14px, 1.8vw, 22px);
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas > #pg52-launch-prompt-preview {
+  order: -10 !important;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-hero {
+  min-height: clamp(360px, 45vh, 620px);
+  padding: clamp(22px, 3vw, 42px);
+  border: 1px solid rgba(255,255,255,.095);
+  border-radius: clamp(28px, 3.8vw, 52px);
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,255,255,.12), transparent 28%),
+    radial-gradient(circle at 82% 14%, rgba(232,0,30,.18), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.025) 44%, rgba(0,0,0,.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 42px 90px rgba(0,0,0,.42);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: clamp(18px, 2.4vw, 32px);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-quality-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255,255,255,.08);
+  font-size: .78rem;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-hero .pg52-launch-standby,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-hero .pg52-launch-preview-compact {
+  min-height: clamp(230px, 31vh, 390px);
+  align-content: end;
+  padding: clamp(24px, 3vw, 42px);
+  border-radius: clamp(24px, 3vw, 40px);
+  background:
+    linear-gradient(180deg, transparent, rgba(0,0,0,.35)),
+    rgba(0,0,0,.24);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-hero .pg52-launch-preview-title strong {
+  font-size: clamp(2rem, 4.4vw, 5.2rem);
+  line-height: .88;
+  letter-spacing: -.075em;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-canvas-hero .pg52-launch-prompt-excerpt {
+  max-height: 155px;
+  padding: 18px;
+  border-radius: 24px;
+  font-size: clamp(.96rem, 1.2vw, 1.12rem);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shot-support {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(260px, .8fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-section-title {
+  font-size: clamp(1.15rem, 1.7vw, 1.7rem);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-output-zone {
+  grid-column: 1 / -1 !important;
+  position: relative;
+  top: auto;
+  display: grid;
+  grid-template-columns: minmax(360px, .75fr) minmax(360px, 1fr);
+  gap: 14px;
+  align-items: start;
+  max-height: none;
+  overflow: visible;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-output-zone .pg52-output-advanced {
+  margin-top: 0;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-footer-bar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 15;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 430px);
+  gap: 14px;
+  align-items: stretch;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 30px;
+  background: rgba(9, 9, 11, .86);
+  backdrop-filter: blur(28px);
+  box-shadow: 0 -22px 58px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-section,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-generate-section {
+  margin: 0;
+  padding: 14px;
+  border-radius: 22px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-generate-section {
+  position: relative;
+  bottom: auto;
+  display: grid;
+  gap: 10px;
+  background:
+    radial-gradient(circle at 70% 0%, rgba(232,0,30,.22), transparent 44%),
+    rgba(255,255,255,.05);
+  box-shadow: none;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-generate-actions {
+  display: grid;
+  grid-template-columns: minmax(120px, .45fr) minmax(180px, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-prompt-btn {
+  min-height: 58px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-generate-btn {
+  min-height: 72px;
+  border-radius: 24px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell .pg52-shot-mode-card,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell .pg52-sa-moment-card,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell .pg52-chip-field,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell .pg52-source-tab {
+  scroll-margin-top: 140px;
+  scroll-margin-bottom: 240px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-content {
+  display: grid;
+  gap: 10px;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-info,
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-meta {
+  min-width: 0;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-reason {
+  color: var(--pg52-console-soft);
+  font-size: .83rem;
+}
+
+#page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-route-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 1320px) {
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-command-bar {
+    grid-template-columns: minmax(270px, .78fr) minmax(260px, .72fr) minmax(0, 1.5fr) !important;
+  }
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-footer-bar,
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-output-zone {
+    grid-template-columns: 1fr;
+  }
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-status-strip .pg52-production-status-strip,
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shot-support,
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-generate-actions {
+    grid-template-columns: 1fr;
+  }
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-shell {
+    padding: 12px;
+    border-radius: 26px;
+  }
+  #page-generator.pg52-generator-owned .pg52-director-desk .pg52-v3-footer-bar {
+    bottom: 8px;
+    border-radius: 24px;
+  }
+}
