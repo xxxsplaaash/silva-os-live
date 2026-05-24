@@ -4036,6 +4036,51 @@
     ].join('');
   }
 
+  function productionStatusSelectHtml(id, label, options, hint, extraClass){
+    var old = $(id);
+    var value = old ? old.value : '';
+    return [
+      '<label class="pg52-production-status-card ' + esc(extraClass || '') + '" for="' + esc(id) + '">',
+        '<span>' + esc(label) + '</span>',
+        '<select id="' + esc(id) + '" class="pg52-production-status-select" data-pg38-control="' + esc(id) + '">' + options + '</select>',
+        hint ? '<em>' + esc(hint) + '</em>' : '',
+      '</label>',
+      value ? '<script type="application/json" data-pg38-value="' + esc(id) + '">' + esc(JSON.stringify(value)) + '</script>' : ''
+    ].join('');
+  }
+
+  function productionStatusMetricHtml(id, label, value, hint, stateName){
+    return [
+      '<div class="pg52-production-status-card pg52-production-status-card--metric ' + esc(stateName || 'is-neutral') + '">',
+        '<span>' + esc(label) + '</span>',
+        '<strong id="' + esc(id) + '">' + esc(value || 'Checking') + '</strong>',
+        hint ? '<em>' + esc(hint) + '</em>' : '',
+      '</div>'
+    ].join('');
+  }
+
+  function productionStatusStripHtml(controls){
+    controls = controls || routeControlOptions();
+    var modelValue = $('g-image-model')?.value || '';
+    var spendValue = $('g-spend-lane')?.value || '';
+    return [
+      '<div class="pg52-production-status-strip" aria-label="Production status">',
+        productionStatusSelectHtml('g-char', 'Character', capturedOptions('g-char'), 'Identity anchor', 'pg52-production-status-card--character'),
+        '<input type="hidden" id="g-character" value="' + esc($('g-char')?.value || 'leah') + '">',
+        productionStatusSelectHtml('g-route-intent', 'Job', controls.intent, 'Final image brief', 'pg52-production-status-card--job'),
+        '<div class="pg52-production-status-card pg52-production-status-card--route">',
+          '<span>Route</span>',
+          '<select id="g-image-model" class="pg52-production-status-select" data-pg38-control="g-image-model"></select>',
+          '<select id="g-spend-lane" class="pg52-production-status-select pg52-production-status-select--mini" data-pg38-control="g-spend-lane">' + controls.spendLane + '</select>',
+        '</div>',
+        modelValue ? '<script type="application/json" data-pg38-value="g-image-model">' + esc(JSON.stringify(modelValue)) + '</script>' : '',
+        spendValue ? '<script type="application/json" data-pg38-value="g-spend-lane">' + esc(JSON.stringify(spendValue)) + '</script>' : '',
+        productionStatusMetricHtml('pg3-selected-cost', 'Cost', 'R-', 'Estimated per final', 'is-neutral'),
+        productionStatusMetricHtml('pg52-top-readiness-value', 'Readiness', 'Checking', 'Launch status', 'is-neutral'),
+      '</div>'
+    ].join('');
+  }
+
   function mobileNavButtonHtml(){
     return '<button class="pg52-mobile-nav-button" type="button" data-pg52-mobile-nav-toggle aria-label="Open navigation" aria-expanded="false"><span aria-hidden="true">☰</span></button>';
   }
@@ -4822,10 +4867,10 @@
     return [
       '<section class="pg52-sa-moment-strip" id="pg52-sa-moment-strip" aria-label="SA Moment quick select">',
         '<div class="pg52-sa-moment-head">',
-          '<div><span class="pg52-t-micro">SA Moment</span><strong>Load a real cultural content setup</strong></div>',
+          '<div><span class="pg52-t-micro">Moment</span><strong>Choose the cultural beat</strong></div>',
           '<small>Starting points only. Every field stays editable.</small>',
         '</div>',
-        '<div class="pg52-sa-moment-scroll" role="list">',
+        '<div class="pg52-sa-moment-grid" role="list">',
           SA_CULTURAL_MOMENTS.map(saMomentTileHtml).join(''),
         '</div>',
         '<div class="pg52-sa-moment-banner" id="pg52-sa-moment-banner" aria-live="polite"' + (pack ? '' : ' hidden') + '>',
@@ -5200,11 +5245,11 @@
     return [
       '<section class="pg52-shot-mode-selector" id="pg52-shot-mode-selector" aria-label="Shot mode selector">',
         '<div class="pg52-shot-mode-head">',
-          '<span class="pg52-t-micro">Shot mode</span>',
+          '<span class="pg52-t-micro">Shot</span>',
           '<strong>' + esc(shotModeMeta(active).label) + '</strong>',
-          '<small>Choose the workflow before building the shot.</small>',
+          '<small>Pick the creative frame before scene and styling.</small>',
         '</div>',
-        '<div class="pg52-shot-mode-scroll" role="list">',
+        '<div class="pg52-shot-mode-grid" role="list">',
           Object.keys(SHOT_MODES).map(function(key){
             var mode = SHOT_MODES[key];
             var selected = key === active;
@@ -10039,34 +10084,24 @@
     shell.setAttribute('data-contract', 'PROMPT_CONTRACT_V5_2');
     shell.innerHTML = [
       '<section class="pg52-shell pg52-v2-shell" aria-label="Prompt Generator V2 production console">',
-        '<header class="pg52-command-bar pg52-v2-command-bar" aria-label="Prompt Generator command and status bar">',
+        '<header class="pg52-command-bar pg52-v2-command-bar pg52-production-command-bar" aria-label="Prompt Generator production status">',
           mobileNavButtonHtml(),
-          '<div class="pg52-brand-mark pg52-v2-brand-mark"><span class="pg52-t-micro">Prompt Generator V2</span><strong>Production Console</strong><em>Character, shot, route, generate.</em></div>',
-          '<div class="pg52-command-selects pg52-v2-command-controls">',
-            commandFieldHtml('g-char', 'Character', capturedOptions('g-char')),
-            '<input type="hidden" id="g-character" value="' + esc($('g-char')?.value || 'leah') + '">',
-            commandFieldHtml('g-route-intent', 'Job', controls.intent),
-            commandFieldHtml('g-spend-lane', 'Spend', controls.spendLane),
-            commandFieldHtml('g-image-model', 'Model', '', true),
-          '</div>',
-          '<div class="pg52-v2-command-status"><span>Route cost</span><div class="pg52-cmd-cost" id="pg3-selected-cost">R-</div></div>',
-          '<button class="pg52-generate-btn pg52-generate-btn--compact" type="button" onclick="generateImageFromGenerator(this)">Generate ' + generateArrowSvg(14) + '</button>',
+          '<div class="pg52-brand-mark pg52-v2-brand-mark"><span class="pg52-t-micro">Prompt Generator V2</span><strong>Production Console</strong><em>Build the shot, verify the route, launch the frame.</em></div>',
+          productionStatusStripHtml(controls),
         '</header>',
-        workflowStripHtml(),
         '<div class="pg52-workspace pg52-v2-layout">',
-          '<aside class="pg52-identity-rail pg52-v2-identity-panel" aria-label="Character identity and active references">',
-            '<div class="pg52-v2-panel-kicker">Left lane · Character context</div>',
+          '<aside class="pg52-identity-rail pg52-v2-identity-panel pg52-identity-stage" aria-label="Character identity and active references">',
             '<div class="pg52-identity-card pg52-v2-identity-hero">',
               '<div class="pg52-identity-card-top">',
-                '<div><div class="pg52-t-micro">Selected character</div><div class="pg52-char-name pg52-t-subtitle" id="pg52-char-display">Character</div></div>',
+                '<div><div class="pg52-t-micro">Character identity</div><div class="pg52-char-name pg52-t-subtitle" id="pg52-char-display">Character</div></div>',
                 lockedBadgeHtml('LOCKED'),
               '</div>',
               '<div class="pg52-char-tags" id="pg52-char-tags"></div>',
-              '<p class="pg52-v2-panel-note">Identity, references, and lock checks stay together before the shot moves to generation.</p>',
+              '<p class="pg52-v2-panel-note">The identity anchor stays visible while every creative choice moves toward generation.</p>',
             '</div>',
             '<div class="pg52-profile-inline-state" id="pg52-profile-inline-state" hidden></div>',
             '<section class="pg52-v2-card pg52-v2-ref-card" aria-label="Identity references">',
-              '<div class="pg52-v2-card-head"><span>Identity refs</span><strong>Reference readiness</strong></div>',
+              '<div class="pg52-v2-card-head"><span>Identity refs</span><strong>Reference lock</strong></div>',
               '<div class="pg52-ref-grid" id="pg52-ref-grid"></div>',
               '<label class="pg52-refs-toggle">',
                 '<input type="checkbox" id="g-attach-refs" data-pg38-control="g-attach-refs" checked>',
@@ -10084,34 +10119,29 @@
           '</aside>',
           '<main class="pg52-shot-canvas pg52-v2-shot-studio" aria-label="Shot studio configuration">',
             '<section class="pg52-v2-studio-hero" aria-label="Shot Studio overview">',
-              '<div><span class="pg52-t-micro">Center lane · Shot Studio</span><h2>Build the final frame.</h2><p>Pick the shot mode, shape the moment, lock the outfit, then tune the scene without leaving the production surface.</p></div>',
-              '<div class="pg52-v2-studio-steps"><span>Mode</span><span>Moment</span><span>Wardrobe</span><span>Scene</span></div>',
+              '<div><span class="pg52-t-micro">Shot Studio</span><h2>Shape the final frame.</h2><p>Three decisions: the shot, the scene, and the styling. Everything else stays secondary.</p></div>',
+              '<div class="pg52-v2-studio-steps"><span>Shot</span><span>Scene</span><span>Styling</span></div>',
             '</section>',
-            shotModeSelectorHtml(),
-            quickConfigButtonHtml(),
-            saMomentStripHtml(),
-            directorBriefHtml(),
-            '<section class="pg52-canvas-section" id="pg52-wardrobe-section">',
+            '<section class="pg52-creative-step pg52-step-shot" id="pg52-step-shot" aria-label="Shot">',
               '<div class="pg52-section-head">',
                 '<div class="pg52-step-num">01</div>',
-                '<div class="pg52-section-title-group"><span class="pg52-t-label">Wardrobe</span><h3 class="pg52-t-title" data-pg52-mode-title="wardrobe">' + esc(modeCopy.wardrobe) + '</h3></div>',
-                '<div class="pg52-section-actions"><button class="pg52-btn-ghost pg52-btn-sm" type="button" data-pg52-open-wardrobe>+ Add item</button></div>',
+                '<div class="pg52-section-title-group"><span class="pg52-t-label">Shot</span><h3 class="pg52-t-title">Choose the creative frame</h3></div>',
               '</div>',
-              '<select id="g-outfit" class="pg52-hidden-select" data-pg38-control="g-outfit">' + outfitOptionsHtml() + '</select>',
-              '<div class="pg52-wardrobe-grid" id="pg52-wardrobe-grid"></div>',
-              '<div id="pg50-wardrobe-cards" hidden></div>',
-              textOverrideHtml(),
+              shotModeSelectorHtml(),
+              '<div class="pg52-shot-support-grid">',
+                quickConfigButtonHtml(),
+                saMomentStripHtml(),
+              '</div>',
             '</section>',
-            '<section class="pg52-canvas-section" id="pg52-scene-section">',
+            '<section class="pg52-creative-step pg52-step-scene" id="pg52-scene-section" aria-label="Scene">',
               '<div class="pg52-section-head">',
                 '<div class="pg52-step-num">02</div>',
-                '<div class="pg52-section-title-group"><span class="pg52-t-label">Scene + Camera</span><h3 class="pg52-t-title" data-pg52-mode-title="scene">' + esc(modeCopy.scene) + '</h3></div>',
+                '<div class="pg52-section-title-group"><span class="pg52-t-label">Scene</span><h3 class="pg52-t-title" data-pg52-mode-title="scene">' + esc(modeCopy.scene) + '</h3></div>',
                 '<div class="pg52-section-actions">',
-                  '<button class="pg52-btn-ghost pg52-btn-sm" type="button" data-pg50-randomize="concepts">Blast 6 Concepts</button>',
                   '<button class="pg52-btn-ghost pg52-btn-sm" type="button" data-pg50-randomize="scene">Smart Randomize</button>',
                 '</div>',
               '</div>',
-              '<div class="pg52-chip-grid" id="pg52-chip-grid">',
+              '<div class="pg52-scene-control-grid pg52-chip-grid" id="pg52-chip-grid">',
                 chipFieldHtml('g-location', 'Location', capturedOptions('g-location'), true),
                 chipFieldHtml('g-shot-action', 'Action', optionList(SHOT_ACTIONS, state.generatorV5.shotAction)),
                 chipFieldHtml('g-camera-distance', 'Distance', optionList(CAMERA_DISTANCES, state.generatorV5.cameraDistance)),
@@ -10124,9 +10154,9 @@
               socialFinishTreatmentHtml(),
               authenticityControlsHtml(),
               '<div class="pg52-compatibility-meter" id="pg52-compatibility-meter" aria-live="polite"></div>',
-              '<details class="pg52-creative-tools" id="pg52-creative-tools" data-pg52-active-tool="concepts">',
+              '<details class="pg52-creative-tools pg52-advanced-drawer" id="pg52-creative-tools" data-pg52-active-tool="concepts">',
                 '<summary class="pg52-creative-tools-summary">',
-                  '<span class="pg52-t-micro">Creative tools</span>',
+                  '<span class="pg52-t-micro">Advanced scene tools</span>',
                   '<strong>Concepts, randomize, cinematic, platform, scene notes</strong>',
                   '<em>open when needed</em>',
                 '</summary>',
@@ -10146,7 +10176,7 @@
                 '<input type="checkbox" id="g-lock-outfit">',
                 '<input type="checkbox" id="g-lock-scene">',
               '</div>',
-              '<details class="pg52-production-settings">',
+              '<details class="pg52-production-settings pg52-advanced-drawer">',
                 '<summary class="pg52-production-settings-toggle">Production settings</summary>',
                 '<div class="pg52-production-settings-grid">',
                   chipFieldHtml('g-platform', 'Platform', capturedOptions('g-platform')),
@@ -10164,36 +10194,53 @@
                 '</div>',
               '</details>',
             '</section>',
-            '<section class="pg52-canvas-section" id="pg52-scene-refs-section">',
+            '<section class="pg52-creative-step pg52-step-styling" id="pg52-step-styling" aria-label="Styling">',
               '<div class="pg52-section-head">',
                 '<div class="pg52-step-num">03</div>',
-                '<div class="pg52-section-title-group"><span class="pg52-t-label">Scene Refs</span><h3 class="pg52-t-title" data-pg52-mode-title="refs">' + esc(modeCopy.refs) + '</h3></div>',
+                '<div class="pg52-section-title-group"><span class="pg52-t-label">Styling</span><h3 class="pg52-t-title" data-pg52-mode-title="wardrobe">' + esc(modeCopy.wardrobe) + '</h3></div>',
+                '<div class="pg52-section-actions"><button class="pg52-btn-ghost pg52-btn-sm" type="button" data-pg52-open-wardrobe>+ Add wardrobe</button></div>',
+              '</div>',
+              '<select id="g-outfit" class="pg52-hidden-select" data-pg38-control="g-outfit">' + outfitOptionsHtml() + '</select>',
+              '<div class="pg52-wardrobe-grid" id="pg52-wardrobe-grid"></div>',
+              '<div id="pg50-wardrobe-cards" hidden></div>',
+              textOverrideHtml(),
+              directorBriefHtml(),
+              '<div class="pg52-scene-ref-shell" id="pg52-scene-refs-section">',
+                '<div class="pg52-section-head pg52-section-head--compact">',
+                  '<div class="pg52-section-title-group"><span class="pg52-t-label">Refs + aesthetic</span><h3 class="pg52-t-title" data-pg52-mode-title="refs">' + esc(modeCopy.refs) + '</h3></div>',
                 '<div class="pg52-ref-source-tabs" id="pg52-ref-source-tabs">',
                   '<button class="pg52-source-tab active" data-pg52-source="home" type="button">Home System</button>',
                   '<button class="pg52-source-tab" data-pg52-source="assets" type="button">Assets Vault</button>',
                   '<button class="pg52-source-tab" data-pg52-source="scene" type="button">Scene Refs</button>',
                   '<button class="pg52-source-tab" data-pg52-source="aesthetic" type="button">Aesthetic Ref</button>',
                 '</div>',
-              '</div>',
-              '<div class="pg52-ref-candidates" id="pg52-ref-candidates"></div>',
-              '<div class="pg52-ref-dock" id="pg52-ref-dock">',
-                '<button class="pg52-ref-dock-bar" id="pg52-ref-dock-toggle" type="button" aria-expanded="false">',
-                  '<div class="pg52-ref-dock-counts" id="pg52-ref-dock-counts">0 refs</div>',
-                  '<span class="pg52-ref-dock-label">Refs queued for generation</span>',
-                  '<svg class="pg52-dock-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 5l3 3 3-3" stroke="var(--color-current)" stroke-width="1.4" stroke-linecap="round"/></svg>',
-                '</button>',
-                '<div class="pg52-ref-dock-tray" id="pg52-ref-dock-tray" hidden></div>',
+                '</div>',
+                '<div class="pg52-ref-candidates" id="pg52-ref-candidates"></div>',
+                '<div class="pg52-ref-dock" id="pg52-ref-dock">',
+                  '<button class="pg52-ref-dock-bar" id="pg52-ref-dock-toggle" type="button" aria-expanded="false">',
+                    '<div class="pg52-ref-dock-counts" id="pg52-ref-dock-counts">0 refs</div>',
+                    '<span class="pg52-ref-dock-label">Refs queued for generation</span>',
+                    '<svg class="pg52-dock-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 5l3 3 3-3" stroke="var(--color-current)" stroke-width="1.4" stroke-linecap="round"/></svg>',
+                  '</button>',
+                  '<div class="pg52-ref-dock-tray" id="pg52-ref-dock-tray" hidden></div>',
+                '</div>',
               '</div>',
             '</section>',
           '</main>',
           '<aside class="pg52-output-rail pg52-v2-output-lane" id="gen-output-panel" aria-label="Prompt preview, quality, route, and generation">',
-            '<div class="pg52-v2-output-head"><span class="pg52-t-micro">Right lane · Output</span><h2>Preview. Validate. Generate.</h2><p>One clean path from prompt quality to route readiness and final image generation.</p></div>',
-            '<div class="pg52-route-card" id="g-route-preview">',
-              '<div class="pg52-route-skeleton" id="pg52-route-skeleton">',
-                '<div class="pg52-skeleton-line pg52-skeleton-line--short"></div>',
-                '<div class="pg52-skeleton-line"></div>',
-                '<div class="pg52-skeleton-line pg52-skeleton-line--med"></div>',
-              '</div>',
+            '<div class="pg52-v2-output-head"><span class="pg52-t-micro">Launch lane</span><h2>Preview. Validate. Generate.</h2><p>The prompt, route, and final action stay in one deliberate path.</p></div>',
+            '<section class="pg52-launch-card pg52-launch-prompt-preview" id="pg52-launch-prompt-preview" aria-label="Prompt preview">',
+              '<div class="pg52-launch-card-head"><span>Prompt Preview</span><strong>Live build</strong></div>',
+              '<div class="pg3-output-stage pg52-output-stage pg52-launch-preview-stage" id="pg3-output-stage">' + launchPromptStandbyHtml() + '</div>',
+              '<div id="gen-ai-tools" class="pg52-status-region"><div id="ai-helper-output" class="pg52-status-line">Ready.</div></div>',
+            '</section>',
+            '<section class="pg52-launch-card pg52-launch-quality" id="pg52-launch-quality" aria-label="Prompt quality">',
+              '<div class="pg52-launch-card-head"><span>Quality</span><strong id="pg52-prompt-quality-pill">Prompt quality: checking</strong></div>',
+              '<div class="pg52-prompt-quality" id="pg52-prompt-quality"><div id="pg52-prompt-quality-detail">' + promptQualityHtml(promptQualityLabel(0)) + '</div></div>',
+            '</section>',
+            '<section class="pg52-route-card pg52-launch-card" id="g-route-preview" aria-label="Selected route">',
+              '<div class="pg52-launch-card-head"><span>Route</span><strong>Provider path</strong></div>',
+              '<div class="pg52-route-standby" id="pg52-route-standby"><strong>Route check is warming up.</strong><span>Provider readiness, cost, and reference handling will settle here.</span></div>',
               '<div class="pg52-route-content" id="pg52-route-content" hidden>',
                 '<div class="pg52-route-top">',
                   '<div><div class="pg52-t-micro">Route</div><div class="pg52-route-model pg52-t-subtitle" id="pg52-route-model-name">Nano Banana Pro</div><div class="pg52-route-provider pg52-t-micro" id="pg52-route-provider">Google Vertex AI</div></div>',
@@ -10202,7 +10249,6 @@
                 '<div class="pg52-route-reason" id="pg52-route-reason"></div>',
                 '<div class="pg52-route-tags" id="pg52-route-tags"></div>',
                 '<div class="pg52-model-intelligence-card" id="pg52-model-intelligence-card"></div>',
-                '<details class="pg52-quality-summary" id="pg52-prompt-quality"><summary><span id="pg52-prompt-quality-pill">Prompt quality: checking</span></summary><div id="pg52-prompt-quality-detail"></div></details>',
                 '<div class="pg52-route-actions">',
                   '<button class="pg52-btn-ghost pg52-btn-sm" id="pg50-model-drawer-toggle" type="button" aria-expanded="false" aria-controls="pg50-model-drawer">Compare all routes</button>',
                   '<button class="pg52-route-details-btn" type="button" id="pg52-route-details-btn" aria-expanded="false">Route details + alternatives</button>',
@@ -10211,30 +10257,28 @@
                   '<div id="pg50-model-summary"></div>',
                 '</div>',
               '</div>',
-            '</div>',
-            '<section class="pg52-v2-generate-readiness" id="pg52-v2-generate-readiness" aria-label="Generate readiness checklist">',
-              '<div class="pg52-v2-card-head"><span>Generate readiness</span><strong>Final check</strong></div>',
-              '<ul>',
-                '<li><span></span>Character identity and refs are visible.</li>',
-                '<li><span></span>Shot mode, wardrobe, and scene are selected.</li>',
-                '<li><span></span>Route, cost, and prompt quality are reviewed.</li>',
-              '</ul>',
             '</section>',
-            '<button class="pg52-generate-btn pg52-generate-btn--full" type="button" onclick="generateImageFromGenerator(this)">Generate Final Image ' + generateArrowSvg(16) + '</button>',
-            '<div class="pg52-prompt-actions" aria-label="Prompt-only actions">',
-              '<button class="pg52-btn-ghost pg52-btn-sm" type="button" onclick="generatePromptFromGenerator(this)">Generate Prompt</button>',
-              '<button class="pg52-btn-ghost pg52-btn-sm" type="button" onclick="copyText(document.getElementById(\'out-main\')?.textContent || window._lastGenerated?.prompt || \'\', this)">Copy Prompt</button>',
-            '</div>',
+            '<section class="pg52-v2-generate-readiness pg52-launch-card" id="pg52-launch-readiness" aria-label="Generate readiness checklist">' + launchReadinessHtml() + '</section>',
+            '<section class="pg52-launch-card pg52-launch-generate" id="pg52-launch-generate" aria-label="Generate final image">',
+              '<div class="pg52-launch-card-head"><span>Generate</span><strong>Final action</strong></div>',
+              '<button class="pg52-generate-btn pg52-generate-btn--full" type="button" onclick="generateImageFromGenerator(this)">Generate Final Image ' + generateArrowSvg(16) + '</button>',
+              '<div class="pg52-prompt-actions" aria-label="Prompt-only actions">',
+                '<button class="pg52-btn-ghost pg52-btn-sm" type="button" onclick="generatePromptFromGenerator(this)">Generate Prompt</button>',
+                '<button class="pg52-btn-ghost pg52-btn-sm" type="button" onclick="copyText(document.getElementById(\'out-main\')?.textContent || window._lastGenerated?.prompt || \'\', this)">Copy Prompt</button>',
+              '</div>',
+            '</section>',
             mobileRoutePromptControlsHtml(),
             '<div class="pg52-image-result pg52-result-stage" id="pg52-image-result" hidden aria-live="polite" aria-label="Generated image review stage"></div>',
-            '<div class="pg52-output-accordions">',
-              accordionHtml('pg52-acc-prompt', 'Final prompt', '<div class="pg3-output-stage pg52-output-stage" id="pg3-output-stage"></div><div id="gen-ai-tools" class="pg52-status-region"><div id="ai-helper-output" class="pg52-status-line">Ready.</div></div>'),
-              accordionHtml('pg52-acc-identity', 'Identity proofing'),
-              accordionHtml('pg52-acc-quality', 'Prompt quality'),
-              accordionHtml('pg52-acc-anatomy', 'Prompt anatomy'),
-              accordionHtml('pg52-acc-variants', 'Prompt variants'),
-              accordionHtml('pg52-acc-caption', 'Caption / social kit'),
-            '</div>',
+            '<details class="pg52-output-advanced">',
+              '<summary><span>Advanced output</span><em>proofing, anatomy, variants, caption</em></summary>',
+              '<div class="pg52-output-accordions">',
+                accordionHtml('pg52-acc-identity', 'Identity proofing'),
+                accordionHtml('pg52-acc-quality', 'Prompt quality'),
+                accordionHtml('pg52-acc-anatomy', 'Prompt anatomy'),
+                accordionHtml('pg52-acc-variants', 'Prompt variants'),
+                accordionHtml('pg52-acc-caption', 'Caption / social kit'),
+              '</div>',
+            '</details>',
           '</aside>',
         '</div>',
         '<section class="pg52-shot-history-panel pg52-v2-history-strip" id="pg52-shot-history-panel" hidden aria-label="Recent shots and reusable prompt history"></section>',
@@ -11776,12 +11820,14 @@
       profileState.textContent = state.generatorProfileLoading ? 'Loading character profile...' : (state.generatorProfileError || '');
     }
     if ($('pg52-char-tags')) {
-      var tags = [
-        char.role || char.title || '',
-        char.identity?.skin || char.identity?.tone || '',
-        activeRoutedModel()?.displayName || 'Nano Banana Pro'
-      ].filter(Boolean).slice(0, 4);
-      $('pg52-char-tags').innerHTML = tags.map(function(tag){ return '<span>' + esc(tag) + '</span>'; }).join('');
+      var facts = [
+        ['Role', char.role || char.title || 'Studio character'],
+        ['Identity', char.identity?.skin || char.identity?.tone || 'Written profile active'],
+        ['Route', activeRoutedModel()?.displayName || 'Nano Banana Pro']
+      ].filter(function(item){ return Boolean(item[1]); });
+      $('pg52-char-tags').innerHTML = facts.map(function(item){
+        return '<div class="pg52-character-fact"><em>' + esc(item[0]) + '</em><strong>' + esc(item[1]) + '</strong></div>';
+      }).join('');
     }
     if ($('pg52-ref-grid')) {
       var tiles = [face, body].filter(Boolean).map(function(ref){
@@ -11801,7 +11847,7 @@
       var count = refs.length;
       var stateName = count >= 2 ? 'ready' : count === 1 ? 'partial' : 'none';
       $('pg52-readiness-dot').className = 'pg52-readiness-dot pg52-readiness-dot--' + stateName;
-      $('pg52-readiness-label').textContent = stateName === 'ready' ? 'exact_character_ready' : stateName === 'partial' ? '1 ref active' : 'no refs attached';
+      $('pg52-readiness-label').textContent = stateName === 'ready' ? 'Ready: face + body refs' : stateName === 'partial' ? 'Partial: one identity ref' : 'Missing direct refs';
       var detail = count + ' labeled ref' + (count === 1 ? '' : 's') + ' will be sent with this generation.';
       if ($('pg52-readiness-row')) $('pg52-readiness-row').title = detail;
       if ($('pg52-readiness-detail')) $('pg52-readiness-detail').textContent = detail;
@@ -11879,6 +11925,65 @@
     return warnings;
   }
 
+  function launchPromptStandbyHtml(){
+    return [
+      '<div class="pg52-launch-standby">',
+        '<strong>Prompt preview will assemble here.</strong>',
+        '<span>Choose the shot, scene, styling, and route; the final prompt stays in this lane before generation.</span>',
+      '</div>'
+    ].join('');
+  }
+
+  function launchReadinessRowHtml(label, value, stateName){
+    var safeState = /^(ready|warn|blocked|neutral)$/.test(stateName || '') ? stateName : 'neutral';
+    return [
+      '<li class="pg52-launch-ready-row is-' + safeState + '">',
+        '<span class="pg52-launch-ready-dot" aria-hidden="true"></span>',
+        '<div><strong>' + esc(label) + '</strong><em>' + esc(value || 'Checking') + '</em></div>',
+      '</li>'
+    ].join('');
+  }
+
+  function launchReadinessHtml(ctx, selected, readiness, quality){
+    ctx = ctx || routeContext();
+    selected = selected || ctx.selectedModel || activeRoutedModel();
+    readiness = readiness || readinessForModel(selected);
+    quality = quality || promptQualityLabel(0);
+    var char = getCharSafe($('g-char')?.value || 'leah');
+    var refsEnabled = checked('g-attach-refs', true);
+    var refCount = Number(ctx.referenceCount || 0);
+    var sceneParts = [optionText('g-location'), optionText('g-shot-action')].filter(Boolean);
+    var shotLabel = shotModeMeta(currentShotMode()).label || 'Shot mode';
+    var qualityTotal = Number(quality.total || 0);
+    var qualityState = qualityTotal >= 78 ? 'ready' : qualityTotal >= 55 ? 'warn' : 'blocked';
+    return [
+      '<div class="pg52-launch-ready-head"><span>Readiness</span><strong>Launch checks</strong></div>',
+      '<ul class="pg52-launch-ready-list">',
+        launchReadinessRowHtml('Character selected', char.name || optionText('g-char') || 'Character', 'ready'),
+        launchReadinessRowHtml('Identity refs', !refsEnabled ? 'Reference images disabled for this shot' : refCount >= 2 ? 'Face and body refs attached' : refCount === 1 ? 'One identity ref attached' : 'Missing direct refs; written identity only', !refsEnabled ? 'warn' : refCount >= 2 ? 'ready' : refCount === 1 ? 'warn' : 'blocked'),
+        launchReadinessRowHtml('Shot mode', shotLabel, shotLabel ? 'ready' : 'blocked'),
+        launchReadinessRowHtml('Scene selected', sceneParts.length >= 2 ? sceneParts.join(' / ') : sceneParts[0] || 'Choose location and action', sceneParts.length >= 2 ? 'ready' : 'warn'),
+        launchReadinessRowHtml('Route ready', selected ? ((selected.displayName || selected.id) + ' · ' + readinessLabel(selected)) : 'Choose a route', readiness.configured ? 'ready' : 'blocked'),
+        launchReadinessRowHtml('Prompt quality', (quality.grade || 'D') + ' · ' + qualityTotal + '/100', qualityState),
+      '</ul>'
+    ].join('');
+  }
+
+  function updateLaunchReadiness(ctx, selected, readiness, quality){
+    var html = launchReadinessHtml(ctx, selected, readiness, quality);
+    var launch = $('pg52-launch-readiness');
+    if (launch) launch.innerHTML = html;
+    var top = $('pg52-top-readiness-value');
+    if (top) {
+      top.textContent = readiness && readiness.configured ? 'Ready' : readiness ? 'Setup needed' : 'Checking';
+      var card = top.closest('.pg52-production-status-card');
+      if (card) {
+        card.classList.remove('is-ready', 'is-warn', 'is-blocked', 'is-neutral');
+        card.classList.add(readiness && readiness.configured ? 'is-ready' : readiness ? 'is-blocked' : 'is-neutral');
+      }
+    }
+  }
+
   function routeContext(){
     var modelId = getCurrentImageModel();
     var charId = $('g-char')?.value || 'leah';
@@ -11926,6 +12031,7 @@
     syncMobileCostLabels();
     renderModelSummary(selected, data);
     if ($('pg52-route-content')) {
+      if ($('pg52-route-standby')) $('pg52-route-standby').hidden = true;
       if ($('pg52-route-skeleton')) $('pg52-route-skeleton').hidden = true;
       $('pg52-route-content').hidden = false;
       if ($('pg52-route-model-name')) $('pg52-route-model-name').textContent = selected.displayName || selected.id || 'Selected route';
@@ -11955,14 +12061,16 @@
         $('pg52-model-intelligence-card').innerHTML = modelIntelligenceCardHtml(selected, data);
       }
       renderIdentityLockCard();
+      var quality = promptQualityLabel(0);
       try {
         var kitForQuality = buildKit();
-        var quality = kitForQuality.generatorRecipe?.promptQuality || scorePromptQuality(kitForQuality.generatorRecipe, selected);
+        quality = kitForQuality.generatorRecipe?.promptQuality || scorePromptQuality(kitForQuality.generatorRecipe, selected);
         if ($('pg52-prompt-quality-pill')) {
           $('pg52-prompt-quality-pill').textContent = 'Prompt quality: ' + quality.grade + ' - ' + quality.total + '/100';
         }
         if ($('pg52-prompt-quality-detail')) $('pg52-prompt-quality-detail').innerHTML = promptQualityHtml(quality);
       } catch (_) {}
+      updateLaunchReadiness(ctx, selected, readiness, quality);
       var details = $('pg52-route-details');
       if (details) {
         var summary = $('pg50-model-summary')?.outerHTML || '';
@@ -13453,6 +13561,30 @@
       '<div class="output-block"><div class="output-label">LinkedIn Hook</div><div class="output-text">' + esc(kit.liHook) + '</div></div>',
       '<div class="output-block"><div class="output-label">B-roll Pairing</div><div class="output-text">' + esc(kit.broll) + '</div></div>'
     ].join('');
+    if ($('prompt-generator-52-shell')) {
+      var sceneLine = [kit.loc?.name || kit.location, kit.scenePack?.lightingLabel || kit.scenePack?.lighting || optionText('g-time'), kit.scenePack?.mood || optionText('g-mood')].filter(Boolean).join(' / ');
+      var promptExcerpt = abbreviatePromptText(kit.mainPrompt, 220);
+      return [
+        '<div class="pg52-launch-preview-compact">',
+          '<div class="pg52-launch-preview-title">',
+            '<span>' + esc(kit.character.name || kit.char) + '</span>',
+            '<strong>' + esc(shotModeMeta(currentShotMode()).label || 'Final image') + '</strong>',
+            '<em>' + esc(sceneLine || 'Scene still resolving') + '</em>',
+          '</div>',
+          '<p class="pg52-launch-prompt-excerpt">' + esc(promptExcerpt || 'Prompt will compile from the current shot setup.') + '</p>',
+          '<div class="pg52-launch-preview-meta">',
+            '<span>' + esc(providerChip(kit.model)) + '</span>',
+            '<span>' + esc(kit.model.displayName) + '</span>',
+            '<span>Refs ' + esc(kit.refCount) + '</span>',
+          '</div>',
+          warnings,
+          '<div class="pg52-hidden-prompt-text" hidden>',
+            '<div id="out-main">' + esc(kit.mainPrompt) + '</div>',
+            '<div id="out-neg">' + esc(kit.negative) + '</div>',
+          '</div>',
+        '</div>'
+      ].join('');
+    }
     return [
       '<div class="pg40-preview-head">',
         '<div>',
