@@ -41,13 +41,16 @@ class SystemClock implements IClock {
   }
 }
 
-class SequentialIdGenerator implements IIdGenerator {
+class ProductionIdGenerator implements IIdGenerator {
   private counters = new Map<string, number>();
+  private readonly processNonce = Math.random().toString(36).slice(2, 8);
 
   next(prefix: string): string {
     const nextValue = (this.counters.get(prefix) ?? 0) + 1;
     this.counters.set(prefix, nextValue);
-    return `${prefix}_${nextValue}`;
+    const time = Date.now().toString(36);
+    const random = Math.random().toString(36).slice(2, 10);
+    return `${prefix}_${time}_${this.processNonce}_${nextValue}_${random}`;
   }
 }
 
@@ -198,7 +201,7 @@ export function buildProductionRuntime(
     rollback: new JournalRollbackHelper(),
     fallback: new CautiousFallbackHandler(),
     traceFactory: new RuntimeTraceFactory(),
-    idGenerator: new SequentialIdGenerator(),
+    idGenerator: new ProductionIdGenerator(),
     clock: new SystemClock(),
 
     // Pack 1.4: bounded critic loop is active on the live generator path.

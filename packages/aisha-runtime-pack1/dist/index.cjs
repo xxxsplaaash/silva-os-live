@@ -3870,12 +3870,15 @@ var SystemClock = class {
     return (/* @__PURE__ */ new Date()).toISOString();
   }
 };
-var SequentialIdGenerator = class {
+var ProductionIdGenerator = class {
   counters = /* @__PURE__ */ new Map();
+  processNonce = Math.random().toString(36).slice(2, 8);
   next(prefix) {
     const nextValue = (this.counters.get(prefix) ?? 0) + 1;
     this.counters.set(prefix, nextValue);
-    return `${prefix}_${nextValue}`;
+    const time = Date.now().toString(36);
+    const random = Math.random().toString(36).slice(2, 10);
+    return `${prefix}_${time}_${this.processNonce}_${nextValue}_${random}`;
   }
 };
 var RuntimeTrace = class {
@@ -3960,7 +3963,7 @@ function buildProductionRuntime(config, stores) {
     rollback: new JournalRollbackHelper(),
     fallback: new CautiousFallbackHandler(),
     traceFactory: new RuntimeTraceFactory(),
-    idGenerator: new SequentialIdGenerator(),
+    idGenerator: new ProductionIdGenerator(),
     clock: new SystemClock(),
     // Pack 1.4: bounded critic loop is active on the live generator path.
     // MAX_CRITIC_CYCLES = 2. Sync, before commit. Never aborts the turn.

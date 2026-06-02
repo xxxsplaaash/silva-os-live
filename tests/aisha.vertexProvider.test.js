@@ -27,3 +27,13 @@ test('Pack 1 Vertex Gemini path is preferred and uses JSON-schema output config'
   assert.match(adapter, /responseMimeType:\s*"application\/json"/);
   assert.match(adapter, /responseJsonSchema:/);
 });
+
+test('Pack 1 production IDs are restart-safe for durable stores', () => {
+  const runtimeBuilder = readRepoFile('packages/aisha-runtime-pack1/src/runtime/runtimeBuilder.ts');
+
+  assert.match(runtimeBuilder, /class ProductionIdGenerator/);
+  assert.match(runtimeBuilder, /processNonce/);
+  assert.match(runtimeBuilder, /Date\.now\(\)\.toString\(36\)/);
+  assert.match(runtimeBuilder, /Math\.random\(\)\.toString\(36\)/);
+  assert.doesNotMatch(runtimeBuilder, /return `\\$\\{prefix\\}_\\$\\{nextValue\\}`;/);
+});
