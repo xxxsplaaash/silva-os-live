@@ -127,7 +127,9 @@
         };
       }),
       alliances: [],
-      interruptions: []
+      interruptions: [],
+      roomMove: 'observe',
+      statusEvents: []
     };
   }
 
@@ -305,10 +307,36 @@
           return { interrupter: interrupter, interrupted: interrupted, kind: kind };
         })
         .filter(Boolean)
-        .slice(0, 2)
+        .slice(0, 2),
+      roomMove: normalizeRoomMove(source.roomMove || fallback.roomMove || 'observe'),
+      statusEvents: (Array.isArray(source.statusEvents) ? source.statusEvents : [])
+        .map(function (item) {
+          var id = safeSpeakerId(item.speakerId);
+          if (!id) return null;
+          var target = safeSpeakerId(item.targetSpeakerId);
+          var kind = normalizeStatusEventKind(item.kind);
+          return {
+            speakerId: id,
+            targetSpeakerId: target || '',
+            kind: kind,
+            weight: Math.max(0, Math.min(100, Math.round(Number(item.weight || 0) || 0)))
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 4)
     };
     if (!state.socialSignals.hierarchy.length) state.socialSignals.hierarchy = defaultSocialSignals().hierarchy;
     state.tensionScore = state.socialSignals.tension;
+  }
+
+  function normalizeRoomMove(value) {
+    var move = safeToken(value, 'observe');
+    return ['anchor', 'challenge', 'redirect', 'defend', 'deflect', 'cool', 'escalate', 'observe'].includes(move) ? move : 'observe';
+  }
+
+  function normalizeStatusEventKind(value) {
+    var kind = safeToken(value, 'redirect');
+    return ['challenge', 'defense', 'redirect', 'status-gain', 'status-loss', 'continuity-anchor', 'cooling-silence'].includes(kind) ? kind : 'redirect';
   }
 
   function updatePresence(events, silentReactions) {
@@ -420,6 +448,23 @@
 
     if (el.dynamicsList) {
       var rows = [];
+      if (signals.roomMove) {
+        rows.push('<div class="room-move-chip">Room move: ' + escapeHtml(normalizeRoomMove(signals.roomMove)) + '</div>');
+      }
+      (signals.statusEvents || []).slice(0, 4).forEach(function (item) {
+        var target = item.targetSpeakerId ? (' → ' + speakerName(item.targetSpeakerId)) : '';
+        rows.push(
+          '<div class="dynamics-item status-event"><strong>' +
+          escapeHtml(speakerName(item.speakerId)) +
+          '</strong>' +
+          escapeHtml(target) +
+          ' · ' +
+          escapeHtml(normalizeStatusEventKind(item.kind)) +
+          ' <span>' +
+          escapeHtml(Math.round(Number(item.weight || 0))) +
+          '</span></div>'
+        );
+      });
       (signals.interruptions || []).forEach(function (item) {
         rows.push(
           '<div class="dynamics-item interruption"><strong>' +
@@ -441,7 +486,7 @@
           '</div>'
         );
       });
-      el.dynamicsList.innerHTML = rows.length ? rows.slice(0, 4).join('') : '<div class="empty-state">No visible shifts yet.</div>';
+      el.dynamicsList.innerHTML = rows.length ? rows.slice(0, 7).join('') : '<div class="empty-state">No visible shifts yet.</div>';
     }
   }
 

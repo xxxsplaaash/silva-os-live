@@ -507,7 +507,29 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
                   silentReactions: [
                     { speakerId: 'grok', visibleState: 'Tracking' }
                   ],
-                  stateUpdates: { notes: ['obsidian dashboard preference noted'] }
+                  stateUpdates: { notes: ['obsidian dashboard preference noted'] },
+                  socialCues: {
+                    roomMove: 'anchor',
+                    tensionDelta: 6,
+                    continuityDelta: 8,
+                    speakerCues: [
+                      {
+                        speakerId: 'aisha',
+                        targetSpeakerId: 'leah',
+                        stance: 'dominant',
+                        statusDelta: 6,
+                        allianceWith: 'grok',
+                        interruptionKind: 'continuity-correction'
+                      },
+                      {
+                        speakerId: 'leah',
+                        targetSpeakerId: 'aisha',
+                        stance: 'allied',
+                        statusDelta: 2,
+                        allianceWith: 'aisha'
+                      }
+                    ]
+                  }
                 })
               }],
               memorySummary: {
@@ -590,7 +612,10 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         assert.ok(data.socialSignals.continuityPressure >= 0 && data.socialSignals.continuityPressure <= 100);
         assert.ok(data.socialSignals.hierarchy.some(item => item.speakerId === 'aisha' && item.rank >= 1));
         assert.ok(data.socialSignals.alliances.some(item => item.reason === 'continuity-anchor' || item.reason === 'agreement'));
-        assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+        assert.equal(data.socialSignals.roomMove, 'anchor');
+        assert.ok(data.socialSignals.statusEvents.some(item => item.speakerId === 'aisha' && item.kind === 'continuity-anchor'));
+        assert.ok(data.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
+        assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;
@@ -622,7 +647,28 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
                   { speakerId: 'grok', visibleState: 'Tracking' },
                   { speakerId: 'claudia', visibleState: 'Tracking' }
                 ],
-                stateUpdates: { notes: [] }
+                stateUpdates: { notes: [] },
+                socialCues: {
+                  roomMove: 'challenge',
+                  tensionDelta: 7,
+                  continuityDelta: 10,
+                  speakerCues: [
+                    {
+                      speakerId: 'aisha',
+                      targetSpeakerId: 'leah',
+                      stance: 'dominant',
+                      statusDelta: 7,
+                      allianceWith: 'grok',
+                      interruptionKind: 'continuity-correction'
+                    },
+                    {
+                      speakerId: 'grok',
+                      targetSpeakerId: 'leah',
+                      stance: 'curious',
+                      statusDelta: 3
+                    }
+                  ]
+                }
               })
             }],
             memorySummary: {
@@ -710,7 +756,97 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
         assert.ok(final.socialSignals.continuityPressure > 0 && final.socialSignals.continuityPressure <= 100);
         assert.ok(final.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
         assert.ok(final.socialSignals.hierarchy.every(item => item.status >= 0 && item.status <= 100));
-        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
+        assert.equal(final.socialSignals.roomMove, 'challenge');
+        assert.ok(final.socialSignals.statusEvents.some(item => item.speakerId === 'aisha' && item.kind === 'continuity-anchor'));
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt|socialCues/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase social cues cannot create continuity ledger rows', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'The room redirects without recording a new truth.',
+                roomMood: 'playful',
+                responseMode: 'small_exchange',
+                speakers: [
+                  { speakerId: 'leah', role: 'primary', tone: 'dry', text: 'That is a redirect, not a receipt.' }
+                ],
+                silentReactions: [
+                  { speakerId: 'vanya', visibleState: 'Cooling' }
+                ],
+                stateUpdates: { notes: [] },
+                socialCues: {
+                  roomMove: 'redirect',
+                  tensionDelta: 4,
+                  continuityDelta: 9,
+                  speakerCues: [
+                    {
+                      speakerId: 'leah',
+                      targetSpeakerId: 'grok',
+                      stance: 'dismissive',
+                      statusDelta: 5,
+                      allianceWith: 'vanya'
+                    }
+                  ]
+                }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.91
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'showcase-cues-no-ledger',
+            mode: 'social_hierarchy_lab',
+            userText: 'Shift the room without adding a new fact.'
+          })
+        });
+        assert.equal(response.status, 200);
+        const data = await response.json();
+        assert.deepEqual(data.continuityLedger, []);
+        assert.equal(data.socialSignals.roomMove, 'redirect');
+        assert.equal(data.socialSignals.continuityPressure, 9);
+        assert.ok(data.socialSignals.statusEvents.some(item => item.speakerId === 'leah' && item.kind === 'status-gain'));
+        assert.ok(data.socialSignals.alliances.some(item => item.between.includes('leah') && item.between.includes('vanya')));
+        assert.doesNotMatch(JSON.stringify(data), /socialCues|aishaDiagnostics|generatorPrompt|test-room-provider-key|AIza/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

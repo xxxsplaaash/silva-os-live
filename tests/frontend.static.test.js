@@ -1709,6 +1709,12 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /presence-state-/);
   assert.match(script, /processingStatus/);
   assert.match(script, /tensionScore/);
+  assert.match(script, /roomMove/);
+  assert.match(script, /statusEvents/);
+  assert.match(script, /normalizeRoomMove/);
+  assert.match(script, /normalizeStatusEventKind/);
+  assert.match(script, /room-move-chip/);
+  assert.match(script, /status-event/);
   assert.match(html, /hierarchy-list/);
   assert.match(html, /dynamics-list/);
   assert.match(html, /continuity-fill/);
@@ -1727,10 +1733,12 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.turn-state-value\.fallback/);
   assert.match(css, /\.hierarchy-list/);
   assert.match(css, /\.dynamics-item/);
+  assert.match(css, /\.room-move-chip/);
+  assert.match(css, /\.dynamics-item\.status-event/);
   assert.match(css, /\.continuity-meter/);
   assert.match(script, /silvastudios\.co\.za/);
   assert.doesNotMatch(script, /EventSource|WebSocket/);
-  assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+  assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
   assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
   assert.match(vercel, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);

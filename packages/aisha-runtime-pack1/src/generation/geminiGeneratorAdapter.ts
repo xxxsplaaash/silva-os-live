@@ -252,6 +252,8 @@ function isSocialDirectorStructuredMode(input: GeneratorInput): boolean {
 
 function socialDirectorResponseSchema(): Record<string, unknown> {
   const speakerIds = ["aisha", "vanya", "leah", "claudia", "grok"];
+  const socialRoomMoves = ["anchor", "challenge", "redirect", "defend", "deflect", "cool", "escalate", "observe"];
+  const socialStances = ["dominant", "defensive", "allied", "dismissive", "curious", "silent"];
   return {
     type: "object",
     properties: {
@@ -299,6 +301,31 @@ function socialDirectorResponseSchema(): Record<string, unknown> {
           },
         },
         required: ["notes"],
+      },
+      socialCues: {
+        type: "object",
+        properties: {
+          roomMove: { type: "string", enum: socialRoomMoves },
+          tensionDelta: { type: "integer" },
+          continuityDelta: { type: "integer" },
+          speakerCues: {
+            type: "array",
+            maxItems: 5,
+            items: {
+              type: "object",
+              properties: {
+                speakerId: { type: "string", enum: speakerIds },
+                targetSpeakerId: { type: "string", enum: speakerIds },
+                stance: { type: "string", enum: socialStances },
+                statusDelta: { type: "integer" },
+                allianceWith: { type: "string", enum: speakerIds },
+                interruptionKind: { type: "string", enum: ["status-cut", "continuity-correction"] },
+              },
+              required: ["speakerId", "stance", "statusDelta"],
+            },
+          },
+        },
+        required: ["roomMove", "tensionDelta", "continuityDelta", "speakerCues"],
       },
     },
     required: ["roomBeat", "roomMood", "responseMode", "speakers", "silentReactions", "stateUpdates"],

@@ -7,6 +7,8 @@ const path = require('node:path');
 
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
+const { validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
+const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 
 const BANNED_RX = /\b(I hear|I will keep this human|degraded mode|fallback|I need the object|Give me the thing|Say the thing plainly|if that is the object|on that:|I agree with)\b/i;
 const RAW_INTERNAL_RX = /\b(exchangeContextV06|selectedSpeakers|addendumConstraint|relationshipSummaries|repairNeeded|trust:\s*\d|irritation:\s*\d|gravity|pulseReason|aishaDiagnostics|projectContext|activeSpeakerId)\b/i;
@@ -236,6 +238,15 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
           { speakerId: 'grok', role: 'side', tone: 'dry', text: 'I have filed a mild objection to the word vibe, but yes.' }
         ],
         silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+        socialCues: {
+          roomMove: 'redirect',
+          tensionDelta: -2,
+          continuityDelta: 0,
+          speakerCues: [
+            { speakerId: 'vanya', targetSpeakerId: 'grok', stance: 'dominant', statusDelta: 5 },
+            { speakerId: 'grok', allianceWith: 'vanya', stance: 'allied', statusDelta: 2 }
+          ]
+        },
         stateUpdates: { notes: ['valid social beat'] }
       })
     }));
@@ -248,9 +259,76 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
       assert.equal(body.validation.fallbackUsed, false);
       assert.equal(body.debugSummary.failureCategory, '');
       assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['vanya', 'grok']);
+      assert.doesNotMatch(JSON.stringify(body), /socialCues/);
       assertCleanVisible(body);
     });
   });
+});
+
+test('social director normalizes bounded social cues and ignores invalid speakers', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'A status challenge lands.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'That idea is hiding behind politeness.' },
+      { speakerId: 'aisha', role: 'side', tone: 'precise', text: 'The prior claim is still on record.' }
+    ],
+    silentReactions: [{ speakerId: 'grok', visibleState: 'Tracking' }],
+    socialCues: {
+      roomMove: 'challenge',
+      tensionDelta: 99,
+      continuityDelta: -99,
+      speakerCues: [
+        { speakerId: 'leah', targetSpeakerId: 'aisha', stance: 'dominant', statusDelta: 42, allianceWith: 'grok', interruptionKind: 'status-cut' },
+        { speakerId: 'ghost', targetSpeakerId: 'leah', stance: 'dominant', statusDelta: 8 }
+      ]
+    },
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Leah, challenge that idea.' });
+
+  assert.equal(validation.ok, true);
+  assert.equal(validation.output.socialCues.roomMove, 'challenge');
+  assert.equal(validation.output.socialCues.tensionDelta, 12);
+  assert.equal(validation.output.socialCues.continuityDelta, -12);
+  assert.equal(validation.output.socialCues.speakerCues.length, 1);
+  assert.deepEqual(validation.output.socialCues.speakerCues[0], {
+    speakerId: 'leah',
+    targetSpeakerId: 'aisha',
+    stance: 'dominant',
+    statusDelta: 8,
+    allianceWith: 'grok',
+    interruptionKind: 'status-cut'
+  });
+});
+
+test('showcase social signal projector maps social cues without creating truth', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'continuity_breaker',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    messageEvents: [{ speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'That contradicts the prior claim.' }],
+    silentReactions: [{ speakerId: 'grok', visibleState: 'Tracking' }],
+    continuityLedger: [],
+    roomState: { priorSpeaker: 'leah' },
+    socialCues: {
+      roomMove: 'anchor',
+      tensionDelta: 6,
+      continuityDelta: 12,
+      speakerCues: [
+        { speakerId: 'aisha', targetSpeakerId: 'leah', stance: 'dominant', statusDelta: 8, interruptionKind: 'continuity-correction' },
+        { speakerId: 'grok', allianceWith: 'aisha', stance: 'allied', statusDelta: 3 }
+      ]
+    },
+    diagnostics: {}
+  });
+
+  assert.equal(signals.roomMove, 'anchor');
+  assert.ok(signals.tension >= 0 && signals.tension <= 100);
+  assert.equal(signals.continuityPressure, 12);
+  assert.ok(signals.statusEvents.some(item => item.kind === 'continuity-anchor' && item.speakerId === 'aisha'));
+  assert.ok(signals.alliances.some(item => item.between.includes('aisha') && item.between.includes('grok')));
+  assert.ok(signals.interruptions.some(item => item.kind === 'continuity-correction' && item.interrupter === 'aisha'));
 });
 
 test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async () => {

@@ -432,6 +432,18 @@ textarea {
   gap: 7px;
 }
 
+.room-move-chip {
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid rgba(232, 0, 30, .34);
+  border-radius: 999px;
+  background: rgba(232, 0, 30, .10);
+  color: var(--soft);
+  font: 11px "DM Mono", ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
 .hierarchy-item {
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr) 46px;
@@ -500,6 +512,15 @@ textarea {
 .dynamics-item.interruption {
   border-color: rgba(232, 0, 30, .35);
   background: rgba(232, 0, 30, .055);
+}
+
+.dynamics-item.status-event {
+  border-color: rgba(184, 168, 216, .28);
+}
+
+.dynamics-item.status-event span {
+  color: var(--muted);
+  font: 11px "DM Mono", ui-monospace, monospace;
 }
 
 .presence-list,

@@ -64,7 +64,7 @@ const {
   callAishaEngine,
   getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
-const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
+const { runSocialDirectorTurn, socialCuesForPayload } = require('../lib/studio/socialDirector');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 const { createAishaStudioPulseRequest } = require('../lib/aisha/aishaTypes');
 const {
@@ -1105,6 +1105,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const memorySummary = payload.memorySummary || {};
   const stateUpdates = payload.stateUpdates || {};
   const debug = payload.debugSummary || {};
+  const socialCues = socialCuesForPayload(payload);
   const responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
   const roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
   const messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
@@ -1135,6 +1136,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     messageEvents,
     silentReactions,
     continuityLedger,
+    socialCues,
     roomState,
     diagnostics
   });
