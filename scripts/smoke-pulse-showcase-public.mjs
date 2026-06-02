@@ -104,9 +104,49 @@ async function checkFrontend() {
     assert(js.includes(name), `${name} message missing from public JS`);
   });
   assert(js.includes('is-pulse-embed'), 'embed body class missing from public JS');
+  assert(!/return ['"]\*['"]/.test(js), 'public JS still has wildcard parent target fallback');
+  assert(!/postMessage\([^;]+,\s*['"]\*['"]/.test(js), 'public JS still posts parent messages to wildcard target');
   assert(css.includes('body.is-pulse-embed'), 'embed CSS missing');
   assertNoPublicLeaks('showcase js', js);
   log('frontend page, CSP, injected API base, stream client, and public assets');
+}
+
+async function checkCorsPreflight() {
+  const preflights = [
+    ['/api/studio/pulse-showcase/status', 'https://silva-os-live.vercel.app', 'GET'],
+    ['/api/studio/pulse-showcase/turn', 'https://silvastudios.co.za', 'POST'],
+    ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST']
+  ];
+
+  for (const [path, origin, method] of preflights) {
+    const { res, text } = await fetchText(`${BACKEND_URL}${path}`, {
+      method: 'OPTIONS',
+      headers: {
+        origin,
+        'access-control-request-method': method,
+        'access-control-request-headers': 'content-type'
+      }
+    });
+    assert(res.status === 204, `${path} preflight for ${origin} returned ${res.status}: ${text.slice(0, 120)}`);
+    assert(res.headers.get('access-control-allow-origin') === origin, `${path} preflight did not echo ${origin}`);
+    assert(/GET,POST,OPTIONS/i.test(res.headers.get('access-control-allow-methods') || ''), `${path} preflight methods missing`);
+    assert(/content-type/i.test(res.headers.get('access-control-allow-headers') || ''), `${path} preflight headers missing content-type`);
+  }
+
+  const { res: blockedRes, json: blockedJson } = await fetchJson(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
+    method: 'OPTIONS',
+    headers: {
+      origin: 'https://not-silva.example',
+      'access-control-request-method': 'POST',
+      'access-control-request-headers': 'content-type'
+    }
+  });
+  assert(blockedRes.status === 403, `blocked preflight returned ${blockedRes.status}`);
+  assert(blockedRes.headers.get('access-control-allow-origin') === null, 'blocked preflight exposed CORS allow-origin');
+  assert(blockedJson && blockedJson.error === 'pulse-showcase-origin-blocked', 'blocked preflight did not return safe origin error');
+  assert(/room held that turn/i.test(blockedJson.message || ''), 'blocked preflight did not return held-turn copy');
+  assertNoPublicLeaks('blocked preflight', JSON.stringify(blockedJson));
+  log('backend CORS preflight', 'trusted origins pass and blocked origin is safe');
 }
 
 async function checkBackendStatus() {
@@ -210,6 +250,7 @@ async function checkBrowserStreamingTurn() {
 }
 
 await checkFrontend();
+await checkCorsPreflight();
 await checkBackendStatus();
 await checkStreamFinal();
 await checkViewport(1440, 980, 'desktop embed');

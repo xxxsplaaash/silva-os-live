@@ -439,11 +439,11 @@
 
   function parentTargetOrigin() {
     try {
-      if (!document.referrer) return '*';
+      if (!document.referrer) return '';
       var origin = new URL(document.referrer).origin;
       return trustedParentOrigin(origin) ? origin : '';
     } catch (err) {
-      return '*';
+      return '';
     }
   }
 

@@ -73,6 +73,13 @@ $w.onReady(function () {
 
 ## Repeatable CLI proof
 
+Run against the local built Vercel artifact before deploy:
+
+```bash
+SILVA_API_BASE_URL=https://silva-backend-799875816242.us-central1.run.app npm run build:vercel
+node scripts/smoke-pulse-showcase-local-iframe.mjs
+```
+
 Run after Vercel deploy:
 
 ```bash

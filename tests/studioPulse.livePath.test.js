@@ -529,22 +529,41 @@ test('Studio Pulse showcase guard allows trusted origins and no-origin smoke cal
     const noOrigin = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`);
     assert.equal(noOrigin.status, 200);
 
-    const allowed = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`, {
+    const allowedVercel = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`, {
       headers: { origin: 'https://silva-os-live.vercel.app' }
     });
-    assert.equal(allowed.status, 200);
-    assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://silva-os-live.vercel.app');
-    assert.match(allowed.headers.get('vary') || '', /Origin/);
+    assert.equal(allowedVercel.status, 200);
+    assert.equal(allowedVercel.headers.get('access-control-allow-origin'), 'https://silva-os-live.vercel.app');
+    assert.match(allowedVercel.headers.get('vary') || '', /Origin/);
 
-    const preflight = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
-      method: 'OPTIONS',
-      headers: {
-        origin: 'https://www.silvastudios.co.za',
-        'access-control-request-method': 'POST'
-      }
+    const allowedLocal = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`, {
+      headers: { origin: 'http://localhost:3225' }
     });
-    assert.equal(preflight.status, 204);
-    assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://www.silvastudios.co.za');
+    assert.equal(allowedLocal.status, 200);
+    assert.equal(allowedLocal.headers.get('access-control-allow-origin'), 'http://localhost:3225');
+
+    const preflights = [
+      ['/api/studio/pulse-showcase/status', 'https://silva-os-live.vercel.app', 'GET'],
+      ['/api/studio/pulse-showcase/turn', 'https://silvastudios.co.za', 'POST'],
+      ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST'],
+      ['/api/studio/pulse-showcase/turn-stream', 'http://127.0.0.1:3225', 'POST']
+    ];
+
+    for (const [path, origin, method] of preflights) {
+      const preflight = await fetch(`${baseUrl}${path}`, {
+        method: 'OPTIONS',
+        headers: {
+          origin,
+          'access-control-request-method': method,
+          'access-control-request-headers': 'content-type'
+        }
+      });
+      assert.equal(preflight.status, 204);
+      assert.equal(preflight.headers.get('access-control-allow-origin'), origin);
+      assert.match(preflight.headers.get('access-control-allow-methods') || '', /GET,POST,OPTIONS/);
+      assert.match(preflight.headers.get('access-control-allow-headers') || '', /content-type/);
+      assert.equal(preflight.headers.get('access-control-max-age'), '600');
+    }
   });
 });
 
@@ -559,6 +578,20 @@ test('Studio Pulse showcase guard blocks untrusted origins before Pack 1 is call
     }));
 
     await withStudioServer(async baseUrl => {
+      const blockedPreflight = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+        method: 'OPTIONS',
+        headers: {
+          origin: 'https://not-silva.example',
+          'access-control-request-method': 'POST',
+          'access-control-request-headers': 'content-type'
+        }
+      });
+      assert.equal(blockedPreflight.status, 403);
+      assert.equal(blockedPreflight.headers.get('access-control-allow-origin'), null);
+      const blockedPreflightBody = await blockedPreflight.json();
+      assert.equal(blockedPreflightBody.error, 'pulse-showcase-origin-blocked');
+      assert.match(blockedPreflightBody.message, /room held that turn/i);
+
       const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
         method: 'POST',
         headers: {

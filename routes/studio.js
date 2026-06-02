@@ -899,6 +899,7 @@ function applyPulseShowcaseCors(req, res) {
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'content-type,accept');
+  res.setHeader('Access-Control-Max-Age', '600');
 }
 
 function safePulseShowcaseError(res, statusCode, error) {

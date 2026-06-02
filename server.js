@@ -46,6 +46,9 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.setHeader('Access-Control-Max-Age', '600');
   }
+  if (req.method === 'OPTIONS' && String(req.path || '').startsWith('/api/studio/pulse-showcase/')) {
+    return next();
+  }
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   return next();
 });
