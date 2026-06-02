@@ -928,11 +928,23 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
   };
 
   (Array.isArray(memorySummary.activeTruths) ? memorySummary.activeTruths : [])
-    .forEach(item => add(item, 'active', 'pack1-memory'));
+    .forEach(item => {
+      add(item, 'active', 'pack1-memory');
+      if (item?.supersededPriorText) {
+        add({
+          id: `${item.id || item.noteId || item.claimId || 'superseded-prior'}-prior`,
+          text: item.supersededPriorText,
+          status: 'superseded'
+        }, 'superseded', 'pack1-memory');
+      }
+    });
   (Array.isArray(memorySummary.supersededTruths) ? memorySummary.supersededTruths : [])
     .forEach(item => add(item, 'superseded', 'pack1-memory'));
-  (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
-    .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
+  const hasPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
+  if (!hasPack1MemoryRows) {
+    (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
+      .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
+  }
 
   return rows.slice(0, 12);
 }

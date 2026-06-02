@@ -1198,6 +1198,11 @@ function socialDirectorContext(input) {
   const projectContext = asRecord(ctx?.projectContext);
   return asRecord(projectContext?.["socialDirectorV1"]);
 }
+function socialDirectorGeneratorPrompt(input) {
+  const context = socialDirectorContext(input);
+  const prompt = asString(context?.["generatorPrompt"]);
+  return prompt;
+}
 function isSocialDirectorMode(input) {
   return !!socialDirectorContext(input);
 }
@@ -1453,7 +1458,7 @@ function buildGenerationPrompt(input) {
   const root = input;
   const turn = asRecord(root["turn"]);
   const snapshot = asRecord(root["snapshot"]);
-  const userMessage = readString(turn, "rawText") ?? readString(turn, "text") ?? "";
+  const userMessage = socialDirectorGeneratorPrompt(input) ?? readString(turn, "rawText") ?? readString(turn, "text") ?? "";
   const sections = [];
   sections.push(buildIdentityBlock(input));
   const studioPulseBlock = buildStudioPulseContextBlock(input);
@@ -5893,12 +5898,17 @@ async function processAishaRequest(request, options = {}) {
     const noteVersioning = anyDeps["noteVersioning"];
     if (noteVersioning) {
       const activeNotes = await noteVersioning.listActiveNotes({
-        sessionId: request.sessionId
+        sessionId: request.sessionId,
+        includeGlobal: true
       });
       const activeNoteIds = activeNotes.map((n) => n.id);
       const supersededMap = await noteVersioning.listSupersededByIds(activeNoteIds);
+      const contradictionEvidence = noteVersioning.listContradictionEvidence ? await noteVersioning.listContradictionEvidence({
+        sessionId: request.sessionId,
+        maxResults: 8
+      }) : [];
       activeTruths = activeNotes.filter((n) => n.status === "active").map((n) => noteToTruthRecord(n, supersededMap[n.id]));
-      supersededTruths = activeNotes.filter((n) => n.status === "superseded").map((n) => noteToTruthRecord(n));
+      supersededTruths = contradictionEvidence.filter((n) => n.status === "superseded" || n.status === "disputed").map((n) => noteToTruthRecord(n));
     }
     const snapshotStore = anyDeps["snapshotStore"];
     if (snapshotStore) {

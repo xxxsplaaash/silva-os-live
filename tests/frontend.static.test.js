@@ -1685,6 +1685,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /sessionStorage/);
   assert.match(script, /PULSE_HEIGHT/);
   assert.match(script, /trustedParentOrigin/);
+  assert.match(script, /payload\.continuityLedger\) && payload\.continuityLedger\.length/);
   assert.match(script, /silvastudios\.co\.za/);
   assert.doesNotMatch(script, /EventSource|WebSocket/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);

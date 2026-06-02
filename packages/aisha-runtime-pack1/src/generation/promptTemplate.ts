@@ -35,6 +35,12 @@ function socialDirectorContext(input: GeneratorInput): Record<string, unknown> |
   return asRecord(projectContext?.["socialDirectorV1"]);
 }
 
+function socialDirectorGeneratorPrompt(input: GeneratorInput): string | null {
+  const context = socialDirectorContext(input);
+  const prompt = asString(context?.["generatorPrompt"]);
+  return prompt;
+}
+
 function isSocialDirectorMode(input: GeneratorInput): boolean {
   return !!socialDirectorContext(input);
 }
@@ -342,6 +348,7 @@ export function buildGenerationPrompt(input: GeneratorInput): BuiltPrompt {
   const snapshot = asRecord(root["snapshot"]);
 
   const userMessage =
+    socialDirectorGeneratorPrompt(input) ??
     readString(turn, "rawText") ??
     readString(turn, "text") ??
     "";

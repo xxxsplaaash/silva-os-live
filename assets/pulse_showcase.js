@@ -257,7 +257,9 @@
       el.roomMood.textContent = 'Mood: ' + (payload.roomMood || 'focused');
       el.responseMode.textContent = 'Mode: ' + (payload.responseMode || 'single');
       (payload.messageEvents || []).forEach(function (item) { state.messages.push(item); });
-      state.ledger = Array.isArray(payload.continuityLedger) ? payload.continuityLedger : state.ledger;
+      if (Array.isArray(payload.continuityLedger) && payload.continuityLedger.length) {
+        state.ledger = payload.continuityLedger;
+      }
       renderStatus();
       renderMessages();
       renderLedger();

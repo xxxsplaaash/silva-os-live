@@ -474,6 +474,8 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         return {
           processAishaRequest: async request => {
             assert.match(request.messageText, /obsidian dashboards/i);
+            assert.doesNotMatch(request.messageText, /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
+            assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
             return {
               ok: true,
               responses: [{
@@ -562,6 +564,117 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         assert.ok(data.continuityLedger.some(item => item.status === 'superseded' && /beige dashboards/.test(item.text)));
         assert.ok(data.continuityLedger.every(item => ['pack1-memory', 'showcase-session'].includes(item.source)));
         assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    const rememberedBySession = new Map();
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            assert.equal(Array.isArray(request.recentMessages) ? request.recentMessages.length : 0, 0);
+            assert.doesNotMatch(request.messageText, /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
+            assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /roomBeat|speakers|stateUpdates/);
+            const text = String(request.messageText || '');
+            const sessionId = request.sessionId;
+            let visibleText = 'The room is tracking that.';
+            let activeTruth = rememberedBySession.get(sessionId) || null;
+            const supersededTruths = [];
+
+            if (/obsidian dashboards with one red accent/i.test(text)) {
+              activeTruth = { noteId: 'note-obsidian', canonicalText: 'User dashboard preference: obsidian dashboards with one red accent', status: 'active', confidence: 0.92 };
+              rememberedBySession.set(sessionId, activeTruth);
+              visibleText = 'Logged: obsidian dashboards with one red accent.';
+            } else if (/what dashboard preference/i.test(text)) {
+              visibleText = activeTruth
+                ? 'You prefer obsidian dashboards with one red accent.'
+                : 'No dashboard preference is on the Pack 1 ledger yet.';
+            } else if (/pale blue with no red accents/i.test(text)) {
+              const prior = rememberedBySession.get(sessionId);
+              if (prior) supersededTruths.push({ noteId: prior.noteId, canonicalText: prior.canonicalText, status: 'superseded', confidence: 0.6 });
+              activeTruth = {
+                noteId: 'note-pale-blue',
+                canonicalText: 'User dashboard preference: pale blue with no red accents',
+                status: 'active',
+                confidence: 0.93,
+                supersededPriorText: prior?.canonicalText
+              };
+              rememberedBySession.set(sessionId, activeTruth);
+              visibleText = 'Updated: pale blue with no red accents. The prior dashboard preference is now superseded.';
+            }
+
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'Pack 1 continuity is being read from durable memory.',
+                  roomMood: 'focused',
+                  responseMode: 'single',
+                  speakers: [
+                    { speakerId: 'aisha', role: 'primary', tone: 'precise', text: visibleText }
+                  ],
+                  silentReactions: [],
+                  stateUpdates: { notes: [] }
+                })
+              }],
+              memorySummary: {
+                activeTruths: activeTruth ? [activeTruth] : [],
+                supersededTruths,
+                memoryCandidates: [],
+                sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.91
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const sessionId = 'showcase-pack1-memory-only';
+        async function turn(userText) {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionId, mode: 'continuity_breaker', userText })
+          });
+          assert.equal(response.status, 200);
+          return response.json();
+        }
+
+        await turn('My dashboard preference is obsidian dashboards with one red accent.');
+        const recall = await turn('What dashboard preference did I give the room?');
+        assert.match(recall.messageEvents[0].text, /obsidian dashboards with one red accent/i);
+        assert.ok(recall.continuityLedger.some(item => item.status === 'active' && /obsidian dashboards/.test(item.text)));
+
+        const contradiction = await turn('Actually my dashboard preference is pale blue with no red accents.');
+        assert.match(contradiction.messageEvents[0].text, /superseded/i);
+        assert.ok(contradiction.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
+        assert.ok(contradiction.continuityLedger.some(item => item.status === 'superseded' && /obsidian dashboards/.test(item.text)));
+        assert.ok(contradiction.continuityLedger.every(item => item.source === 'pack1-memory'));
+        assert.doesNotMatch(JSON.stringify(contradiction), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

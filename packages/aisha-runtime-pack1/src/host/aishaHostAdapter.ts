@@ -541,24 +541,32 @@ export async function processAishaRequest(
     const anyDeps = deps as unknown as Record<string, unknown>;
     const noteVersioning = anyDeps["noteVersioning"] as
       | {
-          listActiveNotes: (f: { sessionId: string }) => Promise<NoteRecord[]>;
+          listActiveNotes: (f: { sessionId: string; includeGlobal?: boolean }) => Promise<NoteRecord[]>;
           listSupersededByIds: (ids: string[]) => Promise<Record<string, string>>;
+          listContradictionEvidence?: (f: { sessionId: string; maxResults?: number }) => Promise<NoteRecord[]>;
         }
       | undefined;
 
     if (noteVersioning) {
       const activeNotes = await noteVersioning.listActiveNotes({
         sessionId: request.sessionId,
+        includeGlobal: true,
       });
       const activeNoteIds = activeNotes.map((n) => n.id);
       const supersededMap = await noteVersioning.listSupersededByIds(activeNoteIds);
+      const contradictionEvidence = noteVersioning.listContradictionEvidence
+        ? await noteVersioning.listContradictionEvidence({
+            sessionId: request.sessionId,
+            maxResults: 8,
+          })
+        : [];
 
       activeTruths = activeNotes
         .filter((n) => n.status === "active")
         .map((n) => noteToTruthRecord(n, supersededMap[n.id]));
 
-      supersededTruths = activeNotes
-        .filter((n) => n.status === "superseded")
+      supersededTruths = contradictionEvidence
+        .filter((n) => n.status === "superseded" || n.status === "disputed")
         .map((n) => noteToTruthRecord(n));
     }
 
