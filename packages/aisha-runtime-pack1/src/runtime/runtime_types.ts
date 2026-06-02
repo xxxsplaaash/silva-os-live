@@ -9,6 +9,8 @@ import {
   ITurnStore,
   IThreadStore,
   MemoryContextBlock,
+  NoteLinkRecord,
+  NoteRecord,
   RetrievalBundle,
   StateSnapshotRecord,
   ThreadRecord,
@@ -259,11 +261,18 @@ export interface IClock {
   nowIso(): string;
 }
 
+export interface AsyncMemoryFollowupResult {
+  gatePassed: boolean;
+  candidatesExtracted: number;
+  notesWritten: NoteRecord[];
+  linksWritten: NoteLinkRecord[];
+}
+
 export interface IAsyncMemoryFollowup {
   scheduleEpisodeProcessing(input: {
     sessionId: string;
     episodeId: string;
-  }): Promise<void>;
+  }): Promise<AsyncMemoryFollowupResult | void>;
 }
 
 export interface RuntimeMemoryDeps {
@@ -337,5 +346,6 @@ export interface ProcessTurnResult {
   episodeId?: string;
   threadId?: string;
   criticLoop?: CriticLoopResult;
+  memoryFollowup?: AsyncMemoryFollowupResult;
   fallbackReason?: string;
 }

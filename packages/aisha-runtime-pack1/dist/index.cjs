@@ -623,7 +623,7 @@ function overlayRetrievalBundle(input) {
   };
 }
 function buildSuccessResult(input) {
-  const { text, trace, criticLoop, committed } = input;
+  const { text, trace, criticLoop, committed, memoryFollowup } = input;
   return {
     ok: true,
     text,
@@ -632,7 +632,8 @@ function buildSuccessResult(input) {
     snapshotId: committed.snapshot.id,
     episodeId: committed.episode.id,
     threadId: committed.thread.id,
-    criticLoop
+    criticLoop,
+    memoryFollowup
   };
 }
 function buildFallbackResult(input) {
@@ -1012,17 +1013,23 @@ async function processTurn(deps, input) {
       }
     });
     trace.succeed();
+    let memoryFollowup;
     if (deps.asyncMemoryFollowup) {
       try {
-        await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
+        const followup = await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
           sessionId: input.sessionId,
           episodeId: committed.episode.id
         });
+        memoryFollowup = followup || void 0;
         trace.add({
           stage: "memory.async_followup_scheduled",
           at: deps.clock.nowIso(),
           data: {
-            episodeId: committed.episode.id
+            episodeId: committed.episode.id,
+            gatePassed: memoryFollowup?.gatePassed === true,
+            candidatesExtracted: memoryFollowup?.candidatesExtracted ?? 0,
+            notesWritten: memoryFollowup?.notesWritten.length ?? 0,
+            linksWritten: memoryFollowup?.linksWritten.length ?? 0
           }
         });
       } catch (error) {
@@ -1046,7 +1053,8 @@ async function processTurn(deps, input) {
       text: parsed.text,
       trace,
       criticLoop: criticLoopResult,
-      committed
+      committed,
+      memoryFollowup
     });
   } catch (error) {
     const reason = compactErrorMessage(error);
@@ -3674,21 +3682,29 @@ var InMemoryAsyncMemoryFollowup = class {
   deps;
   async scheduleEpisodeProcessing(input) {
     const t0 = Date.now();
+    const summary = {
+      gatePassed: false,
+      candidatesExtracted: 0,
+      notesWritten: [],
+      linksWritten: []
+    };
     try {
       const episode = await this.deps.episodeStore.getById(input.episodeId);
-      if (!episode) return;
-      if (episode.sessionId !== input.sessionId) return;
+      if (!episode) return summary;
+      if (episode.sessionId !== input.sessionId) return summary;
       const turns = await this.deps.turnStore.getByIds(episode.turnIds);
-      if (turns.length === 0) return;
+      if (turns.length === 0) return summary;
       const gate = this.deps.noteExtractionSandbox.heuristicGate(episode, turns);
+      summary.gatePassed = gate.pass;
       const currentTurn = turns[turns.length - 1];
-      if (!currentTurn) return;
+      if (!currentTurn) return summary;
       const currentSnapshot = await this.deps.snapshotStore.getByTurnId(currentTurn.id);
       if (gate.pass) {
         const candidates = await this.deps.noteExtractionSandbox.extract(
           episode,
           turns
         );
+        summary.candidatesExtracted = candidates.length;
         for (const candidate of candidates) {
           const validation = this.deps.noteVersioning.validate(candidate);
           if (!validation.valid) continue;
@@ -3699,7 +3715,7 @@ var InMemoryAsyncMemoryFollowup = class {
             subjectPersonId: candidate.subjectPersonId,
             relationshipContextPersonId: candidate.relationshipContextPersonId
           });
-          await this.deps.noteVersioning.mergeOrSupersede(
+          const merge = await this.deps.noteVersioning.mergeOrSupersede(
             candidate,
             existing,
             currentSnapshot ? {
@@ -3707,6 +3723,8 @@ var InMemoryAsyncMemoryFollowup = class {
               caution: currentSnapshot.expressiveEnvelope.tension
             } : void 0
           );
+          summary.notesWritten.push(...merge.notesWritten);
+          summary.linksWritten.push(...merge.linksWritten);
         }
       }
       let activeNotes = await this.deps.noteVersioning.listActiveNotes({
@@ -3766,9 +3784,11 @@ var InMemoryAsyncMemoryFollowup = class {
           groupedSignals.get(scopeKey).signals.push(sig);
         }
         for (const group of groupedSignals.values()) {
-          await this.deps.noteVersioning.persistReviewSignals(group.signals, group.scope);
+          const reviewed = await this.deps.noteVersioning.persistReviewSignals(group.signals, group.scope);
+          summary.notesWritten.push(...reviewed);
         }
       }
+      return summary;
     } finally {
       console.log(`[PERF] async followup latency: ${Date.now() - t0}ms`);
     }
@@ -5699,6 +5719,37 @@ function noteToTruthRecord(note, supersededPriorText) {
     lastConfirmedAt: note.lastConfirmedAt
   };
 }
+function truthKey(record) {
+  return String(record.noteId || record.canonicalText || record.normalizedValue || "").trim().toLowerCase();
+}
+function appendTruth(target, record) {
+  const key = truthKey(record);
+  if (!key) return;
+  if (target.some((item) => truthKey(item) === key)) return;
+  target.push(record);
+}
+function appendPack1FollowupTruths(input) {
+  const notes = input.notesWritten ?? [];
+  if (!notes.length) return;
+  const byId = new Map(notes.map((note) => [note.id, note]));
+  const supersededByActive = /* @__PURE__ */ new Map();
+  for (const link of input.linksWritten ?? []) {
+    if (link.relation !== "supersedes") continue;
+    const prior = byId.get(link.toNoteId);
+    if (!prior) continue;
+    supersededByActive.set(link.fromNoteId, prior.canonicalText);
+  }
+  for (const note of notes) {
+    if (note.status === "active") {
+      appendTruth(
+        input.activeTruths,
+        noteToTruthRecord(note, supersededByActive.get(note.id))
+      );
+    } else if (note.status === "superseded" || note.status === "disputed") {
+      appendTruth(input.supersededTruths, noteToTruthRecord(note));
+    }
+  }
+}
 function snapshotToStateEnvelope(snapshot) {
   return {
     certainty: snapshot.expressiveEnvelope.certainty,
@@ -5961,6 +6012,12 @@ async function processAishaRequest(request, options = {}) {
   let supersededTruths = [];
   let stateEnvelope = emptyStateEnvelope();
   let episodeId = result.episodeId;
+  appendPack1FollowupTruths({
+    activeTruths,
+    supersededTruths,
+    notesWritten: result.memoryFollowup?.notesWritten,
+    linksWritten: result.memoryFollowup?.linksWritten
+  });
   try {
     const anyDeps = deps;
     const noteVersioning = anyDeps["noteVersioning"];
@@ -5975,8 +6032,11 @@ async function processAishaRequest(request, options = {}) {
         sessionId: request.sessionId,
         maxResults: 8
       }) : [];
-      activeTruths = activeNotes.filter((n) => n.status === "active").map((n) => noteToTruthRecord(n, supersededMap[n.id]));
-      supersededTruths = contradictionEvidence.filter((n) => n.status === "superseded" || n.status === "disputed").map((n) => noteToTruthRecord(n));
+      activeNotes.filter((n) => n.status === "active").forEach((n) => appendTruth(
+        activeTruths,
+        noteToTruthRecord(n, supersededMap[n.id])
+      ));
+      contradictionEvidence.filter((n) => n.status === "superseded" || n.status === "disputed").forEach((n) => appendTruth(supersededTruths, noteToTruthRecord(n)));
     }
     const snapshotStore = anyDeps["snapshotStore"];
     if (snapshotStore) {

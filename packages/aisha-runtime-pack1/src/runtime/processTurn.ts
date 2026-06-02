@@ -1,4 +1,5 @@
 import {
+  AsyncMemoryFollowupResult,
   BuildTurnArtifactsResult,
   CommittedMemorySlice,
   ParsedOutput,
@@ -257,8 +258,9 @@ function buildSuccessResult(input: {
   trace: ReturnType<ProcessTurnDeps["traceFactory"]["create"]>;
   criticLoop?: import("./runtime_types").CriticLoopResult;
   committed: CommittedMemorySlice;
+  memoryFollowup?: AsyncMemoryFollowupResult;
 }): ProcessTurnResult {
-  const { text, trace, criticLoop, committed } = input;
+  const { text, trace, criticLoop, committed, memoryFollowup } = input;
 
   return {
     ok: true,
@@ -269,6 +271,7 @@ function buildSuccessResult(input: {
     episodeId: committed.episode.id,
     threadId: committed.thread.id,
     criticLoop,
+    memoryFollowup,
   };
 }
 
@@ -728,18 +731,24 @@ export async function processTurn(
 
     trace.succeed();
 
+    let memoryFollowup: AsyncMemoryFollowupResult | undefined;
     if (deps.asyncMemoryFollowup) {
       try {
-        await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
+        const followup = await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
           sessionId: input.sessionId,
           episodeId: committed.episode.id,
         });
+        memoryFollowup = followup || undefined;
 
         trace.add({
           stage: "memory.async_followup_scheduled",
           at: deps.clock.nowIso(),
           data: {
             episodeId: committed.episode.id,
+            gatePassed: memoryFollowup?.gatePassed === true,
+            candidatesExtracted: memoryFollowup?.candidatesExtracted ?? 0,
+            notesWritten: memoryFollowup?.notesWritten.length ?? 0,
+            linksWritten: memoryFollowup?.linksWritten.length ?? 0,
           },
         });
       } catch (error) {
@@ -765,6 +774,7 @@ export async function processTurn(
       trace,
       criticLoop: criticLoopResult,
       committed,
+      memoryFollowup,
     });
   } catch (error) {
     const reason = compactErrorMessage(error);

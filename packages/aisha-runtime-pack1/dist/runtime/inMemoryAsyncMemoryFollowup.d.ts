@@ -1,5 +1,5 @@
 import type { IEpisodeStore, INoteExtractionSandbox, INoteVersioning, ISnapshotStore, ITurnStore } from "../memory/types";
-import type { IAsyncMemoryFollowup } from "./runtime_types";
+import type { AsyncMemoryFollowupResult, IAsyncMemoryFollowup } from "./runtime_types";
 export declare class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
     private readonly deps;
     constructor(deps: {
@@ -12,5 +12,5 @@ export declare class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup
     scheduleEpisodeProcessing(input: {
         sessionId: string;
         episodeId: string;
-    }): Promise<void>;
+    }): Promise<AsyncMemoryFollowupResult>;
 }

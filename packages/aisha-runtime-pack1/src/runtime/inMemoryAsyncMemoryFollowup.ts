@@ -4,6 +4,7 @@ import type {
   INoteVersioning,
   ISnapshotStore,
   ITurnStore,
+  NoteLinkRecord,
   NoteRecord,
 } from "../memory/types";
 import {
@@ -11,7 +12,7 @@ import {
   derivePersistedReviewSignals,
   type PersistedReviewSignal,
 } from "../memory/reactiveReconsolidation";
-import type { IAsyncMemoryFollowup } from "./runtime_types";
+import type { AsyncMemoryFollowupResult, IAsyncMemoryFollowup } from "./runtime_types";
 
 // Removed ReviewPersistingNoteVersioning since INoteVersioning now natively has persistReviewSignals
 
@@ -90,20 +91,27 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
   async scheduleEpisodeProcessing(input: {
     sessionId: string;
     episodeId: string;
-  }): Promise<void> {
+  }): Promise<AsyncMemoryFollowupResult> {
     const t0 = Date.now();
+    const summary: AsyncMemoryFollowupResult = {
+      gatePassed: false,
+      candidatesExtracted: 0,
+      notesWritten: [],
+      linksWritten: [],
+    };
     try {
       const episode = await this.deps.episodeStore.getById(input.episodeId);
-      if (!episode) return;
-      if (episode.sessionId !== input.sessionId) return;
+      if (!episode) return summary;
+      if (episode.sessionId !== input.sessionId) return summary;
 
       const turns = await this.deps.turnStore.getByIds(episode.turnIds);
-      if (turns.length === 0) return;
+      if (turns.length === 0) return summary;
 
       const gate = this.deps.noteExtractionSandbox.heuristicGate(episode, turns);
+      summary.gatePassed = gate.pass;
 
       const currentTurn = turns[turns.length - 1];
-      if (!currentTurn) return;
+      if (!currentTurn) return summary;
 
       const currentSnapshot = await this.deps.snapshotStore.getByTurnId(currentTurn.id);
 
@@ -112,6 +120,7 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
           episode,
           turns,
         );
+        summary.candidatesExtracted = candidates.length;
 
         for (const candidate of candidates) {
           const validation = this.deps.noteVersioning.validate(candidate);
@@ -125,7 +134,7 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
             relationshipContextPersonId: candidate.relationshipContextPersonId,
           });
 
-          await this.deps.noteVersioning.mergeOrSupersede(
+          const merge = await this.deps.noteVersioning.mergeOrSupersede(
             candidate, 
             existing,
             currentSnapshot ? { 
@@ -133,6 +142,8 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
               caution: currentSnapshot.expressiveEnvelope.tension 
             } : undefined
           );
+          summary.notesWritten.push(...merge.notesWritten);
+          summary.linksWritten.push(...(merge.linksWritten as NoteLinkRecord[]));
         }
       }
 
@@ -211,9 +222,11 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
         }
 
         for (const group of groupedSignals.values()) {
-          await this.deps.noteVersioning.persistReviewSignals(group.signals, group.scope);
+          const reviewed = await this.deps.noteVersioning.persistReviewSignals(group.signals, group.scope);
+          summary.notesWritten.push(...reviewed);
         }
       }
+      return summary;
     } finally {
       console.log(`[PERF] async followup latency: ${Date.now() - t0}ms`);
     }

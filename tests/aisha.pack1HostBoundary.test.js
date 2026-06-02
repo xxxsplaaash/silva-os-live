@@ -52,7 +52,7 @@ function createTrace(traceId, sessionId) {
   };
 }
 
-function createDeps({ generatorInputs, writtenTurns }) {
+function createDeps({ generatorInputs, writtenTurns, storeMemory = true, followupMemory = false }) {
   let counter = 0;
   const activeNote = note('note_active_dashboard', 'User dashboard preference: pale blue with no red accents', 'active');
   const supersededNote = note('note_old_dashboard', 'User dashboard preference: obsidian with one red accent', 'superseded');
@@ -209,17 +209,38 @@ function createDeps({ generatorInputs, writtenTurns }) {
       async listActiveNotes(filter) {
         assert.equal(filter.sessionId, 'pack1-host-boundary-session');
         assert.equal(filter.includeGlobal, true);
-        return [activeNote];
+        return storeMemory ? [activeNote] : [];
       },
       async listSupersededByIds(ids) {
-        assert.deepEqual(ids, [activeNote.id]);
-        return { [activeNote.id]: supersededNote.canonicalText };
+        assert.deepEqual(ids, storeMemory ? [activeNote.id] : []);
+        return storeMemory ? { [activeNote.id]: supersededNote.canonicalText } : {};
       },
       async listContradictionEvidence(filter) {
         assert.equal(filter.sessionId, 'pack1-host-boundary-session');
-        return [supersededNote];
+        return storeMemory ? [supersededNote] : [];
       },
     },
+    ...(followupMemory ? {
+      asyncMemoryFollowup: {
+        async scheduleEpisodeProcessing() {
+          return {
+            gatePassed: true,
+            candidatesExtracted: 2,
+            notesWritten: [activeNote, supersededNote],
+            linksWritten: [{
+              id: 'link_active_supersedes_old',
+              kind: 'note_link',
+              createdAt: iso(),
+              sourceModality: 'text',
+              fromNoteId: activeNote.id,
+              toNoteId: supersededNote.id,
+              relation: 'supersedes',
+              strength: 1,
+            }],
+          };
+        },
+      },
+    } : {}),
   };
 }
 
@@ -270,6 +291,42 @@ test('Pack 1 social-director prompt builder prefers generatorPrompt over turn ra
   assert.match(source, /function socialDirectorGeneratorPrompt/);
   assert.match(source, /socialDirectorGeneratorPrompt\(input\)\s*\?\?/);
   assert.match(source, /readString\(turn,\s*"rawText"\)/);
+});
+
+test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {
+  const { processAishaRequest } = await import('../packages/aisha-runtime-pack1/dist/index.js');
+  const generatorInputs = [];
+  const writtenTurns = [];
+  const deps = createDeps({
+    generatorInputs,
+    writtenTurns,
+    storeMemory: false,
+    followupMemory: true,
+  });
+
+  const response = await processAishaRequest({
+    sessionId: 'pack1-host-boundary-session',
+    threadId: 'pack1-host-boundary-session',
+    roomId: 'studio-pulse-social-director',
+    activeSpeakerId: 'aisha',
+    activeCharacterId: 'aisha',
+    messageText: 'Actually my dashboard preference is pale blue with no red accents.',
+    message: 'Actually my dashboard preference is pale blue with no red accents.',
+    projectContext: {
+      socialDirectorV1: {
+        schemaVersion: 'studio-pulse.social-director.v1',
+        userMessage: 'Actually my dashboard preference is pale blue with no red accents.',
+        generatorPrompt: 'SOCIAL DIRECTOR JSON CONTRACT: return roomBeat, speakers, stateUpdates.',
+        structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+      },
+    },
+    recentMessages: [],
+  }, { deps, engineMode: 'fixture' });
+
+  assert.equal(response.ok, true);
+  assert.ok(response.memorySummary.activeTruths.some(item => /pale blue/.test(item.canonicalText)));
+  assert.ok(response.memorySummary.activeTruths.some(item => /obsidian/.test(item.supersededPriorText || '')));
+  assert.ok(response.memorySummary.supersededTruths.some(item => /obsidian/.test(item.canonicalText)));
 });
 
 test('Pack 1 extractor and retrieval prioritize durable dashboard slot preferences', () => {

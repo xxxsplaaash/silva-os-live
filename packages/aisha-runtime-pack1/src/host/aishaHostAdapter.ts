@@ -22,7 +22,7 @@ import type {
   AishaEngineTrace,
   AishaTruthRecord,
 } from "./studioPulseContract";
-import type { NoteRecord, StateSnapshotRecord } from "../memory/types";
+import type { NoteLinkRecord, NoteRecord, StateSnapshotRecord } from "../memory/types";
 import { buildProductionRuntime } from "../runtime/runtimeBuilder";
 import { InMemoryTurnStore } from "../memory/turnStore";
 import { InMemorySnapshotStore } from "../memory/snapshotStore";
@@ -187,6 +187,53 @@ function noteToTruthRecord(
     subjectPersonId: note.subjectPersonId,
     lastConfirmedAt: note.lastConfirmedAt,
   };
+}
+
+function truthKey(record: AishaTruthRecord): string {
+  return String(record.noteId || record.canonicalText || record.normalizedValue || "")
+    .trim()
+    .toLowerCase();
+}
+
+function appendTruth(
+  target: AishaTruthRecord[],
+  record: AishaTruthRecord,
+): void {
+  const key = truthKey(record);
+  if (!key) return;
+  if (target.some((item) => truthKey(item) === key)) return;
+  target.push(record);
+}
+
+function appendPack1FollowupTruths(input: {
+  activeTruths: AishaTruthRecord[];
+  supersededTruths: AishaTruthRecord[];
+  notesWritten?: NoteRecord[];
+  linksWritten?: NoteLinkRecord[];
+}): void {
+  const notes = input.notesWritten ?? [];
+  if (!notes.length) return;
+
+  const byId = new Map(notes.map((note) => [note.id, note]));
+  const supersededByActive = new Map<string, string>();
+
+  for (const link of input.linksWritten ?? []) {
+    if (link.relation !== "supersedes") continue;
+    const prior = byId.get(link.toNoteId);
+    if (!prior) continue;
+    supersededByActive.set(link.fromNoteId, prior.canonicalText);
+  }
+
+  for (const note of notes) {
+    if (note.status === "active") {
+      appendTruth(
+        input.activeTruths,
+        noteToTruthRecord(note, supersededByActive.get(note.id)),
+      );
+    } else if (note.status === "superseded" || note.status === "disputed") {
+      appendTruth(input.supersededTruths, noteToTruthRecord(note));
+    }
+  }
 }
 
 function snapshotToStateEnvelope(snapshot: StateSnapshotRecord): AishaStateEnvelope {
@@ -536,6 +583,13 @@ export async function processAishaRequest(
   let stateEnvelope: AishaStateEnvelope = emptyStateEnvelope();
   let episodeId: string | undefined = result.episodeId;
 
+  appendPack1FollowupTruths({
+    activeTruths,
+    supersededTruths,
+    notesWritten: result.memoryFollowup?.notesWritten,
+    linksWritten: result.memoryFollowup?.linksWritten,
+  });
+
   try {
     // Read active notes from noteVersioning if available via deps cast
     const anyDeps = deps as unknown as Record<string, unknown>;
@@ -561,13 +615,16 @@ export async function processAishaRequest(
           })
         : [];
 
-      activeTruths = activeNotes
+      activeNotes
         .filter((n) => n.status === "active")
-        .map((n) => noteToTruthRecord(n, supersededMap[n.id]));
+        .forEach((n) => appendTruth(
+          activeTruths,
+          noteToTruthRecord(n, supersededMap[n.id]),
+        ));
 
-      supersededTruths = contradictionEvidence
+      contradictionEvidence
         .filter((n) => n.status === "superseded" || n.status === "disputed")
-        .map((n) => noteToTruthRecord(n));
+        .forEach((n) => appendTruth(supersededTruths, noteToTruthRecord(n)));
     }
 
     // Read latest snapshot for state envelope

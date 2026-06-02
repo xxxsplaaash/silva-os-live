@@ -1,4 +1,4 @@
-import { EpisodeBoundaryDecision, EpisodeRecord, IEpisodeBoundaryDetector, IEpisodeStore, IContextBuilder, IRetrievalPlanner, ISnapshotStore, ITurnStore, IThreadStore, MemoryContextBlock, RetrievalBundle, StateSnapshotRecord, ThreadRecord, TurnRecord } from "../memory/types";
+import { EpisodeBoundaryDecision, EpisodeRecord, IEpisodeBoundaryDetector, IEpisodeStore, IContextBuilder, IRetrievalPlanner, ISnapshotStore, ITurnStore, IThreadStore, MemoryContextBlock, NoteLinkRecord, NoteRecord, RetrievalBundle, StateSnapshotRecord, ThreadRecord, TurnRecord } from "../memory/types";
 export interface TurnInput {
     sessionId: string;
     speaker: "user" | "aisha" | "other";
@@ -213,11 +213,17 @@ export interface IIdGenerator {
 export interface IClock {
     nowIso(): string;
 }
+export interface AsyncMemoryFollowupResult {
+    gatePassed: boolean;
+    candidatesExtracted: number;
+    notesWritten: NoteRecord[];
+    linksWritten: NoteLinkRecord[];
+}
 export interface IAsyncMemoryFollowup {
     scheduleEpisodeProcessing(input: {
         sessionId: string;
         episodeId: string;
-    }): Promise<void>;
+    }): Promise<AsyncMemoryFollowupResult | void>;
 }
 export interface RuntimeMemoryDeps {
     turnStore: ITurnStore;
@@ -287,5 +293,6 @@ export interface ProcessTurnResult {
     episodeId?: string;
     threadId?: string;
     criticLoop?: CriticLoopResult;
+    memoryFollowup?: AsyncMemoryFollowupResult;
     fallbackReason?: string;
 }
