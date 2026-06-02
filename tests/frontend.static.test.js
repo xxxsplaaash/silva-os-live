@@ -44,6 +44,7 @@ const PULSE_SHOWCASE_JS = path.join(ROOT, 'assets', 'pulse_showcase.js');
 const PULSE_SHOWCASE_CSS = path.join(ROOT, 'assets', 'pulse_showcase.css');
 const BUILD_VERCEL_STATIC = path.join(ROOT, 'scripts', 'build-vercel-static.mjs');
 const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
+const AISHA_GEMINI_ADAPTER = path.join(ROOT, 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts');
 
 function readIndex() {
   return fs.readFileSync(INDEX, 'utf8');
@@ -1694,6 +1695,12 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
+  assert.match(script, /acceptedByPack1/);
+  assert.match(script, /fallbackCategory/);
+  assert.match(script, /runtimePhase/);
+  assert.match(script, /Pack 1 accepted/);
+  assert.match(script, /Local fallback carried turn/);
+  assert.match(script, /Persistence connected/);
   assert.match(script, /isNearBottom/);
   assert.match(script, /ledger-source-/);
   assert.match(script, /ledger-status-/);
@@ -1706,6 +1713,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(html, /dynamics-list/);
   assert.match(html, /continuity-fill/);
   assert.match(html, /processing-status/);
+  assert.match(html, /turn-state-value/);
   assert.match(html, /room-signal-value/);
   assert.match(html, /continuity-value/);
   assert.match(html, /tension-fill/);
@@ -1715,14 +1723,27 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.ledger-source-pack1-memory/);
   assert.match(css, /\.signal-meter/);
   assert.match(css, /\.processing-status/);
+  assert.match(css, /\.turn-state-value\.accepted/);
+  assert.match(css, /\.turn-state-value\.fallback/);
   assert.match(css, /\.hierarchy-list/);
   assert.match(css, /\.dynamics-item/);
   assert.match(css, /\.continuity-meter/);
   assert.match(script, /silvastudios\.co\.za/);
   assert.doesNotMatch(script, /EventSource|WebSocket/);
+  assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
   assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
   assert.match(vercel, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);
+});
+
+test('A.I.S.H.A provider debug previews are gated behind explicit debug flags', () => {
+  const adapter = fs.readFileSync(AISHA_GEMINI_ADAPTER, 'utf8');
+  assert.match(adapter, /function providerDebugEnabled/);
+  assert.match(adapter, /process\.env\.AISHA_DEBUG/);
+  assert.match(adapter, /process\.env\.T24_DEBUG/);
+  assert.match(adapter, /function logProviderDebug/);
+  assert.doesNotMatch(adapter, /console\.error\(`\[T24_DEBUG\]/);
+  assert.match(adapter, /logProviderDebug\(`\[T24_DEBUG\]/);
 });
 
 test('Prompt Generator V3 rescue pass protects identity trust and laptop layout', () => {

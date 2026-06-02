@@ -395,6 +395,14 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.turn-state-value.accepted {
+  color: var(--green);
+}
+
+.turn-state-value.fallback {
+  color: var(--amber);
+}
+
 .signal-meter {
   height: 6px;
   margin-top: 12px;

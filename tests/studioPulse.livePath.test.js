@@ -576,6 +576,11 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         assert.equal(data.silentReactions[0].speakerId, 'grok');
         assert.equal(data.diagnostics.persistenceConnected, true);
         assert.equal(data.diagnostics.fallbackUsed, false);
+        assert.equal(data.diagnostics.fallbackCategory, '');
+        assert.equal(data.diagnostics.traceStatus, 'succeeded');
+        assert.equal(data.acceptedByPack1, true);
+        assert.equal(data.fallbackCategory, '');
+        assert.equal(data.runtimePhase, 'final');
         assert.ok(data.continuityLedger.some(item => item.status === 'active' && /obsidian dashboards/.test(item.text)));
         assert.ok(data.continuityLedger.some(item => item.status === 'superseded' && /beige dashboards/.test(item.text)));
         assert.ok(data.continuityLedger.every(item => ['pack1-memory', 'showcase-session'].includes(item.source)));
@@ -684,10 +689,20 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
         assert.ok(eventNames.indexOf('silent_reaction') >= 0);
         assert.ok(eventNames.indexOf('ledger') >= 0);
         assert.equal(eventNames[eventNames.length - 1], 'final');
+        const runtimeStatusEvents = events.filter(item => item.event === 'runtime_status');
+        assert.ok(runtimeStatusEvents.length >= 2);
+        assert.equal(runtimeStatusEvents[0].data.runtimePhase, 'preflight');
+        assert.equal(runtimeStatusEvents[runtimeStatusEvents.length - 1].data.runtimePhase, 'final');
 
         const final = events.find(item => item.event === 'final').data;
         assert.equal(final.ok, true);
         assert.equal(final.sessionId, 'showcase-stream-test-session');
+        assert.equal(final.acceptedByPack1, true);
+        assert.equal(final.fallbackCategory, '');
+        assert.equal(final.runtimePhase, 'final');
+        assert.equal(final.diagnostics.traceStatus, 'succeeded');
+        assert.equal(final.diagnostics.persistenceConnected, true);
+        assert.equal(runtimeStatusEvents[runtimeStatusEvents.length - 1].data.acceptedByPack1, true);
         assert.equal(final.messageEvents[0].speakerId, 'aisha');
         assert.ok(final.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
         assert.ok(final.continuityLedger.some(item => item.status === 'superseded' && /obsidian dashboards/.test(item.text)));
@@ -696,6 +711,75 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
         assert.ok(final.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
         assert.ok(final.socialSignals.hierarchy.every(item => item.status >= 0 && item.status <= 100));
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase turn-stream reports safe fallback acceptance state', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: false,
+            responses: [],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'failed',
+              failureReason: 'quota exceeded while provider returned raw body preview {"secret":"test-room-provider-key"}',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            engineMode: 'unavailable',
+            aishaEngineConnected: false,
+            confidence: 0,
+            fallbackReason: 'provider-quota'
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-stream-fallback-test-session',
+            mode: 'social_hierarchy_lab',
+            userText: 'Keep the room moving even if Pack 1 falls back.'
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const runtimeStatusEvents = events.filter(item => item.event === 'runtime_status');
+        assert.ok(runtimeStatusEvents.length >= 2);
+        assert.equal(runtimeStatusEvents[0].data.runtimePhase, 'preflight');
+        assert.equal(runtimeStatusEvents[runtimeStatusEvents.length - 1].data.runtimePhase, 'final');
+
+        const final = events.find(item => item.event === 'final').data;
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.runtimePhase, 'final');
+        assert.equal(final.fallbackCategory, 'quota-exceeded');
+        assert.equal(final.diagnostics.fallbackUsed, true);
+        assert.equal(final.diagnostics.fallbackCategory, 'quota-exceeded');
+        assert.equal(final.diagnostics.traceStatus, 'failed');
+        assert.equal(final.diagnostics.persistenceConnected, true);
+        assert.equal(runtimeStatusEvents[runtimeStatusEvents.length - 1].data.acceptedByPack1, false);
+        assert.equal(runtimeStatusEvents[runtimeStatusEvents.length - 1].data.fallbackCategory, 'quota-exceeded');
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|raw body preview|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

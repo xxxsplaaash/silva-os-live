@@ -1636,6 +1636,12 @@ var K_CONFIDENCE_THRESHOLD = 0.45;
 function redactProviderDiagnostics(value) {
   return String(value || "").replace(/AIza[0-9A-Za-z_-]+/g, "[redacted-key]").replace(/api_key:[^'"\s,}]+/gi, "api_key:[redacted-key]").replace(/\b[A-Za-z0-9_-]{32,}\b/g, "[redacted-token]");
 }
+function providerDebugEnabled() {
+  return ["true", "1", "yes", "on"].includes(String(process.env.AISHA_DEBUG || "").trim().toLowerCase()) || ["true", "1", "yes", "on"].includes(String(process.env.T24_DEBUG || "").trim().toLowerCase());
+}
+function logProviderDebug(message) {
+  if (providerDebugEnabled()) console.error(message);
+}
 function applyKPositionShaping(kPositionBiases, block, intentDecision) {
   const adjustedDirectives = [...block.directives];
   let adjustedIntent = intentDecision.intent;
@@ -1890,7 +1896,7 @@ var GeminiGeneratorAdapter = class {
             { signal: controller.signal }
           );
           const raw = extractProviderText(payload);
-          console.error(`[T24_DEBUG] Vertex Gemini OK model=${modelName} location=${location} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
+          logProviderDebug(`[T24_DEBUG] Vertex Gemini OK model=${modelName} location=${location} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
           if (!raw) {
             throw new Error("generation_empty_response");
           }
@@ -1909,7 +1915,7 @@ var GeminiGeneratorAdapter = class {
         } catch (error) {
           lastError = error;
           const message = redactProviderDiagnostics(error instanceof Error ? error.message : String(error || ""));
-          console.error(`[T24_DEBUG] Vertex Gemini FAILED model=${modelName} location=${location} error=${message.slice(0, 500)}`);
+          logProviderDebug(`[T24_DEBUG] Vertex Gemini FAILED model=${modelName} location=${location} error=${message.slice(0, 500)}`);
         } finally {
           clearTimeout(timeout);
         }
@@ -1929,7 +1935,7 @@ var GeminiGeneratorAdapter = class {
       throw new Error("generation_config_error:missing_gemini_or_vertex_credentials");
     }
     const biasCount = input.kPositionBiases?.length ?? 0;
-    console.error(`[T24_DEBUG] generate() called model=${this.config.model} biasCount=${biasCount} sessionId=${input.sessionId}`);
+    logProviderDebug(`[T24_DEBUG] generate() called model=${this.config.model} biasCount=${biasCount} sessionId=${input.sessionId}`);
     if (input.snapshot.expressiveEnvelope.tension > 0.4) {
       const text = input.turn.rawText.toLowerCase();
       const isDirectDemand = /\b(just fix it|exact working string|exact command)\b/.test(text);
@@ -2105,14 +2111,14 @@ Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, 
         const payload = await response.json();
         if (!response.ok) {
           const rawBody = redactProviderDiagnostics(JSON.stringify(payload)).slice(0, 800);
-          console.error(`[T24_DEBUG] Gemini API FAILED status=${response.status} model=${this.config.model} body=${rawBody}`);
+          logProviderDebug(`[T24_DEBUG] Gemini API FAILED status=${response.status} model=${this.config.model} body=${rawBody}`);
           const message = payload?.error?.message || `gemini_http_error:${response.status}`;
           throw new Error(message);
         }
         const raw = extractRawText(payload);
-        console.error(`[T24_DEBUG] Gemini API OK model=${this.config.model} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
+        logProviderDebug(`[T24_DEBUG] Gemini API OK model=${this.config.model} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
         if (!raw) {
-          console.error(`[T24_DEBUG] Gemini returned empty raw. Full payload: ${JSON.stringify(payload).slice(0, 800)}`);
+          logProviderDebug(`[T24_DEBUG] Gemini returned empty raw. Full payload: ${JSON.stringify(payload).slice(0, 800)}`);
           throw new Error("generation_empty_response");
         }
         return {
@@ -2134,7 +2140,7 @@ Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, 
           throw apiFailure;
         }
         const message = apiFailure instanceof Error ? apiFailure.message : String(apiFailure || "");
-        console.error(`[T24_DEBUG] Gemini API recoverable failure; trying Vertex fallback model=${this.config.model} error=${redactProviderDiagnostics(message).slice(0, 500)}`);
+        logProviderDebug(`[T24_DEBUG] Gemini API recoverable failure; trying Vertex fallback model=${this.config.model} error=${redactProviderDiagnostics(message).slice(0, 500)}`);
       } finally {
         clearTimeout(timeout);
       }

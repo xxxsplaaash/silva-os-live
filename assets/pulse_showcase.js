@@ -35,6 +35,7 @@
     responseMode: 'single',
     tensionScore: 18,
     socialSignals: defaultSocialSignals(),
+    turnRuntime: defaultTurnRuntime(),
     priorSpeaker: '',
     status: null,
     busy: false,
@@ -130,6 +131,14 @@
     };
   }
 
+  function defaultTurnRuntime() {
+    return {
+      acceptedByPack1: false,
+      fallbackCategory: '',
+      runtimePhase: 'preflight'
+    };
+  }
+
   function makeSessionId() {
     return 'pulse-showcase-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   }
@@ -158,6 +167,7 @@
         responseMode: state.responseMode,
         tensionScore: state.tensionScore,
         socialSignals: state.socialSignals,
+        turnRuntime: state.turnRuntime,
         priorSpeaker: state.priorSpeaker
       }));
     } catch (err) {}
@@ -176,6 +186,7 @@
       if (saved.responseMode) state.responseMode = compact(saved.responseMode, 40) || state.responseMode;
       if (Number.isFinite(Number(saved.tensionScore))) state.tensionScore = Math.max(0, Math.min(100, Number(saved.tensionScore)));
       if (saved.socialSignals && typeof saved.socialSignals === 'object') updateSocialSignals(saved.socialSignals);
+      if (saved.turnRuntime && typeof saved.turnRuntime === 'object') updateTurnRuntime(saved.turnRuntime);
       if (saved.priorSpeaker) state.priorSpeaker = safeSpeakerId(saved.priorSpeaker);
     } catch (err) {}
   }
@@ -328,6 +339,21 @@
     }).filter(function (item) { return item.text; });
   }
 
+  function normalizeRuntimePhase(value) {
+    var phase = safeToken(value, 'preflight');
+    return phase === 'final' ? 'final' : 'preflight';
+  }
+
+  function updateTurnRuntime(source) {
+    var data = source && typeof source === 'object' ? source : {};
+    var category = compact(data.fallbackCategory || (data.diagnostics && data.diagnostics.fallbackCategory) || '', 80);
+    state.turnRuntime = {
+      acceptedByPack1: data.acceptedByPack1 === true,
+      fallbackCategory: category,
+      runtimePhase: normalizeRuntimePhase(data.runtimePhase)
+    };
+  }
+
   function setMode(mode) {
     state.mode = MODES[mode] ? mode : 'social_hierarchy_lab';
     document.querySelector('.pulse-shell').dataset.mode = state.mode;
@@ -346,8 +372,15 @@
     el.runtimeLabel.textContent = connected ? 'Pack 1 connected' : 'Local fallback';
     el.engineValue.textContent = status.activeEngine || '--';
     el.persistenceValue.textContent = status.persistence
-      ? (status.persistence.mode + (status.persistence.connected ? ' connected' : ' pending'))
+      ? (status.persistence.mode + ' · ' + (status.persistence.connected ? 'Persistence connected' : 'pending'))
       : '--';
+    var turn = state.turnRuntime || defaultTurnRuntime();
+    var turnClass = turn.acceptedByPack1 ? 'accepted' : (turn.fallbackCategory ? 'fallback' : 'waiting');
+    var turnText = turn.acceptedByPack1
+      ? 'Pack 1 accepted'
+      : (turn.fallbackCategory ? ('Local fallback carried turn: ' + turn.fallbackCategory) : 'waiting');
+    el.turnStateValue.className = 'turn-state-value ' + turnClass;
+    el.turnStateValue.textContent = turnText;
     el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
     var stats = continuityStats();
     el.continuityValue.textContent = stats.total
@@ -547,8 +580,12 @@
       persistence: {
         mode: state.status && state.status.persistence ? state.status.persistence.mode : 'postgres',
         connected: !!(payload.diagnostics && payload.diagnostics.persistenceConnected)
-      }
+      },
+      acceptedByPack1: payload.acceptedByPack1 === true,
+      fallbackCategory: compact(payload.fallbackCategory || (payload.diagnostics && payload.diagnostics.fallbackCategory) || '', 80),
+      runtimePhase: normalizeRuntimePhase(payload.runtimePhase)
     };
+    updateTurnRuntime(payload);
     state.roomMood = compact(payload.roomMood || 'focused', 40) || 'focused';
     state.responseMode = compact(payload.responseMode || 'single', 40) || 'single';
     el.roomMood.textContent = 'Mood: ' + state.roomMood;
@@ -576,6 +613,7 @@
     }
     if (event === 'runtime_status') {
       state.status = data || state.status;
+      updateTurnRuntime(data || {});
       renderStatus();
       return;
     }
@@ -686,6 +724,7 @@
     state.responseMode = 'single';
     state.tensionScore = 18;
     state.socialSignals = defaultSocialSignals();
+    state.turnRuntime = defaultTurnRuntime();
     state.priorSpeaker = '';
     state.forceScroll = true;
     try {
@@ -727,6 +766,7 @@
     el.processingStatus = $('processing-status');
     el.engineValue = $('engine-value');
     el.persistenceValue = $('persistence-value');
+    el.turnStateValue = $('turn-state-value');
     el.roomSignalValue = $('room-signal-value');
     el.continuityValue = $('continuity-value');
     el.sessionValue = $('session-value');

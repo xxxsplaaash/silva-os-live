@@ -917,11 +917,15 @@ function sanitizeShowcaseRoomState(value = {}, mode = 'social_hierarchy_lab') {
 
 function publicPulseShowcaseStatus(status = publicAishaRuntimeStatus({})) {
   const connected = status.aishaEngineConnected === true;
+  const rawEngineMode = safeRuntimeStatusText(status.aishaEngineMode || '');
+  const aishaEngineMode = connected && (!rawEngineMode || rawEngineMode === 'mock')
+    ? 'production'
+    : (rawEngineMode || (connected ? 'production' : 'unavailable'));
   return {
     ok: true,
     activeEngine: connected ? 'aisha-runtime-pack1' : 'local-room-intelligence',
     aishaEngineConnected: connected,
-    aishaEngineMode: safeRuntimeStatusText(status.aishaEngineMode || (connected ? 'production' : 'unavailable')),
+    aishaEngineMode,
     persistence: {
       mode: String(status.aishaPersistenceMode || defaultAishaPersistenceMode()).trim().toLowerCase() === 'postgres' ? 'postgres' : 'memory',
       connected: status.aishaPersistenceConnected === true
@@ -929,6 +933,66 @@ function publicPulseShowcaseStatus(status = publicAishaRuntimeStatus({})) {
     modes: [...PULSE_SHOWCASE_MODES],
     maxUserTextLength: PULSE_SHOWCASE_MAX_USER_TEXT
   };
+}
+
+function normalizePulseShowcaseFallbackCategory(value = '') {
+  return safeRuntimeStatusText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9._:-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+}
+
+function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({})) {
+  return {
+    ...publicPulseShowcaseStatus(status),
+    acceptedByPack1: false,
+    fallbackCategory: '',
+    runtimePhase: 'preflight'
+  };
+}
+
+function publicPulseShowcaseFinalStatus(payload = {}) {
+  const connected = payload.aishaEngineConnected === true;
+  return {
+    ok: true,
+    activeEngine: safeRuntimeStatusText(payload.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')) || 'local-room-intelligence',
+    aishaEngineConnected: connected,
+    aishaEngineMode: connected ? 'production' : 'unavailable',
+    persistence: {
+      mode: defaultAishaPersistenceMode(),
+      connected: payload.diagnostics?.persistenceConnected === true
+    },
+    modes: [...PULSE_SHOWCASE_MODES],
+    maxUserTextLength: PULSE_SHOWCASE_MAX_USER_TEXT,
+    acceptedByPack1: payload.acceptedByPack1 === true,
+    fallbackCategory: normalizePulseShowcaseFallbackCategory(payload.fallbackCategory || payload.diagnostics?.fallbackCategory || ''),
+    runtimePhase: 'final'
+  };
+}
+
+function recordPulseShowcaseRuntimeStatusFromTurn({ payload = {}, debug = {}, activeEngine = '', aishaEngineConnected = false, diagnostics = {} } = {}) {
+  const rawEngineMode = safeRuntimeStatusText(debug.aishaEngineMode || '');
+  const engineMode = aishaEngineConnected && (!rawEngineMode || rawEngineMode === 'mock')
+    ? 'production'
+    : (rawEngineMode || (aishaEngineConnected ? 'production' : 'unavailable'));
+  updateLastAishaRuntimeStatus({
+    aishaAttempted: debug.aishaAttempted === true,
+    aishaEngineConnected,
+    aishaEngineMode: engineMode,
+    activeEngine: activeEngine || (aishaEngineConnected ? 'aisha-runtime-pack1' : 'local-room-intelligence'),
+    fallbackReason: diagnostics.fallbackCategory || '',
+    aishaTraceStatus: diagnostics.traceStatus || debug.aishaTraceStatus || '',
+    aishaTraceFailureReason: debug.aishaTraceFailureReason || '',
+    aishaPersistenceMode: debug.aishaPersistenceMode,
+    aishaPersistenceBackend: debug.aishaPersistenceBackend,
+    aishaPersistenceConnected: diagnostics.persistenceConnected,
+    aishaPersistenceFailureReason: debug.aishaPersistenceFailureReason,
+    runtimeCredentialProvided: debug.runtimeCredentialProvided === true,
+    runtimeCredentialLength: Number(debug.runtimeCredentialLength || 0) || 0,
+    runtimeCredentialSource: debug.runtimeCredentialSource || ''
+  });
 }
 
 function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
@@ -1046,13 +1110,24 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
   const silentReactions = sanitizeShowcaseSilentReactions(payload.silentReactions || []);
   const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates);
-  const diagnostics = {
-    fallbackUsed: payload.validation?.fallbackUsed === true || payload.activeEngine !== 'aisha-runtime-pack1',
-    traceStatus: safeRuntimeStatusText(debug.aishaTraceStatus || ''),
-    persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true
-  };
-  const activeEngine = payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine;
+  const activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
   const aishaEngineConnected = payload.aishaConnected === true;
+  const traceStatus = safeRuntimeStatusText(debug.aishaTraceStatus || '');
+  const fallbackUsed = payload.validation?.fallbackUsed === true || activeEngine !== 'aisha-runtime-pack1';
+  const fallbackCategory = fallbackUsed
+    ? normalizePulseShowcaseFallbackCategory(debug.failureCategory || payload.validation?.failureCategory || payload.validation?.source || 'local-fallback')
+    : '';
+  const diagnostics = {
+    fallbackUsed,
+    traceStatus,
+    persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true,
+    fallbackCategory
+  };
+  const acceptedByPack1 = activeEngine === 'aisha-runtime-pack1'
+    && aishaEngineConnected === true
+    && fallbackUsed !== true
+    && traceStatus !== 'failed';
+  recordPulseShowcaseRuntimeStatusFromTurn({ payload, debug, activeEngine, aishaEngineConnected, diagnostics });
   const socialSignals = projectShowcaseSocialSignals({
     mode,
     roomMood,
@@ -1078,6 +1153,9 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       silentReactions,
       continuityLedger,
       socialSignals,
+      acceptedByPack1,
+      fallbackCategory,
+      runtimePhase: 'final',
       diagnostics
     }
   };
@@ -2461,7 +2539,7 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
       mode: parsed.mode,
       acceptedAt: new Date().toISOString()
     });
-    writePulseShowcaseSse(res, 'runtime_status', publicPulseShowcaseStatus(publicAishaRuntimeStatus({})));
+    writePulseShowcaseSse(res, 'runtime_status', publicPulseShowcasePreflightStatus(publicAishaRuntimeStatus({})));
     writePulseShowcaseSse(res, 'processing', {
       stage: 'social-director',
       visibleState: 'Room is processing the turn.'
@@ -2479,6 +2557,7 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
 
     const result = await buildPulseShowcaseTurnPayload(parsed);
     const payload = result.payload || {};
+    writePulseShowcaseSse(res, 'runtime_status', publicPulseShowcaseFinalStatus(payload));
     writePulseShowcaseSse(res, 'social_signals', payload.socialSignals || {});
     (payload.messageEvents || []).forEach(item => writePulseShowcaseSse(res, 'message', item));
     (payload.silentReactions || []).forEach(item => writePulseShowcaseSse(res, 'silent_reaction', item));
