@@ -65,6 +65,7 @@ const {
   getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
 const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
+const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 const { createAishaStudioPulseRequest } = require('../lib/aisha/aishaTypes');
 const {
   inferWorkflowIntent,
@@ -885,6 +886,23 @@ function sanitizeShowcaseRecentTurns(items = []) {
     .slice(-8);
 }
 
+function sanitizeShowcaseIncomingSocialSignals(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    hierarchy: (Array.isArray(source.hierarchy) ? source.hierarchy : [])
+      .map(item => {
+        const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+        if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId)) return null;
+        return {
+          speakerId,
+          status: Math.max(0, Math.min(100, Math.round(Number(item?.status || 0) || 0)))
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 5)
+  };
+}
+
 function sanitizeShowcaseRoomState(value = {}, mode = 'social_hierarchy_lab') {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
@@ -892,6 +910,7 @@ function sanitizeShowcaseRoomState(value = {}, mode = 'social_hierarchy_lab') {
     roomMood: safeShowcaseText(source.roomMood || source.currentMood || '', 40),
     responseMode: safeShowcaseText(source.responseMode || '', 40),
     priorSpeaker: safeShowcaseText(source.priorSpeaker || '', 40),
+    socialSignals: sanitizeShowcaseIncomingSocialSignals(source.socialSignals || {}),
     showcaseMode: mode
   };
 }
@@ -979,6 +998,94 @@ function sanitizeShowcaseSilentReactions(items = []) {
     })
     .filter(Boolean)
     .slice(0, 5);
+}
+
+function parsePulseShowcaseTurnRequest(body = {}) {
+  const userText = safeShowcaseText(body?.userText || body?.message || body?.question || '', PULSE_SHOWCASE_MAX_USER_TEXT + 1);
+  if (!userText) {
+    return { error: { statusCode: 400, payload: { ok: false, error: 'userText is required' } } };
+  }
+  if (userText.length > PULSE_SHOWCASE_MAX_USER_TEXT) {
+    return { error: { statusCode: 413, payload: { ok: false, error: 'userText must be 500 characters or less' } } };
+  }
+
+  const mode = normalizePulseShowcaseMode(body?.mode);
+  return {
+    userText,
+    mode,
+    sessionId: pulseShowcaseSessionId(body?.sessionId),
+    recentTurns: sanitizeShowcaseRecentTurns(body?.recentTurns || body?.history || []),
+    roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode)
+  };
+}
+
+async function buildPulseShowcaseTurnPayload(parsed = {}) {
+  const { userText, mode, sessionId, recentTurns, roomState } = parsed;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: userText,
+      threadId: sessionId,
+      history: recentTurns,
+      recentTurns,
+      roomState,
+      currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
+      openFloor: mode === 'social_hierarchy_lab',
+      uiState: { surface: 'pulse-showcase', visibleMode: mode }
+    },
+    callAishaEngine,
+    runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
+    includeMemorySummary: true
+  });
+  const payload = result.payload || {};
+  const status = publicAishaRuntimeStatus({});
+  const memorySummary = payload.memorySummary || {};
+  const stateUpdates = payload.stateUpdates || {};
+  const debug = payload.debugSummary || {};
+  const responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
+  const roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
+  const messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
+  const silentReactions = sanitizeShowcaseSilentReactions(payload.silentReactions || []);
+  const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates);
+  const diagnostics = {
+    fallbackUsed: payload.validation?.fallbackUsed === true || payload.activeEngine !== 'aisha-runtime-pack1',
+    traceStatus: safeRuntimeStatusText(debug.aishaTraceStatus || ''),
+    persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true
+  };
+  const activeEngine = payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine;
+  const aishaEngineConnected = payload.aishaConnected === true;
+  const socialSignals = projectShowcaseSocialSignals({
+    mode,
+    roomMood,
+    responseMode,
+    messageEvents,
+    silentReactions,
+    continuityLedger,
+    roomState,
+    diagnostics
+  });
+
+  return {
+    statusCode: result.statusCode || 200,
+    payload: {
+      ok: true,
+      sessionId,
+      mode,
+      activeEngine,
+      aishaEngineConnected,
+      roomMood,
+      responseMode,
+      messageEvents,
+      silentReactions,
+      continuityLedger,
+      socialSignals,
+      diagnostics
+    }
+  };
+}
+
+function writePulseShowcaseSse(res, event, data = {}) {
+  res.write(`event: ${event}\n`);
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
 }
 
 async function hydrateAishaRuntimeStatusIfNeeded({ force = false } = {}) {
@@ -2323,64 +2430,68 @@ router.get('/pulse-showcase/status', async (req, res) => {
 });
 
 router.post('/pulse-showcase/turn', async (req, res) => {
-  const userText = safeShowcaseText(req.body?.userText || req.body?.message || req.body?.question || '', PULSE_SHOWCASE_MAX_USER_TEXT + 1);
-  if (!userText) return res.status(400).json({ ok: false, error: 'userText is required' });
-  if (userText.length > PULSE_SHOWCASE_MAX_USER_TEXT) {
-    return res.status(413).json({ ok: false, error: 'userText must be 500 characters or less' });
-  }
-
-  const mode = normalizePulseShowcaseMode(req.body?.mode);
-  const sessionId = pulseShowcaseSessionId(req.body?.sessionId);
-  const recentTurns = sanitizeShowcaseRecentTurns(req.body?.recentTurns || req.body?.history || []);
-  const roomState = sanitizeShowcaseRoomState(req.body?.roomState || {}, mode);
+  const parsed = parsePulseShowcaseTurnRequest(req.body || {});
+  if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
 
   try {
-    const result = await runSocialDirectorTurn({
-      body: {
-        question: userText,
-        threadId: sessionId,
-        history: recentTurns,
-        recentTurns,
-        roomState,
-        currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
-        openFloor: mode === 'social_hierarchy_lab',
-        uiState: { surface: 'pulse-showcase', visibleMode: mode }
-      },
-      callAishaEngine,
-      runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
-      includeMemorySummary: true
-    });
-    const payload = result.payload || {};
-    const status = publicAishaRuntimeStatus({});
-    const memorySummary = payload.memorySummary || {};
-    const stateUpdates = payload.stateUpdates || {};
-    const debug = payload.debugSummary || {};
-    const responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
-    const roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
-
-    res.status(result.statusCode || 200).json({
-      ok: true,
-      sessionId,
-      mode,
-      activeEngine: payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine,
-      aishaEngineConnected: payload.aishaConnected === true,
-      roomMood,
-      responseMode,
-      messageEvents: sanitizeShowcaseMessages(payload.messageEvents || []),
-      silentReactions: sanitizeShowcaseSilentReactions(payload.silentReactions || []),
-      continuityLedger: pulseShowcaseLedgerFrom(memorySummary, stateUpdates),
-      diagnostics: {
-        fallbackUsed: payload.validation?.fallbackUsed === true || payload.activeEngine !== 'aisha-runtime-pack1',
-        traceStatus: safeRuntimeStatusText(debug.aishaTraceStatus || ''),
-        persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true
-      }
-    });
+    const result = await buildPulseShowcaseTurnPayload(parsed);
+    res.status(result.statusCode).json(result.payload);
   } catch (err) {
     res.status(500).json({
       ok: false,
       error: 'pulse-showcase-turn-failed',
       message: safeRuntimeStatusText(err?.message || err || '')
     });
+  }
+});
+
+router.post('/pulse-showcase/turn-stream', async (req, res) => {
+  const parsed = parsePulseShowcaseTurnRequest(req.body || {});
+  if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  try {
+    writePulseShowcaseSse(res, 'turn_start', {
+      sessionId: parsed.sessionId,
+      mode: parsed.mode,
+      acceptedAt: new Date().toISOString()
+    });
+    writePulseShowcaseSse(res, 'runtime_status', publicPulseShowcaseStatus(publicAishaRuntimeStatus({})));
+    writePulseShowcaseSse(res, 'processing', {
+      stage: 'social-director',
+      visibleState: 'Room is processing the turn.'
+    });
+    writePulseShowcaseSse(res, 'social_signals', projectShowcaseSocialSignals({
+      mode: parsed.mode,
+      roomMood: parsed.roomState.roomMood || (parsed.mode === 'continuity_breaker' ? 'sharp' : 'focused'),
+      responseMode: parsed.roomState.responseMode || 'single',
+      messageEvents: [],
+      silentReactions: [],
+      continuityLedger: [],
+      roomState: parsed.roomState,
+      diagnostics: {}
+    }));
+
+    const result = await buildPulseShowcaseTurnPayload(parsed);
+    const payload = result.payload || {};
+    writePulseShowcaseSse(res, 'social_signals', payload.socialSignals || {});
+    (payload.messageEvents || []).forEach(item => writePulseShowcaseSse(res, 'message', item));
+    (payload.silentReactions || []).forEach(item => writePulseShowcaseSse(res, 'silent_reaction', item));
+    writePulseShowcaseSse(res, 'ledger', { continuityLedger: payload.continuityLedger || [] });
+    writePulseShowcaseSse(res, 'final', payload);
+    res.end();
+  } catch (err) {
+    writePulseShowcaseSse(res, 'error', {
+      ok: false,
+      error: 'pulse-showcase-turn-stream-failed',
+      message: safeRuntimeStatusText(err?.message || err || '')
+    });
+    res.end();
   }
 });
 

@@ -79,6 +79,22 @@ function visibleText(events = []) {
   return (Array.isArray(events) ? events : []).map(event => String(event.text || event.content || '')).join('\n');
 }
 
+function parseSseEvents(value = '') {
+  return String(value || '')
+    .split(/\n\n+/)
+    .map(block => {
+      const lines = block.split(/\r?\n/);
+      const event = (lines.find(line => line.startsWith('event:')) || '').slice(6).trim();
+      const data = lines
+        .filter(line => line.startsWith('data:'))
+        .map(line => line.slice(5).trim())
+        .join('\n');
+      if (!event || !data) return null;
+      return { event, data: JSON.parse(data) };
+    })
+    .filter(Boolean);
+}
+
 async function withMockProvider(output, fn) {
   const originalFetch = global.fetch;
   const outputFn = typeof output === 'function' ? output : () => output;
@@ -563,7 +579,123 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         assert.ok(data.continuityLedger.some(item => item.status === 'active' && /obsidian dashboards/.test(item.text)));
         assert.ok(data.continuityLedger.some(item => item.status === 'superseded' && /beige dashboards/.test(item.text)));
         assert.ok(data.continuityLedger.every(item => ['pack1-memory', 'showcase-session'].includes(item.source)));
+        assert.equal(typeof data.socialSignals.tension, 'number');
+        assert.equal(typeof data.socialSignals.continuityPressure, 'number');
+        assert.ok(data.socialSignals.tension >= 0 && data.socialSignals.tension <= 100);
+        assert.ok(data.socialSignals.continuityPressure >= 0 && data.socialSignals.continuityPressure <= 100);
+        assert.ok(data.socialSignals.hierarchy.some(item => item.speakerId === 'aisha' && item.rank >= 1));
+        assert.ok(data.socialSignals.alliances.some(item => item.reason === 'continuity-anchor' || item.reason === 'agreement'));
         assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase turn-stream emits safe SSE events and final payload', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'A contradiction hits the ledger.',
+                roomMood: 'sharp',
+                responseMode: 'aisha_takeover',
+                speakers: [
+                  { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'That supersedes the dashboard preference already on record.' }
+                ],
+                silentReactions: [
+                  { speakerId: 'grok', visibleState: 'Tracking' },
+                  { speakerId: 'claudia', visibleState: 'Tracking' }
+                ],
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [
+                {
+                  noteId: 'note-new',
+                  canonicalText: 'User dashboard preference: pale blue with no red accents',
+                  status: 'active',
+                  supersededPriorText: 'User dashboard preference: obsidian dashboards with one red accent'
+                }
+              ],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.91
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-stream-test-session',
+            mode: 'continuity_breaker',
+            userText: 'Actually my dashboard preference is pale blue with no red accents.',
+            roomState: {
+              roomMood: 'focused',
+              responseMode: 'single',
+              priorSpeaker: 'leah',
+              socialSignals: {
+                hierarchy: [
+                  { speakerId: 'leah', status: 71 },
+                  { speakerId: 'aisha', status: 70 },
+                  { speakerId: 'grok', status: 62 }
+                ]
+              }
+            }
+          })
+        });
+        assert.equal(response.status, 200);
+        assert.match(response.headers.get('content-type') || '', /text\/event-stream/);
+        const events = parseSseEvents(await response.text());
+        const eventNames = events.map(item => item.event);
+        assert.ok(eventNames.indexOf('turn_start') >= 0);
+        assert.ok(eventNames.indexOf('runtime_status') >= 0);
+        assert.ok(eventNames.indexOf('processing') >= 0);
+        assert.ok(eventNames.indexOf('social_signals') >= 0);
+        assert.ok(eventNames.indexOf('message') >= 0);
+        assert.ok(eventNames.indexOf('silent_reaction') >= 0);
+        assert.ok(eventNames.indexOf('ledger') >= 0);
+        assert.equal(eventNames[eventNames.length - 1], 'final');
+
+        const final = events.find(item => item.event === 'final').data;
+        assert.equal(final.ok, true);
+        assert.equal(final.sessionId, 'showcase-stream-test-session');
+        assert.equal(final.messageEvents[0].speakerId, 'aisha');
+        assert.ok(final.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
+        assert.ok(final.continuityLedger.some(item => item.status === 'superseded' && /obsidian dashboards/.test(item.text)));
+        assert.ok(final.socialSignals.tension > 0 && final.socialSignals.tension <= 100);
+        assert.ok(final.socialSignals.continuityPressure > 0 && final.socialSignals.continuityPressure <= 100);
+        assert.ok(final.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
+        assert.ok(final.socialSignals.hierarchy.every(item => item.status >= 0 && item.status <= 100));
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

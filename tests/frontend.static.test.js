@@ -1682,11 +1682,18 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(html, /assets\/pulse_showcase\.js/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/status/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn/);
+  assert.match(script, /\/api\/studio\/pulse-showcase\/turn-stream/);
+  assert.match(script, /function parseSseBlock/);
+  assert.match(script, /async function apiStream/);
+  assert.match(script, /Stream unavailable\. Using stable turn path\./);
   assert.match(script, /sessionStorage/);
   assert.match(script, /PULSE_HEIGHT/);
   assert.match(script, /trustedParentOrigin/);
   assert.match(script, /function updateLedgerFromPayload/);
   assert.match(script, /payload\.continuityLedger/);
+  assert.match(script, /socialSignals/);
+  assert.match(script, /function updateSocialSignals/);
+  assert.match(script, /function handleStreamEvent/);
   assert.match(script, /isNearBottom/);
   assert.match(script, /ledger-source-/);
   assert.match(script, /ledger-status-/);
@@ -1695,6 +1702,9 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /presence-state-/);
   assert.match(script, /processingStatus/);
   assert.match(script, /tensionScore/);
+  assert.match(html, /hierarchy-list/);
+  assert.match(html, /dynamics-list/);
+  assert.match(html, /continuity-fill/);
   assert.match(html, /processing-status/);
   assert.match(html, /room-signal-value/);
   assert.match(html, /continuity-value/);
@@ -1705,6 +1715,9 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.ledger-source-pack1-memory/);
   assert.match(css, /\.signal-meter/);
   assert.match(css, /\.processing-status/);
+  assert.match(css, /\.hierarchy-list/);
+  assert.match(css, /\.dynamics-item/);
+  assert.match(css, /\.continuity-meter/);
   assert.match(script, /silvastudios\.co\.za/);
   assert.doesNotMatch(script, /EventSource|WebSocket/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
