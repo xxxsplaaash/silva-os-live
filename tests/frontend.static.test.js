@@ -39,6 +39,11 @@ const GENERATION_STATUS_STORE = path.join(ROOT, 'lib', 'imageGeneration', 'gener
 const STUDIO_PULSE = path.join(ROOT, 'studio_pulse_v400.js');
 const STUDIO_ROUTE = path.join(ROOT, 'routes', 'studio.js');
 const STUDIO_ROOM_INTELLIGENCE = path.join(ROOT, 'lib', 'studio', 'roomIntelligence');
+const PULSE_SHOWCASE_HTML = path.join(ROOT, 'pulse-showcase.html');
+const PULSE_SHOWCASE_JS = path.join(ROOT, 'assets', 'pulse_showcase.js');
+const PULSE_SHOWCASE_CSS = path.join(ROOT, 'assets', 'pulse_showcase.css');
+const BUILD_VERCEL_STATIC = path.join(ROOT, 'scripts', 'build-vercel-static.mjs');
+const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
 
 function readIndex() {
   return fs.readFileSync(INDEX, 'utf8');
@@ -1662,6 +1667,29 @@ test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS la
   assert.match(studio, /\/api\/studio\/pulse\/aisha-status/);
   assert.match(studio, /applyAishaRuntimeStatusPayload/);
   assert.doesNotMatch(route, /A\.I\.S\.H\.A\s+global/i);
+});
+
+test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
+  const html = fs.readFileSync(PULSE_SHOWCASE_HTML, 'utf8');
+  const script = fs.readFileSync(PULSE_SHOWCASE_JS, 'utf8');
+  const css = fs.readFileSync(PULSE_SHOWCASE_CSS, 'utf8');
+  const build = fs.readFileSync(BUILD_VERCEL_STATIC, 'utf8');
+  const vercel = fs.readFileSync(VERCEL_CONFIG, 'utf8');
+  const combined = `${html}\n${script}\n${css}`;
+
+  assert.match(html, /Studio Pulse Showcase/);
+  assert.match(html, /assets\/pulse_showcase\.css/);
+  assert.match(html, /assets\/pulse_showcase\.js/);
+  assert.match(script, /\/api\/studio\/pulse-showcase\/status/);
+  assert.match(script, /\/api\/studio\/pulse-showcase\/turn/);
+  assert.match(script, /sessionStorage/);
+  assert.match(script, /PULSE_HEIGHT/);
+  assert.match(script, /trustedParentOrigin/);
+  assert.match(script, /silvastudios\.co\.za/);
+  assert.doesNotMatch(script, /EventSource|WebSocket/);
+  assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
+  assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
+  assert.match(vercel, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);
 });
 
 test('Prompt Generator V3 rescue pass protects identity trust and laptop layout', () => {

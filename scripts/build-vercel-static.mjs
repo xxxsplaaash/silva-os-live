@@ -26,24 +26,25 @@ function copyIfExists(relativePath) {
   });
 }
 
-function writeRuntimeIndex() {
-  const source = fs.readFileSync(path.join(repoRoot, 'index.html'), 'utf8');
+function injectApiBase(source) {
   const configScript = [
     '<script>',
     `window.SILVA_API_BASE_URL=${JSON.stringify(apiBase)};`,
     '</script>'
   ].join('');
-  const html = source.replace(
-    '<title>Silva Studios — AI Division OS v3.9.9</title>',
-    ['<title>Silva Studios — AI Division OS v3.9.9</title>', configScript].join('\n')
-  );
-  fs.writeFileSync(path.join(outDir, 'index.html'), html);
+  return source.replace(/<\/title>/i, `</title>\n${configScript}`);
+}
+
+function writeRuntimeHtml(relativePath) {
+  const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  fs.writeFileSync(path.join(outDir, relativePath), injectApiBase(source));
 }
 
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 
-writeRuntimeIndex();
+writeRuntimeHtml('index.html');
+writeRuntimeHtml('pulse-showcase.html');
 copyIfExists('assets');
 copyIfExists('public');
 copyIfExists('studio_pulse_v400.js');

@@ -838,6 +838,185 @@ function resolveSocialDirectorRuntimeOptions(providerConfig = {}) {
   return options;
 }
 
+const PULSE_SHOWCASE_MODES = Object.freeze(['social_hierarchy_lab', 'continuity_breaker']);
+const PULSE_SHOWCASE_MAX_USER_TEXT = 500;
+const PULSE_SHOWCASE_SPEAKERS = Object.freeze(['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+
+function hasVertexRuntimeCredentials() {
+  return !!String(
+    process.env.VERTEX_SERVICE_ACCOUNT_JSON_PATH ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.VERTEX_AUTH_MODE ||
+    ''
+  ).trim();
+}
+
+function normalizePulseShowcaseMode(value = '') {
+  const mode = String(value || '').trim().toLowerCase();
+  return PULSE_SHOWCASE_MODES.includes(mode) ? mode : 'social_hierarchy_lab';
+}
+
+function pulseShowcaseSessionId(value = '') {
+  const clean = String(value || '')
+    .trim()
+    .replace(/[^a-z0-9._:-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 96);
+  if (clean) return clean;
+  return `pulse-showcase-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function safeShowcaseText(value = '', max = 500) {
+  return textValue(value).replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function sanitizeShowcaseRecentTurns(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const speakerId = String(item?.speakerId || item?.speaker || item?.role || '').trim().toLowerCase();
+      return {
+        speakerId: PULSE_SHOWCASE_SPEAKERS.includes(speakerId) ? speakerId : (speakerId === 'user' ? 'user' : ''),
+        role: safeShowcaseText(item?.role || 'message', 40) || 'message',
+        text: safeShowcaseText(item?.text || item?.content || item?.message || '', 360)
+      };
+    })
+    .filter(item => item.text || item.speakerId)
+    .slice(-8);
+}
+
+function sanitizeShowcaseRoomState(value = {}, mode = 'social_hierarchy_lab') {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    roomBeat: safeShowcaseText(source.roomBeat || '', 160),
+    roomMood: safeShowcaseText(source.roomMood || source.currentMood || '', 40),
+    responseMode: safeShowcaseText(source.responseMode || '', 40),
+    priorSpeaker: safeShowcaseText(source.priorSpeaker || '', 40),
+    showcaseMode: mode
+  };
+}
+
+function publicPulseShowcaseStatus(status = publicAishaRuntimeStatus({})) {
+  const connected = status.aishaEngineConnected === true;
+  return {
+    ok: true,
+    activeEngine: connected ? 'aisha-runtime-pack1' : 'local-room-intelligence',
+    aishaEngineConnected: connected,
+    aishaEngineMode: safeRuntimeStatusText(status.aishaEngineMode || (connected ? 'production' : 'unavailable')),
+    persistence: {
+      mode: String(status.aishaPersistenceMode || defaultAishaPersistenceMode()).trim().toLowerCase() === 'postgres' ? 'postgres' : 'memory',
+      connected: status.aishaPersistenceConnected === true
+    },
+    modes: [...PULSE_SHOWCASE_MODES],
+    maxUserTextLength: PULSE_SHOWCASE_MAX_USER_TEXT
+  };
+}
+
+function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
+  const rows = [];
+  const seen = new Set();
+  const add = (item = {}, fallbackStatus = 'active', source = 'pack1-memory') => {
+    const text = safeShowcaseText(item.text || item.canonicalText || item.claimText || item.normalizedValue || '', 240);
+    if (!text) return;
+    const rawStatus = String(item.status || fallbackStatus || '').trim().toLowerCase();
+    const status = ['active', 'superseded', 'disputed'].includes(rawStatus) ? rawStatus : fallbackStatus;
+    const id = safeShowcaseText(item.id || item.noteId || item.claimId || `${source}-${status}-${text}`, 140);
+    const key = `${source}:${status}:${text.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    rows.push({ id, text, status, source });
+  };
+
+  (Array.isArray(memorySummary.activeTruths) ? memorySummary.activeTruths : [])
+    .forEach(item => add(item, 'active', 'pack1-memory'));
+  (Array.isArray(memorySummary.supersededTruths) ? memorySummary.supersededTruths : [])
+    .forEach(item => add(item, 'superseded', 'pack1-memory'));
+  (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
+    .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
+
+  return rows.slice(0, 12);
+}
+
+function sanitizeShowcaseMessages(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+      if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId)) return null;
+      return {
+        speakerId,
+        speakerName: safeShowcaseText(item?.speakerName || speakerId, 80),
+        role: safeShowcaseText(item?.role || 'primary', 40) || 'primary',
+        tone: safeShowcaseText(item?.tone || '', 80),
+        text: safeShowcaseText(item?.text || '', 500),
+        visibleState: safeShowcaseText(item?.visibleState || 'Watching', 80) || 'Watching'
+      };
+    })
+    .filter(item => item && item.text)
+    .slice(0, 5);
+}
+
+function sanitizeShowcaseSilentReactions(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+      if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId)) return null;
+      return {
+        speakerId,
+        visibleState: safeShowcaseText(item?.visibleState || 'Watching', 80) || 'Watching'
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+async function hydrateAishaRuntimeStatusIfNeeded({ force = false } = {}) {
+  let status = publicAishaRuntimeStatus({});
+  const shouldAttempt = status.aishaEngineEnabled
+    && (status.runtimeCredentialProvided || hasVertexRuntimeCredentials())
+    && (force || !status.statusKnown || status.aishaEngineConnected !== true);
+  if (!shouldAttempt) return status;
+
+  const runtimeOptions = resolveAishaRuntimeCredentialOptions({});
+  try {
+    const probeId = pulseShowcaseSessionId(`studio-pulse-aisha-status-${Date.now().toString(36)}`);
+    const response = await callAishaEngine({
+      sessionId: probeId,
+      threadId: probeId,
+      roomId: 'studio-pulse',
+      userId: 'studio-pulse-ui',
+      activeCharacterId: 'vanya',
+      activeSpeakerId: 'vanya',
+      message: 'status check',
+      recentMessages: [],
+      localRoomState: { statusCheck: true, roomMood: 'neutral' },
+      characterStates: { vanya: { presence: 'active' }, aisha: { presence: 'active' } },
+      projectContext: { source: 'studio-pulse-aisha-status' },
+      modality: { channel: 'status' }
+    }, runtimeOptions);
+    const diagnostics = response?.diagnostics || response?.trace?.aishaDiagnostics || {};
+    updateLastAishaRuntimeStatus({
+      aishaAttempted: true,
+      aishaEngineConnected: response?.aishaEngineConnected === true,
+      aishaEngineMode: String(response?.engineMode || 'mock'),
+      activeEngine: response?.aishaEngineConnected === true ? 'aisha-runtime-pack1' : 'local-room-intelligence',
+      fallbackReason: response?.aishaEngineConnected === true ? '' : String(response?.fallbackReason || 'not-connected'),
+      aishaTraceStatus: diagnostics.responseTraceStatus || response?.trace?.status || '',
+      aishaTraceFailureReason: diagnostics.responseTraceFailureReason || response?.trace?.failureReason || response?.trace?.reason || '',
+      aishaPersistenceMode: diagnostics.aishaPersistenceMode,
+      aishaPersistenceBackend: diagnostics.aishaPersistenceBackend,
+      aishaPersistenceConnected: diagnostics.aishaPersistenceConnected,
+      aishaPersistenceFailureReason: diagnostics.aishaPersistenceFailureReason,
+      runtimeCredentialProvided: diagnostics.runtimeCredentialProvided === true || hasVertexRuntimeCredentials(),
+      runtimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
+      runtimeCredentialSource: diagnostics.runtimeCredentialSource || (hasVertexRuntimeCredentials() ? 'Vertex service account' : '')
+    });
+    status = publicAishaRuntimeStatus({});
+  } catch {
+    status = publicAishaRuntimeStatus({});
+  }
+  return status;
+}
+
 function mergeStudioProviderConfig(primary = {}, fallback = {}) {
   const override = primary && typeof primary === 'object' ? primary : {};
   const base = fallback && typeof fallback === 'object' ? fallback : {};
@@ -2122,49 +2301,75 @@ router.post('/pulse/workflows/:id/commit', async (req, res) => {
 });
 
 router.get('/pulse/aisha-status', async (req, res) => {
-  let status = publicAishaRuntimeStatus({});
-  if (!status.statusKnown && status.aishaEngineEnabled && status.runtimeCredentialProvided) {
-    const runtimeOptions = resolveAishaRuntimeCredentialOptions({});
-    if (runtimeOptions.productionGeminiApiKey) {
-      try {
-        const response = await callAishaEngine({
-          sessionId: 'studio-pulse-aisha-status',
-          threadId: 'studio-pulse-aisha-status',
-          roomId: 'studio-pulse',
-          userId: 'studio-pulse-ui',
-          activeCharacterId: 'vanya',
-          activeSpeakerId: 'vanya',
-          message: 'status check',
-          recentMessages: [],
-          localRoomState: { statusCheck: true, roomMood: 'neutral' },
-          characterStates: { vanya: { presence: 'active' }, aisha: { presence: 'active' } },
-          projectContext: { source: 'studio-pulse-aisha-status' },
-          modality: { channel: 'status' }
-        }, runtimeOptions);
-        const diagnostics = response?.diagnostics || response?.trace?.aishaDiagnostics || {};
-        updateLastAishaRuntimeStatus({
-          aishaAttempted: true,
-          aishaEngineConnected: response?.aishaEngineConnected === true,
-          aishaEngineMode: String(response?.engineMode || 'mock'),
-          activeEngine: response?.aishaEngineConnected === true ? 'aisha-runtime-pack1' : 'local-room-intelligence',
-          fallbackReason: response?.aishaEngineConnected === true ? '' : String(response?.fallbackReason || 'not-connected'),
-          aishaTraceStatus: diagnostics.responseTraceStatus || response?.trace?.status || '',
-          aishaTraceFailureReason: diagnostics.responseTraceFailureReason || response?.trace?.failureReason || response?.trace?.reason || '',
-          aishaPersistenceMode: diagnostics.aishaPersistenceMode,
-          aishaPersistenceBackend: diagnostics.aishaPersistenceBackend,
-          aishaPersistenceConnected: diagnostics.aishaPersistenceConnected,
-          aishaPersistenceFailureReason: diagnostics.aishaPersistenceFailureReason,
-          runtimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
-          runtimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
-          runtimeCredentialSource: diagnostics.runtimeCredentialSource || ''
-        });
-        status = publicAishaRuntimeStatus({});
-      } catch {
-        status = publicAishaRuntimeStatus({});
-      }
-    }
-  }
+  const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
   res.json(status);
+});
+
+router.get('/pulse-showcase/status', async (req, res) => {
+  const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
+  res.json(publicPulseShowcaseStatus(status));
+});
+
+router.post('/pulse-showcase/turn', async (req, res) => {
+  const userText = safeShowcaseText(req.body?.userText || req.body?.message || req.body?.question || '', PULSE_SHOWCASE_MAX_USER_TEXT + 1);
+  if (!userText) return res.status(400).json({ ok: false, error: 'userText is required' });
+  if (userText.length > PULSE_SHOWCASE_MAX_USER_TEXT) {
+    return res.status(413).json({ ok: false, error: 'userText must be 500 characters or less' });
+  }
+
+  const mode = normalizePulseShowcaseMode(req.body?.mode);
+  const sessionId = pulseShowcaseSessionId(req.body?.sessionId);
+  const recentTurns = sanitizeShowcaseRecentTurns(req.body?.recentTurns || req.body?.history || []);
+  const roomState = sanitizeShowcaseRoomState(req.body?.roomState || {}, mode);
+
+  try {
+    const result = await runSocialDirectorTurn({
+      body: {
+        question: userText,
+        threadId: sessionId,
+        history: recentTurns,
+        recentTurns,
+        roomState,
+        currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
+        openFloor: mode === 'social_hierarchy_lab',
+        uiState: { surface: 'pulse-showcase', visibleMode: mode }
+      },
+      callAishaEngine,
+      runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
+      includeMemorySummary: true
+    });
+    const payload = result.payload || {};
+    const status = publicAishaRuntimeStatus({});
+    const memorySummary = payload.memorySummary || {};
+    const stateUpdates = payload.stateUpdates || {};
+    const debug = payload.debugSummary || {};
+    const responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
+    const roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
+
+    res.status(result.statusCode || 200).json({
+      ok: true,
+      sessionId,
+      mode,
+      activeEngine: payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine,
+      aishaEngineConnected: payload.aishaConnected === true,
+      roomMood,
+      responseMode,
+      messageEvents: sanitizeShowcaseMessages(payload.messageEvents || []),
+      silentReactions: sanitizeShowcaseSilentReactions(payload.silentReactions || []),
+      continuityLedger: pulseShowcaseLedgerFrom(memorySummary, stateUpdates),
+      diagnostics: {
+        fallbackUsed: payload.validation?.fallbackUsed === true || payload.activeEngine !== 'aisha-runtime-pack1',
+        traceStatus: safeRuntimeStatusText(debug.aishaTraceStatus || ''),
+        persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      error: 'pulse-showcase-turn-failed',
+      message: safeRuntimeStatusText(err?.message || err || '')
+    });
+  }
 });
 
 router.post('/pulse-social', async (req, res) => {

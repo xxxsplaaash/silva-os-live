@@ -417,6 +417,159 @@ test('A.I.S.H.A status endpoint hydrates fresh UI from a safe runtime health che
   });
 });
 
+test('Studio Pulse showcase status reports public Pack 1 and persistence shape', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{ speakerId: 'vanya', content: 'Status is online.' }],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.88
+          })
+        };
+      });
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/status?refresh=1`);
+        assert.equal(response.status, 200);
+        const status = await response.json();
+        assert.deepEqual(status.modes, ['social_hierarchy_lab', 'continuity_breaker']);
+        assert.equal(status.maxUserTextLength, 500);
+        assert.equal(status.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(status.aishaEngineConnected, true);
+        assert.equal(status.aishaEngineMode, 'production');
+        assert.deepEqual(status.persistence, { mode: 'postgres', connected: true });
+        assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase turn validates input, normalizes mode, and maps memory ledger', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            assert.match(request.messageText, /obsidian dashboards/i);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'A preference lands and the room tracks it.',
+                  roomMood: 'focused',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'Logged: obsidian dashboards with one red accent.' },
+                    { speakerId: 'leah', role: 'side', tone: 'dry', text: 'That is taste with a spine. Keep it.' }
+                  ],
+                  silentReactions: [
+                    { speakerId: 'grok', visibleState: 'Tracking' }
+                  ],
+                  stateUpdates: { notes: ['obsidian dashboard preference noted'] }
+                })
+              }],
+              memorySummary: {
+                activeTruths: [
+                  { noteId: 'note-active-1', canonicalText: 'prefers obsidian dashboards with one red accent', status: 'active', confidence: 0.9 }
+                ],
+                supersededTruths: [
+                  { noteId: 'note-old-1', canonicalText: 'preferred beige dashboards', status: 'superseded', confidence: 0.4 }
+                ],
+                memoryCandidates: [],
+                sessionId: request.sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.91
+            };
+          }
+        };
+      });
+      await withStudioServer(async baseUrl => {
+        const missing = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        assert.equal(missing.status, 400);
+
+        const tooLong = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ userText: 'x'.repeat(501) })
+        });
+        assert.equal(tooLong.status, 413);
+
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'showcase-test-session',
+            mode: 'bad-mode',
+            userText: 'I prefer obsidian dashboards with one red accent.',
+            recentTurns: [{ speakerId: 'user', text: 'hello' }]
+          })
+        });
+        assert.equal(response.status, 200);
+        const data = await response.json();
+        assert.equal(data.ok, true);
+        assert.equal(data.sessionId, 'showcase-test-session');
+        assert.equal(data.mode, 'social_hierarchy_lab');
+        assert.equal(data.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(data.aishaEngineConnected, true);
+        assert.equal(data.roomMood, 'focused');
+        assert.equal(data.responseMode, 'small_exchange');
+        assert.equal(data.messageEvents.length, 2);
+        assert.equal(data.messageEvents[0].speakerId, 'aisha');
+        assert.equal(data.silentReactions[0].speakerId, 'grok');
+        assert.equal(data.diagnostics.persistenceConnected, true);
+        assert.equal(data.diagnostics.fallbackUsed, false);
+        assert.ok(data.continuityLedger.some(item => item.status === 'active' && /obsidian dashboards/.test(item.text)));
+        assert.ok(data.continuityLedger.some(item => item.status === 'superseded' && /beige dashboards/.test(item.text)));
+        assert.ok(data.continuityLedger.every(item => ['pack1-memory', 'showcase-session'].includes(item.source)));
+        assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('aisha_generic_hello_rejected_for_room_mode', async () => {
   await withAishaFlag('true', async () => {
     __setAishaRuntimeImporterForTests(async () => ({
