@@ -200,6 +200,18 @@ function findUngroundedClaims(
 ): CriticFinding[] {
   const findings: CriticFinding[] = [];
   const sentences = splitSentences(parsedText);
+  const contradictionGroundingEvidence: Array<{
+    canonicalText?: string;
+    normalizedValue?: string;
+  }> = retrieval.contradictionEvidence.map((e) => {
+    if (e.kind === "note") {
+      return {
+        canonicalText: e.canonicalText,
+        normalizedValue: e.normalizedValue,
+      };
+    }
+    return { canonicalText: e.summary };
+  });
 
   for (const sentence of sentences) {
     const tokens = sentence.split(/\s+/).filter((t) => t.length > 0);
@@ -209,7 +221,7 @@ function findUngroundedClaims(
     if (!isAssertion) continue;
 
     const normSentence = normaliseForGrounding(sentence);
-    if (!isSentenceGrounded(normSentence, retrieval.activeNotes, retrieval.contradictionEvidence)) {
+    if (!isSentenceGrounded(normSentence, retrieval.activeNotes, contradictionGroundingEvidence)) {
       findings.push({
         issueType: "ungrounded_claim",
         affectedNoteId: undefined,

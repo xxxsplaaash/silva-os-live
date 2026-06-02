@@ -118,6 +118,7 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
           if (!validation.valid) continue;
 
           const existing = await this.deps.noteVersioning.listActiveNotes({
+            sessionId: input.sessionId,
             includeGlobal: true,
             includeProvisional: true,
             subjectPersonId: candidate.subjectPersonId,
@@ -136,6 +137,7 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
       }
 
       let activeNotes = await this.deps.noteVersioning.listActiveNotes({
+        sessionId: input.sessionId,
         includeGlobal: true,
         subjectSpeakerId: currentTurn.speakerId,
         subjectPersonId: currentTurn.relationshipTargetPersonId,
@@ -154,6 +156,7 @@ export class InMemoryAsyncMemoryFollowup implements IAsyncMemoryFollowup {
 
       if (contradictionMode && !hasContradictionSignal) {
         const broaderNotes = await this.deps.noteVersioning.listActiveNotes({
+          sessionId: input.sessionId,
           includeGlobal: true,
         });
 

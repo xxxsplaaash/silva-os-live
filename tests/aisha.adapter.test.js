@@ -212,7 +212,16 @@ test('callAishaEngine preserves safe runtime trace diagnostics for unavailable p
           memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
           stateEnvelope: { mood: 0 },
           relationshipDeltas: [],
-          trace: { status: 'failed', failureReason: 'Gemini API key invalid' },
+          trace: {
+            status: 'failed',
+            failureReason: 'Gemini API key invalid',
+            aishaDiagnostics: {
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'unavailable',
+              aishaPersistenceConnected: false,
+              aishaPersistenceFailureReason: 'database unavailable'
+            }
+          },
           engineMode: 'production',
           aishaEngineConnected: false,
           confidence: 0,
@@ -231,6 +240,10 @@ test('callAishaEngine preserves safe runtime trace diagnostics for unavailable p
     assert.equal(response.diagnostics.responseTraceStatus, 'failed');
     assert.equal(response.diagnostics.responseTraceFailureReason, 'Gemini API key invalid');
     assert.equal(response.diagnostics.responseFallbackReason, 'Gemini API key invalid');
+    assert.equal(response.diagnostics.aishaPersistenceMode, 'postgres');
+    assert.equal(response.diagnostics.aishaPersistenceBackend, 'unavailable');
+    assert.equal(response.diagnostics.aishaPersistenceConnected, false);
+    assert.equal(response.diagnostics.aishaPersistenceFailureReason, 'database unavailable');
     assert.equal(response.diagnostics.responseCount, 1);
     assert.equal(response.diagnostics.firstResponseHasContent, true);
     assert.equal(response.diagnostics.runtimeCredentialProvided, true);

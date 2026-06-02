@@ -79,7 +79,7 @@ export interface AishaTruthRecord {
   /** Human-readable canonical text */
   canonicalText: string;
   normalizedValue?: string;
-  status: "active" | "provisional" | "superseded" | "disputed" | "archived" | "expired";
+  status: "active" | "provisional" | "superseded" | "disputed" | "archived" | "expired" | "stale";
   confidence: number;
   /** If this truth superseded another, the canonical text of the old (superseded) truth */
   supersededPriorText?: string;
@@ -171,6 +171,12 @@ export interface AishaEngineTrace {
   failureReason?: string;
   criticLoopCycles?: number;
   criticMaxCyclesHit?: boolean;
+  aishaDiagnostics?: {
+    aishaPersistenceMode?: "memory" | "postgres";
+    aishaPersistenceBackend?: "in-memory" | "postgres" | "unavailable";
+    aishaPersistenceConnected?: boolean;
+    aishaPersistenceFailureReason?: string;
+  };
 }
 
 export interface AishaEngineError {

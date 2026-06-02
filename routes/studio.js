@@ -104,6 +104,10 @@ let lastAishaRuntimeStatus = {
   fallbackReason: '',
   aishaTraceStatus: '',
   aishaTraceFailureReason: '',
+  aishaPersistenceMode: 'memory',
+  aishaPersistenceBackend: 'in-memory',
+  aishaPersistenceConnected: false,
+  aishaPersistenceFailureReason: '',
   runtimeCredentialProvided: false,
   runtimeCredentialLength: 0,
   runtimeCredentialSource: '',
@@ -752,7 +756,33 @@ function safeRuntimeStatusText(value = '') {
     .slice(0, 240);
 }
 
+function defaultAishaPersistenceMode() {
+  return String(process.env.AISHA_PERSISTENCE || '').trim().toLowerCase() === 'postgres'
+    ? 'postgres'
+    : 'memory';
+}
+
+function normalizeAishaPersistenceStatus(status = {}) {
+  const mode = String(status.aishaPersistenceMode || defaultAishaPersistenceMode()).trim().toLowerCase() === 'postgres'
+    ? 'postgres'
+    : 'memory';
+  const rawBackend = String(status.aishaPersistenceBackend || '').trim().toLowerCase();
+  const backend = ['in-memory', 'postgres', 'unavailable'].includes(rawBackend)
+    ? rawBackend
+    : (mode === 'postgres' ? 'unavailable' : 'in-memory');
+  const connected = typeof status.aishaPersistenceConnected === 'boolean'
+    ? status.aishaPersistenceConnected
+    : (mode === 'memory' ? status.aishaEngineConnected === true : false);
+  return {
+    aishaPersistenceMode: mode,
+    aishaPersistenceBackend: backend,
+    aishaPersistenceConnected: connected,
+    aishaPersistenceFailureReason: safeRuntimeStatusText(status.aishaPersistenceFailureReason || '')
+  };
+}
+
 function updateLastAishaRuntimeStatus(status = {}) {
+  const persistenceStatus = normalizeAishaPersistenceStatus(status);
   lastAishaRuntimeStatus = {
     aishaAttempted: status.aishaAttempted === true,
     aishaEngineConnected: status.aishaEngineConnected === true,
@@ -761,6 +791,7 @@ function updateLastAishaRuntimeStatus(status = {}) {
     fallbackReason: safeRuntimeStatusText(status.fallbackReason || ''),
     aishaTraceStatus: safeRuntimeStatusText(status.aishaTraceStatus || ''),
     aishaTraceFailureReason: safeRuntimeStatusText(status.aishaTraceFailureReason || ''),
+    ...persistenceStatus,
     runtimeCredentialProvided: status.runtimeCredentialProvided === true,
     runtimeCredentialLength: Number(status.runtimeCredentialLength || 0) || 0,
     runtimeCredentialSource: safeRuntimeStatusText(status.runtimeCredentialSource || ''),
@@ -773,11 +804,16 @@ function publicAishaRuntimeStatus(providerConfig = {}) {
   const keyChain = resolveStudioKeyChain(providerConfig);
   const primary = keyChain.find(item => String(item?.apiKey || '').trim());
   const enabled = String(process.env.AISHA_ENGINE_ENABLED || '').trim().toLowerCase() === 'true';
+  const fallbackPersistenceStatus = normalizeAishaPersistenceStatus({
+    aishaEngineConnected: false,
+    aishaPersistenceMode: defaultAishaPersistenceMode()
+  });
   return {
     ok: true,
     statusKnown: !!lastAishaRuntimeStatus.updatedAt,
     aishaEngineEnabled: enabled,
     ...lastAishaRuntimeStatus,
+    ...(lastAishaRuntimeStatus.updatedAt ? {} : fallbackPersistenceStatus),
     runtimeCredentialProvided: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialProvided : !!primary,
     runtimeCredentialLength: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialLength : (primary ? String(primary.apiKey || '').trim().length : 0),
     runtimeCredentialSource: lastAishaRuntimeStatus.updatedAt ? lastAishaRuntimeStatus.runtimeCredentialSource : safeRuntimeStatusText(primary?.label || primary?.provider || '')
@@ -2114,6 +2150,10 @@ router.get('/pulse/aisha-status', async (req, res) => {
           fallbackReason: response?.aishaEngineConnected === true ? '' : String(response?.fallbackReason || 'not-connected'),
           aishaTraceStatus: diagnostics.responseTraceStatus || response?.trace?.status || '',
           aishaTraceFailureReason: diagnostics.responseTraceFailureReason || response?.trace?.failureReason || response?.trace?.reason || '',
+          aishaPersistenceMode: diagnostics.aishaPersistenceMode,
+          aishaPersistenceBackend: diagnostics.aishaPersistenceBackend,
+          aishaPersistenceConnected: diagnostics.aishaPersistenceConnected,
+          aishaPersistenceFailureReason: diagnostics.aishaPersistenceFailureReason,
           runtimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
           runtimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
           runtimeCredentialSource: diagnostics.runtimeCredentialSource || ''
@@ -2507,7 +2547,13 @@ router.post('/pulse', async (req, res) => {
         ? String(base.fallbackReason || '').trim()
         : String(aishaAttempt?.fallbackReason || 'aisha-not-connected').trim() || 'aisha-not-connected'
     };
-    updateLastAishaRuntimeStatus(status);
+    updateLastAishaRuntimeStatus({
+      ...status,
+      aishaPersistenceMode: diagnostics.aishaPersistenceMode,
+      aishaPersistenceBackend: diagnostics.aishaPersistenceBackend,
+      aishaPersistenceConnected: diagnostics.aishaPersistenceConnected,
+      aishaPersistenceFailureReason: diagnostics.aishaPersistenceFailureReason
+    });
     return status;
   }
 
@@ -2569,6 +2615,10 @@ router.post('/pulse', async (req, res) => {
       aishaRuntimeCredentialProvided: diagnostics.runtimeCredentialProvided === true,
       aishaRuntimeCredentialLength: Number(diagnostics.runtimeCredentialLength || 0) || 0,
       aishaRuntimeCredentialSource: safeAishaText(diagnostics.runtimeCredentialSource || ''),
+      aishaPersistenceMode: safeAishaText(diagnostics.aishaPersistenceMode || ''),
+      aishaPersistenceBackend: safeAishaText(diagnostics.aishaPersistenceBackend || ''),
+      aishaPersistenceConnected: diagnostics.aishaPersistenceConnected === true,
+      aishaPersistenceFailureReason: safeAishaText(diagnostics.aishaPersistenceFailureReason || ''),
       aishaResponseShapeSummary: summarizeAishaResponseShape(aishaAttempt)
     };
   }

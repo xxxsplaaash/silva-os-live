@@ -47,9 +47,44 @@ fi
 if [[ -n "${SOCIAL_DIRECTOR_MODEL:-}" ]]; then
   ENV_VARS="${ENV_VARS},SOCIAL_DIRECTOR_MODEL=${SOCIAL_DIRECTOR_MODEL}"
 fi
+for AISHA_ENV_NAME in \
+  AISHA_PERSISTENCE \
+  AISHA_POSTGRES_DATABASE \
+  AISHA_POSTGRES_USER \
+  AISHA_CLOUD_SQL_CONNECTION_NAME \
+  AISHA_POSTGRES_POOL_MAX \
+  AISHA_POSTGRES_PORT; do
+  if [[ -n "${!AISHA_ENV_NAME:-}" ]]; then
+    ENV_VARS="${ENV_VARS},${AISHA_ENV_NAME}=${!AISHA_ENV_NAME}"
+  fi
+done
+if [[ -n "${AISHA_POSTGRES_URL:-}" ]]; then
+  ENV_VARS="${ENV_VARS},AISHA_POSTGRES_URL=${AISHA_POSTGRES_URL}"
+fi
+
+CLOUD_SQL_ARGS=()
+if [[ -n "${AISHA_CLOUD_SQL_CONNECTION_NAME:-}" ]]; then
+  CLOUD_SQL_ARGS+=(--add-cloudsql-instances "$AISHA_CLOUD_SQL_CONNECTION_NAME")
+fi
 
 gcloud config set project "$PROJECT_ID"
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com sqladmin.googleapis.com
+
+SECRET_ARGS=()
+if [[ "${AISHA_PERSISTENCE:-}" == "postgres" ]]; then
+  AISHA_POSTGRES_PASSWORD_SECRET="${AISHA_POSTGRES_PASSWORD_SECRET:-aisha-postgres-password}"
+  if ! gcloud secrets describe "$AISHA_POSTGRES_PASSWORD_SECRET" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    cat >&2 <<MSG
+Deploy stopped before Cloud Run update:
+  AISHA_PERSISTENCE=postgres requires Secret Manager secret "$AISHA_POSTGRES_PASSWORD_SECRET".
+
+Create it first, or set AISHA_POSTGRES_PASSWORD_SECRET to an existing secret name.
+MSG
+    exit 1
+  fi
+  SECRET_ARGS+=(--update-secrets "AISHA_POSTGRES_PASSWORD=${AISHA_POSTGRES_PASSWORD_SECRET}:latest")
+fi
+
 gcloud builds submit --tag "$IMAGE" .
 gcloud run deploy "$SERVICE" \
   --image "$IMAGE" \
@@ -59,4 +94,6 @@ gcloud run deploy "$SERVICE" \
   --memory "$MEMORY" \
   --cpu "$CPU" \
   --timeout "$TIMEOUT" \
-  --update-env-vars "$ENV_VARS"
+  --update-env-vars "$ENV_VARS" \
+  "${SECRET_ARGS[@]}" \
+  "${CLOUD_SQL_ARGS[@]}"

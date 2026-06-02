@@ -24,5 +24,7 @@ export type {
 
 export {
   processAishaRequest,
+  __createPostgresProductionStoresForTests,
+  __resetProductionDepsForTests,
   type AishaHostAdapterOptions,
 } from "./aishaHostAdapter";

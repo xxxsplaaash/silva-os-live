@@ -6,14 +6,22 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
+    "types": "./dist/index.d.ts",
     "import": "./dist/index.js",
-    "require": "./dist/index.cjs",
-    "types": "./dist/index.d.ts"
+    "require": "./dist/index.cjs"
   },
   "scripts": {
+    "build": "node scripts/build.mjs",
     "smoke:production": "node -e \"import('./dist/index.js').then(m => console.log(typeof m.processAishaRequest))\""
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0"
+    "@google/generative-ai": "^0.21.0",
+    "pg": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@types/pg": "^8.20.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
   }
 }

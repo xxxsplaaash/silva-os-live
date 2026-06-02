@@ -25,6 +25,7 @@ import type {
 import type {
   IClock,
   IIdGenerator,
+  IRuntimeTransaction,
   ITraceFactory,
   IRuntimeTrace,
   TraceEvent,
@@ -102,6 +103,7 @@ export interface ProductionStores {
   episodeStore: IEpisodeStore;
   threadStore: IThreadStore;
   noteVersioning: INoteVersioning;
+  runtimeTransaction?: IRuntimeTransaction;
   /**
    * Pack 3.14c: optional pre-created shadow evidence store.
    * When provided, the builder wraps it in a ShadowEvidenceCollector and
@@ -181,7 +183,7 @@ export function buildProductionRuntime(
     generator,
     parser: new ProductionParser(),
     validator: new MinimalRuntimeValidator(),
-    transaction: new InMemoryRuntimeTransaction(),
+    transaction: stores.runtimeTransaction ?? new InMemoryRuntimeTransaction(),
     rollback: new JournalRollbackHelper(),
     fallback: new CautiousFallbackHandler(),
     traceFactory: new RuntimeTraceFactory(),

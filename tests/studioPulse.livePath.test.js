@@ -305,7 +305,15 @@ test('aisha_success_does_not_bypass_room_planner', async () => {
             },
             stateEnvelope: { mood: 0.2 },
             relationshipDeltas: [],
-            trace: { status: 'succeeded' },
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'memory',
+                aishaPersistenceBackend: 'in-memory',
+                aishaPersistenceConnected: true,
+                aishaPersistenceFailureReason: ''
+              }
+            },
             engineMode: 'production',
             aishaEngineConnected: true,
             confidence: 0.88
@@ -348,6 +356,10 @@ test('aisha_success_does_not_bypass_room_planner', async () => {
         assert.equal(status.runtimeCredentialProvided, true);
         assert.equal(status.runtimeCredentialLength, 'test-room-provider-key'.length);
         assert.equal(status.runtimeCredentialSource, 'Mock Gemini');
+        assert.equal(status.aishaPersistenceMode, 'memory');
+        assert.equal(status.aishaPersistenceBackend, 'in-memory');
+        assert.equal(status.aishaPersistenceConnected, true);
+        assert.equal(status.aishaPersistenceFailureReason, '');
         assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
       });
     } finally {

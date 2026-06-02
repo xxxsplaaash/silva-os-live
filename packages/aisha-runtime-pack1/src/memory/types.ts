@@ -1,5 +1,5 @@
 export type NoteSubtype = "K_pref" | "K_profile" | "K_boundary";
-export type NoteStatus = "active" | "provisional" | "superseded" | "disputed" | "archived" | "expired";
+export type NoteStatus = "active" | "provisional" | "superseded" | "disputed" | "archived" | "expired" | "stale";
 export type Modality = "text" | "voice" | "image" | "video";
 export type ConsentStatus = "allow" | "filter" | "deny" | "needs_review";
 
@@ -179,7 +179,7 @@ export interface NoteCandidate {
   relationshipContextPersonId?: string;
   sourceEpisodeIds: string[];
   provenanceReason: string;
-  status: NoteStatus;
+  status?: NoteStatus;
 }
 
 export interface HeuristicGateDecision {

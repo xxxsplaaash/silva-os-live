@@ -49,6 +49,26 @@ function buildAcceptanceAuditEntry(params) {
     supersessionLinks: params.supersessionLinks
   };
 }
+function buildSupersessionAuditEntry(params) {
+  return {
+    auditId: params.auditId,
+    timestamp: params.timestamp,
+    noteId: params.priorNoteId,
+    subtype: "supersession_link",
+    canonicalText: params.priorCanonicalText,
+    outcome: "superseded",
+    primaryReason: "superseded_prior_note",
+    allReasons: ["superseded_prior_note"],
+    signals: params.signals,
+    supersessionLinks: [
+      {
+        priorNoteId: params.priorNoteId,
+        priorCanonicalText: params.priorCanonicalText,
+        priorNewStatus: params.priorNewStatus
+      }
+    ]
+  };
+}
 
 // src/research/associativeRetrieval.ts
 function buildNoteGraph(links) {
@@ -955,17 +975,34 @@ async function processTurn(deps, input) {
     });
     trace.succeed();
     if (deps.asyncMemoryFollowup) {
-      await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
-        sessionId: input.sessionId,
-        episodeId: committed.episode.id
-      });
-      trace.add({
-        stage: "memory.async_followup_scheduled",
-        at: deps.clock.nowIso(),
-        data: {
+      try {
+        await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
+          sessionId: input.sessionId,
           episodeId: committed.episode.id
-        }
-      });
+        });
+        trace.add({
+          stage: "memory.async_followup_scheduled",
+          at: deps.clock.nowIso(),
+          data: {
+            episodeId: committed.episode.id
+          }
+        });
+      } catch (error) {
+        const reason = compactErrorMessage(error);
+        trace.add({
+          stage: "memory.async_followup_failed",
+          at: deps.clock.nowIso(),
+          data: {
+            episodeId: committed.episode.id,
+            reason
+          }
+        });
+        console.warn("[MEMORY] async followup failed after commit", {
+          sessionId: input.sessionId,
+          episodeId: committed.episode.id,
+          reason
+        });
+      }
     }
     return buildSuccessResult({
       text: parsed.text,
@@ -1004,7 +1041,7 @@ async function processTurn(deps, input) {
 }
 
 // src/host/aishaHostAdapter.ts
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 // src/state/compoundStateEngine.ts
 function clamp(value, min, max) {
@@ -3248,13 +3285,22 @@ function isSentenceGrounded(normSentence, activeNotes, contradictionEvidence) {
 function findUngroundedClaims(parsedText, retrieval) {
   const findings = [];
   const sentences = splitSentences(parsedText);
+  const contradictionGroundingEvidence = retrieval.contradictionEvidence.map((e) => {
+    if (e.kind === "note") {
+      return {
+        canonicalText: e.canonicalText,
+        normalizedValue: e.normalizedValue
+      };
+    }
+    return { canonicalText: e.summary };
+  });
   for (const sentence of sentences) {
     const tokens = sentence.split(/\s+/).filter((t) => t.length > 0);
     if (tokens.length < UNGROUNDED_MIN_TOKENS) continue;
     const isAssertion = MEMORY_ASSERTION_PATTERNS.some((p) => p.test(sentence));
     if (!isAssertion) continue;
     const normSentence = normaliseForGrounding(sentence);
-    if (!isSentenceGrounded(normSentence, retrieval.activeNotes, retrieval.contradictionEvidence)) {
+    if (!isSentenceGrounded(normSentence, retrieval.activeNotes, contradictionGroundingEvidence)) {
       findings.push({
         issueType: "ungrounded_claim",
         affectedNoteId: void 0,
@@ -3433,6 +3479,7 @@ var InMemoryAsyncMemoryFollowup = class {
           const validation = this.deps.noteVersioning.validate(candidate);
           if (!validation.valid) continue;
           const existing = await this.deps.noteVersioning.listActiveNotes({
+            sessionId: input.sessionId,
             includeGlobal: true,
             includeProvisional: true,
             subjectPersonId: candidate.subjectPersonId,
@@ -3449,6 +3496,7 @@ var InMemoryAsyncMemoryFollowup = class {
         }
       }
       let activeNotes = await this.deps.noteVersioning.listActiveNotes({
+        sessionId: input.sessionId,
         includeGlobal: true,
         subjectSpeakerId: currentTurn.speakerId,
         subjectPersonId: currentTurn.relationshipTargetPersonId,
@@ -3464,6 +3512,7 @@ var InMemoryAsyncMemoryFollowup = class {
       );
       if (contradictionMode && !hasContradictionSignal2) {
         const broaderNotes = await this.deps.noteVersioning.listActiveNotes({
+          sessionId: input.sessionId,
           includeGlobal: true
         });
         const broaderSignals = deriveCombinedReviewSignals({
@@ -3727,7 +3776,7 @@ function buildProductionRuntime(config, stores) {
     generator,
     parser: new ProductionParser(),
     validator: new MinimalRuntimeValidator(),
-    transaction: new InMemoryRuntimeTransaction(),
+    transaction: stores.runtimeTransaction ?? new InMemoryRuntimeTransaction(),
     rollback: new JournalRollbackHelper(),
     fallback: new CautiousFallbackHandler(),
     traceFactory: new RuntimeTraceFactory(),
@@ -3915,23 +3964,1468 @@ var FixtureNoteVersioning = class {
   }
 };
 
+// src/persistence/postgresStores.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+import pg from "pg";
+
+// src/persistence/postgresSchema.ts
+var AISHA_PACK1_POSTGRES_SCHEMA = `
+CREATE TABLE IF NOT EXISTS aisha_turns (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  speaker TEXT NOT NULL,
+  state_snapshot_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_turns_session_turn
+  ON aisha_turns(session_id, turn_index DESC);
+
+CREATE TABLE IF NOT EXISTS aisha_state_snapshots (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  turn_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_snapshots_session_created
+  ON aisha_state_snapshots(session_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_aisha_snapshots_turn
+  ON aisha_state_snapshots(turn_id);
+
+CREATE TABLE IF NOT EXISTS aisha_episodes (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  thread_id TEXT NOT NULL,
+  start_turn_id TEXT NOT NULL,
+  end_turn_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_episodes_session_updated
+  ON aisha_episodes(session_id, COALESCE(updated_at, created_at) DESC);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_episodes_thread
+  ON aisha_episodes(thread_id);
+
+CREATE TABLE IF NOT EXISTS aisha_threads (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL UNIQUE,
+  active_episode_id TEXT NOT NULL,
+  last_updated_at TIMESTAMPTZ NOT NULL,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_threads_session
+  ON aisha_threads(session_id);
+
+CREATE TABLE IF NOT EXISTS aisha_notes (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  subtype TEXT NOT NULL,
+  status TEXT NOT NULL,
+  subject_kind TEXT NOT NULL,
+  subject_speaker_id TEXT,
+  subject_person_id TEXT,
+  relationship_context_person_id TEXT,
+  confidence REAL NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_notes_session_status
+  ON aisha_notes(session_id, status, COALESCE(updated_at, created_at) DESC);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_notes_subject
+  ON aisha_notes(session_id, subject_kind, subject_speaker_id, subject_person_id, relationship_context_person_id);
+
+CREATE TABLE IF NOT EXISTS aisha_note_links (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  from_note_id TEXT NOT NULL,
+  to_note_id TEXT NOT NULL,
+  relation TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ,
+  payload_json JSONB NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_note_links_from_relation
+  ON aisha_note_links(from_note_id, relation, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_aisha_note_links_session
+  ON aisha_note_links(session_id);
+`;
+
+// src/memory/noteVersioning.ts
+function makeId(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+function now() {
+  return (/* @__PURE__ */ new Date()).toISOString();
+}
+function normalizeValue2(text) {
+  return text.trim().toLowerCase().replace(/\s+/g, " ");
+}
+function sameSubject(a, b) {
+  return a.subjectKind === b.subjectKind && (a.subjectSpeakerId ?? "") === (b.subjectSpeakerId ?? "") && (a.subjectPersonId ?? "") === (b.subjectPersonId ?? "") && (a.relationshipContextPersonId ?? "") === (b.relationshipContextPersonId ?? "");
+}
+function isSameMeaning(candidate, note) {
+  const normalizedCandidate = normalizeValue2(
+    candidate.normalizedValue ?? candidate.canonicalText
+  );
+  const normalizedExisting = normalizeValue2(
+    note.normalizedValue ?? note.canonicalText
+  );
+  return candidate.subtype === note.subtype && sameSubject(candidate, note) && normalizedCandidate === normalizedExisting;
+}
+function isSameTrack(candidate, note) {
+  return candidate.subtype === note.subtype && sameSubject(candidate, note);
+}
+function isContradictory(candidate, note) {
+  if (candidate.subtype !== note.subtype) return false;
+  if (!candidate.normalizedValue || !note.normalizedValue) return false;
+  const cVal = candidate.normalizedValue;
+  const nVal = note.normalizedValue;
+  if (cVal.startsWith("avoids ") && !nVal.startsWith("avoids ")) {
+    return cVal.replace("avoids ", "") === nVal;
+  }
+  if (!cVal.startsWith("avoids ") && nVal.startsWith("avoids ")) {
+    return cVal === nVal.replace("avoids ", "");
+  }
+  const cColonIndex = cVal.indexOf(":");
+  const nColonIndex = nVal.indexOf(":");
+  if (cColonIndex > 0 && nColonIndex > 0) {
+    const cKey = cVal.substring(0, cColonIndex).trim();
+    const nKey = nVal.substring(0, nColonIndex).trim();
+    if (cKey === nKey && cVal !== nVal) {
+      return true;
+    }
+  }
+  return false;
+}
+function reasonPriority(reason) {
+  if (reason === "contradiction_sensitive_lower_support") return 2;
+  if (reason === "retrieved_weak_stale_note") return 1;
+  return 0;
+}
+var InMemoryNoteVersioning = class {
+  notesById = /* @__PURE__ */ new Map();
+  linksById = /* @__PURE__ */ new Map();
+  validate(candidate) {
+    const reasons = [];
+    if (!["K_pref", "K_profile"].includes(candidate.subtype)) {
+      reasons.push("unsupported_subtype");
+    }
+    if (!candidate.canonicalText.trim()) {
+      reasons.push("empty_canonical_text");
+    }
+    if (!candidate.sourceEpisodeIds.length) {
+      reasons.push("missing_source_episode_ids");
+    }
+    if (candidate.confidence < 0 || candidate.confidence > 1) {
+      reasons.push("confidence_out_of_bounds");
+    }
+    const valid = reasons.length === 0;
+    return { valid, reasons };
+  }
+  async mergeOrSupersede(candidate, existing, context) {
+    const notesWritten = [];
+    const linksWritten = [];
+    const activeSameTrack = existing.filter(
+      (note) => (note.status === "active" || note.status === "provisional") && isSameTrack(candidate, note)
+    );
+    const supportiveMatch = activeSameTrack.find(
+      (note) => isSameMeaning(candidate, note)
+    );
+    if (supportiveMatch) {
+      const episodeId = candidate.sourceEpisodeIds[0] ?? "unknown";
+      const existingChain = supportiveMatch.provenanceChain ?? [];
+      const mergedEpisodeIds = [
+        .../* @__PURE__ */ new Set([
+          ...supportiveMatch.sourceEpisodeIds,
+          ...candidate.sourceEpisodeIds
+        ])
+      ];
+      const updated = {
+        ...supportiveMatch,
+        updatedAt: now(),
+        lastConfirmedAt: now(),
+        confidence: Math.min(
+          1,
+          Math.max(supportiveMatch.confidence, candidate.confidence)
+        ),
+        // extractionConfidenceRaw is intentionally NOT updated on reinforce
+        extractionConfidenceRaw: supportiveMatch.extractionConfidenceRaw,
+        provenanceChain: [...existingChain.slice(-4), `reinforced_ep_${episodeId}`],
+        sourceEpisodeIds: mergedEpisodeIds
+      };
+      if (updated.status === "provisional") {
+        const hasMultiEp = mergedEpisodeIds.length > 1;
+        const hasConf = updated.confidence >= 0.65;
+        if (hasMultiEp && hasConf) {
+          updated.status = "active";
+          updated.expiresAt = void 0;
+        }
+      }
+      this.notesById.set(updated.id, updated);
+      notesWritten.push(updated);
+      const reinforceSignals = {
+        trust: context?.trust ?? 0,
+        caution: context?.caution ?? 0,
+        confidence: candidate.confidence,
+        hasContradiction: false,
+        contradictionCount: 0
+      };
+      const reinforceAuditEntry = buildAcceptanceAuditEntry({
+        auditId: makeAuditId(),
+        timestamp: updated.updatedAt ?? updated.createdAt,
+        noteId: updated.id,
+        subtype: updated.subtype,
+        canonicalText: updated.canonicalText,
+        outcome: "reinforced",
+        primaryReason: "reinforced_existing_note",
+        allReasons: ["reinforced_existing_note"],
+        signals: reinforceSignals
+      });
+      return { notesWritten, linksWritten, auditEntries: [reinforceAuditEntry] };
+    }
+    const priorActiveConflicts = activeSameTrack.filter(
+      (note) => isContradictory(candidate, note)
+    );
+    const trust = context?.trust ?? 0;
+    const caution = context?.caution ?? 0;
+    const TRUST_ACCEPT_THRESHOLD = 0.8;
+    const TRUST_GATE_THRESHOLD = 0;
+    const TRUST_REJECT_THRESHOLD = -0.6;
+    const CAUTION_GATE_THRESHOLD = 0.7;
+    const isTrustRejected = trust <= TRUST_REJECT_THRESHOLD;
+    const isTrustGated = trust < TRUST_GATE_THRESHOLD && !isTrustRejected;
+    const isCautionGated = caution > CAUTION_GATE_THRESHOLD;
+    const isTrustAccepted = trust >= TRUST_ACCEPT_THRESHOLD;
+    const isWeak = candidate.confidence < 0.65;
+    const hasContradiction = priorActiveConflicts.length > 0;
+    let initialReviewState = "pending";
+    let reinferenceMode = "allow";
+    let gatingReasonString;
+    if (isTrustRejected || isWeak) {
+      initialReviewState = "rejected";
+      reinferenceMode = "block_auto_reinfer";
+      gatingReasonString = isTrustRejected ? "relationship_trust_rejected" : "weakly_grounded_rejected";
+    } else if (hasContradiction || isTrustGated || isCautionGated) {
+      initialReviewState = "pending";
+      reinferenceMode = "needs_review";
+      gatingReasonString = hasContradiction ? "contradiction_needs_review" : isTrustGated ? "relationship_trust_gated" : "relationship_caution_gated";
+    } else if (isTrustAccepted) {
+      initialReviewState = "accepted";
+      reinferenceMode = "allow";
+    } else {
+      initialReviewState = "pending";
+      reinferenceMode = "allow";
+    }
+    const auditTrail = [
+      {
+        timestamp: now(),
+        action: "created",
+        reason: "Memory extraction process"
+      }
+    ];
+    if (initialReviewState === "rejected" || reinferenceMode === "needs_review") {
+      auditTrail.push({
+        timestamp: now(),
+        action: "relationship_gated",
+        reason: gatingReasonString ?? "Gated",
+        newState: reinferenceMode === "needs_review" ? "needs_review" : initialReviewState
+      });
+    } else if (initialReviewState === "accepted") {
+      auditTrail.push({
+        timestamp: now(),
+        action: "relationship_gated",
+        reason: "relationship_trust_accepted",
+        newState: "accepted"
+      });
+    }
+    const candidateStatus = candidate.subtype === "K_boundary" ? "active" : candidate.status === "provisional" ? "provisional" : "active";
+    const newNote = {
+      id: makeId("note"),
+      kind: "note",
+      createdAt: now(),
+      updatedAt: now(),
+      sourceModality: "text",
+      status: candidateStatus,
+      subtype: candidate.subtype,
+      canonicalText: candidate.canonicalText,
+      normalizedValue: candidate.normalizedValue,
+      confidence: candidate.confidence,
+      extractionConfidenceRaw: candidate.extractionConfidenceRaw,
+      provenanceChain: [candidate.provenanceReason, ...candidate.provenanceChain ?? []].slice(0, 5),
+      subjectKind: candidate.subjectKind,
+      subjectSpeakerId: candidate.subjectSpeakerId,
+      subjectPersonId: candidate.subjectPersonId,
+      relationshipContextPersonId: candidate.relationshipContextPersonId,
+      sourceEpisodeIds: candidate.sourceEpisodeIds,
+      lastConfirmedAt: now(),
+      reviewState: initialReviewState,
+      reinferencePolicy: {
+        mode: reinferenceMode,
+        reason: reinferenceMode === "needs_review" || reinferenceMode === "block_auto_reinfer" ? gatingReasonString : void 0
+      },
+      auditTrail,
+      // Provisional notes are bounded: they expire after 7 days if not promoted.
+      expiresAt: candidateStatus === "provisional" ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3).toISOString() : void 0
+    };
+    this.notesById.set(newNote.id, newNote);
+    notesWritten.push(newNote);
+    const signals = {
+      trust,
+      caution,
+      confidence: candidate.confidence,
+      hasContradiction,
+      contradictionCount: priorActiveConflicts.length
+    };
+    const allReasons = [];
+    if (isTrustRejected) allReasons.push("relationship_trust_rejected");
+    if (isWeak) allReasons.push("weakly_grounded_rejected");
+    if (hasContradiction) allReasons.push("contradiction_needs_review");
+    if (isTrustGated) allReasons.push("relationship_trust_gated");
+    if (isCautionGated) allReasons.push("relationship_caution_gated");
+    if (isTrustAccepted) allReasons.push("relationship_trust_accepted");
+    if (allReasons.length === 0) allReasons.push("default_pending");
+    const primaryReason = allReasons[0];
+    const newNoteOutcome = initialReviewState === "accepted" ? "accepted" : initialReviewState === "rejected" ? "rejected" : "needs_review";
+    const auditEntries = [];
+    auditEntries.push(buildAcceptanceAuditEntry({
+      auditId: makeAuditId(),
+      timestamp: newNote.createdAt,
+      noteId: newNote.id,
+      subtype: newNote.subtype,
+      canonicalText: newNote.canonicalText,
+      outcome: newNoteOutcome,
+      primaryReason,
+      allReasons,
+      signals
+    }));
+    for (const prior of priorActiveConflicts) {
+      const priorNewStatus = prior.status === "provisional" ? "superseded" : "disputed";
+      const supersededPrior = {
+        ...prior,
+        updatedAt: now(),
+        status: priorNewStatus
+      };
+      this.notesById.set(supersededPrior.id, supersededPrior);
+      notesWritten.push(supersededPrior);
+      const supersedesLink = {
+        id: makeId("note_link"),
+        kind: "note_link",
+        createdAt: now(),
+        sourceModality: "text",
+        fromNoteId: newNote.id,
+        toNoteId: supersededPrior.id,
+        relation: "supersedes",
+        strength: 1
+      };
+      this.linksById.set(supersedesLink.id, supersedesLink);
+      linksWritten.push(supersedesLink);
+      auditEntries.push(buildSupersessionAuditEntry({
+        auditId: makeAuditId(),
+        timestamp: supersededPrior.updatedAt ?? supersededPrior.createdAt,
+        priorNoteId: supersededPrior.id,
+        priorCanonicalText: supersededPrior.canonicalText,
+        priorNewStatus,
+        causedByNoteId: newNote.id,
+        signals
+      }));
+    }
+    return { notesWritten, linksWritten, auditEntries };
+  }
+  async persistReviewSignals(signals, subjectScope) {
+    const MAX_PENDING_REVIEW_NOTES = 10;
+    const scopedPendingCount = [...this.notesById.values()].filter(
+      (n) => n.status === "active" && n.reviewState === "pending" && n.reinferencePolicy.mode === "needs_review" && n.subjectKind === subjectScope.subjectKind && (n.subjectPersonId ?? "") === (subjectScope.subjectPersonId ?? "") && (n.relationshipContextPersonId ?? "") === (subjectScope.relationshipContextPersonId ?? "")
+    ).length;
+    if (scopedPendingCount >= MAX_PENDING_REVIEW_NOTES) {
+      console.warn(
+        "[MEMORY] scoped review budget ceiling hit; signals dropped",
+        { subjectScope, droppedCount: signals.length }
+      );
+      return [];
+    }
+    const reduced = /* @__PURE__ */ new Map();
+    for (const signal of signals) {
+      const existing = reduced.get(signal.noteId);
+      if (!existing || reasonPriority(signal.reason) > reasonPriority(existing.reason)) {
+        reduced.set(signal.noteId, signal);
+      }
+    }
+    const updated = [];
+    for (const signal of reduced.values()) {
+      const note = this.notesById.get(signal.noteId);
+      if (!note) continue;
+      if (note.status !== "active") continue;
+      if (note.reviewState === "rejected") continue;
+      if (signal.reason === "soft_signal_increment") {
+        const next2 = {
+          ...note,
+          updatedAt: now(),
+          reconsolidationSignalCount: (note.reconsolidationSignalCount ?? 0) + 1
+        };
+        this.notesById.set(next2.id, next2);
+        updated.push(next2);
+        continue;
+      }
+      const existingReason = note.reinferencePolicy.mode === "needs_review" ? note.reinferencePolicy.reason : void 0;
+      const nextReason = existingReason && reasonPriority(existingReason) > reasonPriority(signal.reason) ? existingReason : signal.reason;
+      const alreadySame = note.reviewState === "pending" && note.reinferencePolicy.mode === "needs_review" && note.reinferencePolicy.reason === nextReason;
+      if (alreadySame) {
+        updated.push(note);
+        continue;
+      }
+      const next = {
+        ...note,
+        updatedAt: now(),
+        lastReviewedAt: now(),
+        reviewState: "pending",
+        reinferencePolicy: {
+          mode: "needs_review",
+          reason: nextReason
+        }
+      };
+      this.notesById.set(next.id, next);
+      updated.push(next);
+    }
+    return updated;
+  }
+  isExpired(note) {
+    if (note.status === "provisional" && note.expiresAt) {
+      return Date.parse(note.expiresAt) < Date.now();
+    }
+    return false;
+  }
+  async listActiveNotes(filter) {
+    const JOINT_GATE_CONFIDENCE = 0.65;
+    const JOINT_GATE_EPISODE_OVERRIDE = 3;
+    const notes = [...this.notesById.values()].filter((note) => {
+      if (this.isExpired(note)) return false;
+      if (filter?.includeProvisional) {
+        if (note.status !== "active" && note.status !== "provisional") return false;
+      } else {
+        if (note.status !== "active") return false;
+      }
+      if (note.reviewState === "rejected") return false;
+      if (note.reinferencePolicy.mode === "block_auto_reinfer") return false;
+      if (filter?.allowedConsentStatuses?.length) {
+        if (!note.consentStatus || !filter.allowedConsentStatuses.includes(note.consentStatus)) {
+          return false;
+        }
+      } else if (note.consentStatus === "deny") {
+        return false;
+      }
+      const passesGate = note.confidence >= JOINT_GATE_CONFIDENCE || note.sourceEpisodeIds.length >= JOINT_GATE_EPISODE_OVERRIDE;
+      if (!passesGate) return false;
+      return true;
+    });
+    const filtered = notes.filter((note) => {
+      if (!filter) return true;
+      if (filter.relationshipContextPersonId) {
+        const matchesRelationship = note.relationshipContextPersonId === filter.relationshipContextPersonId;
+        const allowGlobal = filter.includeGlobal === true && !note.relationshipContextPersonId;
+        if (!matchesRelationship && !allowGlobal) return false;
+      }
+      if (filter.subjectPersonId) {
+        const matchesSubject = note.subjectPersonId === filter.subjectPersonId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectPersonId;
+        if (!matchesSubject && !allowGlobal) return false;
+      }
+      if (filter.subjectSpeakerId) {
+        const matchesSpeaker = note.subjectSpeakerId === filter.subjectSpeakerId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectSpeakerId;
+        if (!matchesSpeaker && !allowGlobal) return false;
+      }
+      return true;
+    });
+    const sorted = filtered.sort((a, b) => {
+      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+      const aTime = Date.parse(a.updatedAt ?? a.createdAt);
+      const bTime = Date.parse(b.updatedAt ?? b.createdAt);
+      return bTime - aTime;
+    });
+    return sorted.slice(0, filter?.maxResults ?? sorted.length);
+  }
+  async listProvisionalNotes(filter) {
+    const notes = [...this.notesById.values()].filter((note) => {
+      if (note.status !== "provisional") return false;
+      if (this.isExpired(note)) return false;
+      if (note.reviewState === "rejected") return false;
+      if (note.reinferencePolicy.mode === "block_auto_reinfer") return false;
+      if (note.consentStatus === "deny") return false;
+      if (!filter) return true;
+      if (filter.subjectPersonId) {
+        const matchesSubject = note.subjectPersonId === filter.subjectPersonId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectPersonId;
+        if (!matchesSubject && !allowGlobal) return false;
+      }
+      if (filter.subjectSpeakerId) {
+        const matchesSpeaker = note.subjectSpeakerId === filter.subjectSpeakerId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectSpeakerId;
+        if (!matchesSpeaker && !allowGlobal) return false;
+      }
+      return true;
+    });
+    const sorted = notes.sort((a, b) => {
+      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+      const aTime = Date.parse(a.updatedAt ?? a.createdAt);
+      const bTime = Date.parse(b.updatedAt ?? b.createdAt);
+      return bTime - aTime;
+    });
+    return sorted.slice(0, filter?.maxResults ?? sorted.length);
+  }
+  async evaluateProvisionalPromotion(filter) {
+    const PROMOTION_CONFIDENCE_THRESHOLD = 0.65;
+    const PROMOTION_MIN_EPISODES = 2;
+    const allProvisional = [...this.notesById.values()].filter((note) => {
+      if (note.status !== "provisional") return false;
+      if (note.reviewState === "rejected") return false;
+      if (note.reinferencePolicy.mode === "block_auto_reinfer") return false;
+      if (note.consentStatus === "deny") return false;
+      if (!filter) return true;
+      if (filter.subjectPersonId) {
+        const matchesSubject = note.subjectPersonId === filter.subjectPersonId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectPersonId;
+        if (!matchesSubject && !allowGlobal) return false;
+      }
+      if (filter.subjectSpeakerId) {
+        const matchesSpeaker = note.subjectSpeakerId === filter.subjectSpeakerId;
+        const allowGlobal = filter.includeGlobal === true && note.subjectKind === "user" && !note.subjectSpeakerId;
+        if (!matchesSpeaker && !allowGlobal) return false;
+      }
+      return true;
+    });
+    const promoted = [];
+    const expired = [];
+    const unchanged = [];
+    const nowMs = Date.now();
+    for (const note of allProvisional) {
+      if (note.expiresAt && Date.parse(note.expiresAt) < nowMs) {
+        const stale = {
+          ...note,
+          updatedAt: new Date(nowMs).toISOString(),
+          status: "stale",
+          expiresAt: void 0,
+          auditTrail: [
+            ...note.auditTrail ?? [],
+            {
+              timestamp: new Date(nowMs).toISOString(),
+              action: "created",
+              reason: "provisional_expired: expiresAt exceeded without promotion",
+              previousState: "provisional",
+              newState: "stale"
+            }
+          ]
+        };
+        this.notesById.set(stale.id, stale);
+        expired.push(stale);
+        continue;
+      }
+      const hasMultiEp = note.sourceEpisodeIds.length >= PROMOTION_MIN_EPISODES;
+      const hasConf = note.confidence >= PROMOTION_CONFIDENCE_THRESHOLD;
+      if (hasMultiEp && hasConf) {
+        const promotedNote = {
+          ...note,
+          updatedAt: new Date(nowMs).toISOString(),
+          status: "active",
+          expiresAt: void 0,
+          // no longer bounded
+          lastConfirmedAt: new Date(nowMs).toISOString(),
+          auditTrail: [
+            ...note.auditTrail ?? [],
+            {
+              timestamp: new Date(nowMs).toISOString(),
+              action: "operator_approved",
+              reason: `provisional_promoted: ${note.sourceEpisodeIds.length} source episodes, confidence=${note.confidence}`,
+              previousState: "provisional",
+              newState: "active"
+            }
+          ]
+        };
+        this.notesById.set(promotedNote.id, promotedNote);
+        promoted.push(promotedNote);
+        continue;
+      }
+      unchanged.push(note);
+    }
+    if (promoted.length > 0 || expired.length > 0) {
+      console.log(
+        `[MEMORY][PROVISIONAL] evaluated ${allProvisional.length} provisional note(s): promoted=${promoted.length}, expired=${expired.length}, unchanged=${unchanged.length}`
+      );
+    }
+    return { promoted, expired, unchanged };
+  }
+  async listContradictionEvidence(filter) {
+    const notes = [...this.notesById.values()].filter((note) => {
+      if (!(note.status === "superseded" || note.status === "disputed")) {
+        return false;
+      }
+      if (filter?.allowedConsentStatuses?.length) {
+        return Boolean(note.consentStatus && filter.allowedConsentStatuses.includes(note.consentStatus));
+      }
+      return note.consentStatus !== "deny";
+    });
+    const filtered = notes.filter((note) => {
+      if (!filter) return true;
+      if (filter.subjectPersonId && note.subjectPersonId !== filter.subjectPersonId) {
+        return false;
+      }
+      if (filter.subjectSpeakerId && note.subjectSpeakerId !== filter.subjectSpeakerId) {
+        return false;
+      }
+      if (filter.relationshipContextPersonId && note.relationshipContextPersonId !== filter.relationshipContextPersonId) {
+        return false;
+      }
+      return true;
+    });
+    const sorted = filtered.sort((a, b) => {
+      const aTime = Date.parse(a.updatedAt ?? a.createdAt);
+      const bTime = Date.parse(b.updatedAt ?? b.createdAt);
+      return bTime - aTime;
+    });
+    return sorted.slice(0, filter?.maxResults ?? 2);
+  }
+  async operatorReview(noteId, decision, operatorId) {
+    const note = this.notesById.get(noteId);
+    if (!note) return null;
+    const action = decision === "accept" ? "operator_approved" : "operator_rejected";
+    const newState = decision === "accept" ? "accepted" : "rejected";
+    const reinferenceMode = decision === "accept" ? "allow" : "block_auto_reinfer";
+    const updated = {
+      ...note,
+      updatedAt: now(),
+      reviewState: newState,
+      reinferencePolicy: {
+        mode: reinferenceMode,
+        reason: decision === "accept" ? void 0 : "operator_rejected"
+      },
+      auditTrail: [
+        ...note.auditTrail ?? [],
+        {
+          timestamp: now(),
+          action,
+          reason: `Operator decision: ${decision}`,
+          operatorId,
+          previousState: note.reviewState,
+          newState
+        }
+      ]
+    };
+    this.notesById.set(updated.id, updated);
+    return updated;
+  }
+  /**
+   * Seeds notes directly into the store for testing purposes.
+   * Notes are inserted as-is without validation or merging.
+   */
+  async seedNotes(notes) {
+    for (const note of notes) {
+      this.notesById.set(note.id, note);
+    }
+  }
+  /**
+   * For each given active noteId, returns the canonical text of the note it
+   * directly superseded via a 'supersedes' link. Pure read. No store writes.
+   * Returns at most one entry per input noteId (the most recently created link).
+   */
+  async listSupersededByIds(noteIds) {
+    const result = {};
+    const idSet = new Set(noteIds);
+    const linksByFrom = /* @__PURE__ */ new Map();
+    for (const link of this.linksById.values()) {
+      if (link.relation !== "supersedes") continue;
+      if (!idSet.has(link.fromNoteId)) continue;
+      const existing = linksByFrom.get(link.fromNoteId) ?? [];
+      existing.push(link);
+      linksByFrom.set(link.fromNoteId, existing);
+    }
+    for (const [fromNoteId, links] of linksByFrom.entries()) {
+      const sorted = links.sort(
+        (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+      );
+      const best = sorted[0];
+      if (!best) continue;
+      const supersededNote = this.notesById.get(best.toNoteId);
+      if (!supersededNote) continue;
+      result[fromNoteId] = supersededNote.canonicalText;
+    }
+    return result;
+  }
+};
+
+// src/persistence/postgresStores.ts
+var { Pool } = pg;
+var GLOBAL_SESSION_ID = "__global__";
+function payloadValue(value) {
+  return JSON.stringify(value);
+}
+function rowPayload(row) {
+  if (!row) return null;
+  const raw = row.payload_json;
+  if (typeof raw === "string") return JSON.parse(raw);
+  return raw;
+}
+function asIso(value) {
+  return value || (/* @__PURE__ */ new Date()).toISOString();
+}
+function unique2(items) {
+  return [...new Set(items)];
+}
+function resolveAishaPostgresConfigFromEnv(env = process.env) {
+  const connectionString = String(
+    env.AISHA_POSTGRES_URL || env.AISHA_TEST_POSTGRES_URL || ""
+  ).trim();
+  if (connectionString) return { connectionString };
+  const database = String(env.AISHA_POSTGRES_DATABASE || "").trim();
+  const user = String(env.AISHA_POSTGRES_USER || "").trim();
+  const password = String(env.AISHA_POSTGRES_PASSWORD || "").trim();
+  const cloudSqlConnectionName = String(
+    env.AISHA_CLOUD_SQL_CONNECTION_NAME || ""
+  ).trim();
+  if (!database || !user || !password || !cloudSqlConnectionName) {
+    throw new Error(
+      "AISHA_PERSISTENCE=postgres requires AISHA_POSTGRES_URL or AISHA_POSTGRES_DATABASE, AISHA_POSTGRES_USER, AISHA_POSTGRES_PASSWORD, and AISHA_CLOUD_SQL_CONNECTION_NAME"
+    );
+  }
+  return {
+    host: `/cloudsql/${cloudSqlConnectionName}`,
+    port: Number(env.AISHA_POSTGRES_PORT || 5432),
+    database,
+    user,
+    password,
+    max: Number(env.AISHA_POSTGRES_POOL_MAX || 4)
+  };
+}
+function poolConfig(config) {
+  if (config.connectionString) {
+    return {
+      connectionString: config.connectionString,
+      ssl: config.ssl === true ? { rejectUnauthorized: false } : void 0,
+      max: config.max ?? 4
+    };
+  }
+  return {
+    host: config.host,
+    port: config.port ?? 5432,
+    database: config.database,
+    user: config.user,
+    password: config.password,
+    ssl: config.ssl === true ? { rejectUnauthorized: false } : void 0,
+    max: config.max ?? 4
+  };
+}
+var AishaPostgresConnection = class {
+  pool;
+  transactionClient = new AsyncLocalStorage();
+  constructor(config) {
+    this.pool = new Pool(poolConfig(config));
+  }
+  async ensureSchema() {
+    await this.pool.query(AISHA_PACK1_POSTGRES_SCHEMA);
+  }
+  async query(sql, params = []) {
+    const client = this.transactionClient.getStore();
+    if (client) return client.query(sql, params);
+    return this.pool.query(sql, params);
+  }
+  async withTransaction(fn) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await this.transactionClient.run(client, fn);
+      await client.query("COMMIT");
+      return result;
+    } catch (error) {
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+  async close() {
+    await this.pool.end();
+  }
+};
+var PostgresRuntimeJournal = class {
+  constructor(connection, traceId, sessionId) {
+    this.connection = connection;
+    this.traceId = traceId;
+    this.sessionId = sessionId;
+  }
+  connection;
+  traceId;
+  sessionId;
+  state = "open";
+  stagedArtifacts = [];
+  async stage(artifact) {
+    this.ensureOpen("stage");
+    this.stagedArtifacts.push({
+      ...artifact,
+      data: { ...artifact.data }
+    });
+  }
+  snapshot() {
+    return {
+      traceId: this.traceId,
+      sessionId: this.sessionId,
+      stagedArtifacts: this.stagedArtifacts.map((artifact) => ({
+        ...artifact,
+        data: { ...artifact.data }
+      }))
+    };
+  }
+  async commit(input) {
+    this.ensureOpen("commit");
+    const result = await this.connection.withTransaction(input.apply);
+    this.state = "committed";
+    return result;
+  }
+  async abort() {
+    if (this.state === "committed") {
+      throw new Error("journal_already_committed");
+    }
+    this.state = "aborted";
+  }
+  ensureOpen(operation) {
+    if (this.state !== "open") {
+      throw new Error(`journal_not_open:${operation}:${this.state}`);
+    }
+  }
+};
+var PostgresRuntimeTransaction = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  async openJournal(input) {
+    return new PostgresRuntimeJournal(
+      this.connection,
+      input.traceId,
+      input.sessionId
+    );
+  }
+};
+var PostgresTurnStore = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  async write(turn) {
+    const result = await this.connection.query(
+      `
+      INSERT INTO aisha_turns (
+        id, session_id, turn_index, speaker, state_snapshot_id, created_at, updated_at, payload_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      ON CONFLICT(id) DO NOTHING
+      RETURNING id
+      `,
+      [
+        turn.id,
+        turn.sessionId,
+        turn.turnIndex,
+        turn.speaker,
+        turn.stateSnapshotId,
+        asIso(turn.createdAt),
+        turn.updatedAt || null,
+        payloadValue(turn)
+      ]
+    );
+    if (result.rowCount !== 1) throw new Error(`Turn already exists: ${turn.id}`);
+    return turn;
+  }
+  async getRecent(sessionId, limit) {
+    const result = await this.connection.query(
+      `
+      SELECT payload_json
+      FROM aisha_turns
+      WHERE session_id = $1
+      ORDER BY turn_index DESC, created_at DESC
+      LIMIT $2
+      `,
+      [sessionId, Math.max(0, limit)]
+    );
+    return result.rows.map((row) => rowPayload(row)).filter((turn) => Boolean(turn)).reverse();
+  }
+  async getById(id) {
+    const result = await this.connection.query(
+      `SELECT payload_json FROM aisha_turns WHERE id = $1`,
+      [id]
+    );
+    return rowPayload(result.rows[0]);
+  }
+  async getByIds(ids) {
+    if (!ids.length) return [];
+    const result = await this.connection.query(
+      `SELECT id, payload_json FROM aisha_turns WHERE id = ANY($1::text[])`,
+      [ids]
+    );
+    const byId = new Map(
+      result.rows.map((row) => [String(row.id), rowPayload(row)])
+    );
+    return ids.map((id) => byId.get(id)).filter((turn) => Boolean(turn));
+  }
+};
+var PostgresSnapshotStore = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  async write(snapshot) {
+    const result = await this.connection.query(
+      `
+      INSERT INTO aisha_state_snapshots (
+        id, session_id, turn_id, created_at, updated_at, payload_json
+      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+      ON CONFLICT(id) DO NOTHING
+      RETURNING id
+      `,
+      [
+        snapshot.id,
+        snapshot.sessionId,
+        snapshot.turnId,
+        asIso(snapshot.createdAt),
+        snapshot.updatedAt || null,
+        payloadValue(snapshot)
+      ]
+    );
+    if (result.rowCount !== 1) {
+      throw new Error(`Snapshot already exists: ${snapshot.id}`);
+    }
+    return snapshot;
+  }
+  async getLatest(sessionId) {
+    const result = await this.connection.query(
+      `
+      SELECT payload_json
+      FROM aisha_state_snapshots
+      WHERE session_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+      `,
+      [sessionId]
+    );
+    return rowPayload(result.rows[0]);
+  }
+  async getByTurnId(turnId) {
+    const result = await this.connection.query(
+      `SELECT payload_json FROM aisha_state_snapshots WHERE turn_id = $1 LIMIT 1`,
+      [turnId]
+    );
+    return rowPayload(result.rows[0]);
+  }
+  async getRecent(sessionId, limit) {
+    const result = await this.connection.query(
+      `
+      SELECT payload_json
+      FROM aisha_state_snapshots
+      WHERE session_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT $2
+      `,
+      [sessionId, Math.max(0, limit)]
+    );
+    return result.rows.map((row) => rowPayload(row)).filter((snapshot) => Boolean(snapshot));
+  }
+};
+var PostgresEpisodeStore = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  async createFromTurn(turn, decision, options) {
+    const episode = {
+      id: options?.episodeId ?? `ep_${turn.id}`,
+      kind: "episode",
+      createdAt: turn.createdAt,
+      updatedAt: turn.updatedAt,
+      sourceModality: turn.sourceModality,
+      sessionId: turn.sessionId,
+      threadId: `thread_${turn.sessionId}`,
+      startTurnId: turn.id,
+      endTurnId: turn.id,
+      turnIds: [turn.id],
+      topicLabels: [],
+      primaryModality: turn.sourceModality,
+      modalityMix: [turn.sourceModality],
+      participantSpeakerIds: turn.speakerId ? [turn.speakerId] : [],
+      participantPersonIds: turn.recognizedPersonId ? [turn.recognizedPersonId] : [],
+      focalRelationshipPersonId: turn.relationshipTargetPersonId,
+      boundaryReason: {
+        topicShift: decision.topicShift,
+        surpriseDiscontinuity: decision.surpriseDiscontinuity,
+        score: decision.score
+      }
+    };
+    await this.upsert(episode);
+    return episode;
+  }
+  async appendTurn(episodeId, turn, decision) {
+    const existing = await this.getById(episodeId);
+    if (!existing) return this.createFromTurn(turn, decision);
+    const updated = {
+      ...existing,
+      updatedAt: turn.createdAt,
+      endTurnId: turn.id,
+      turnIds: unique2([...existing.turnIds, turn.id]),
+      modalityMix: unique2([...existing.modalityMix, turn.sourceModality]),
+      participantSpeakerIds: unique2([
+        ...existing.participantSpeakerIds,
+        ...turn.speakerId ? [turn.speakerId] : []
+      ]),
+      participantPersonIds: unique2([
+        ...existing.participantPersonIds,
+        ...turn.recognizedPersonId ? [turn.recognizedPersonId] : []
+      ]),
+      boundaryReason: {
+        topicShift: existing.boundaryReason.topicShift || decision.topicShift,
+        surpriseDiscontinuity: existing.boundaryReason.surpriseDiscontinuity || decision.surpriseDiscontinuity,
+        score: Math.max(existing.boundaryReason.score, decision.score)
+      }
+    };
+    await this.upsert(updated);
+    return updated;
+  }
+  async getActive(sessionId) {
+    const thread = await this.connection.query(
+      `SELECT active_episode_id FROM aisha_threads WHERE session_id = $1 LIMIT 1`,
+      [sessionId]
+    );
+    const activeEpisodeId = thread.rows[0]?.active_episode_id;
+    if (activeEpisodeId) return this.getById(String(activeEpisodeId));
+    const latest = await this.connection.query(
+      `
+      SELECT payload_json
+      FROM aisha_episodes
+      WHERE session_id = $1
+      ORDER BY COALESCE(updated_at, created_at) DESC
+      LIMIT 1
+      `,
+      [sessionId]
+    );
+    return rowPayload(latest.rows[0]);
+  }
+  async getById(id) {
+    const result = await this.connection.query(
+      `SELECT payload_json FROM aisha_episodes WHERE id = $1`,
+      [id]
+    );
+    return rowPayload(result.rows[0]);
+  }
+  async getByIds(ids) {
+    if (!ids.length) return [];
+    const result = await this.connection.query(
+      `SELECT id, payload_json FROM aisha_episodes WHERE id = ANY($1::text[])`,
+      [ids]
+    );
+    const byId = new Map(
+      result.rows.map((row) => [String(row.id), rowPayload(row)])
+    );
+    return ids.map((id) => byId.get(id)).filter((episode) => Boolean(episode));
+  }
+  async upsert(episode) {
+    await this.connection.query(
+      `
+      INSERT INTO aisha_episodes (
+        id, session_id, thread_id, start_turn_id, end_turn_id, created_at, updated_at, payload_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+      ON CONFLICT(id) DO UPDATE SET
+        session_id = excluded.session_id,
+        thread_id = excluded.thread_id,
+        end_turn_id = excluded.end_turn_id,
+        updated_at = excluded.updated_at,
+        payload_json = excluded.payload_json
+      `,
+      [
+        episode.id,
+        episode.sessionId,
+        episode.threadId,
+        episode.startTurnId,
+        episode.endTurnId,
+        asIso(episode.createdAt),
+        episode.updatedAt || null,
+        payloadValue(episode)
+      ]
+    );
+  }
+};
+var PostgresThreadStore = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  async update(sessionId, episode) {
+    const existing = await this.getActive(sessionId);
+    const thread = {
+      id: existing?.id ?? `thread_${sessionId}`,
+      sessionId,
+      activeEpisodeId: episode.id,
+      episodeIds: unique2([...existing?.episodeIds ?? [], episode.id]),
+      lastUpdatedAt: episode.updatedAt ?? episode.createdAt,
+      focalRelationshipPersonId: existing?.focalRelationshipPersonId,
+      threadSummary: existing?.threadSummary
+    };
+    await this.connection.query(
+      `
+      INSERT INTO aisha_threads (
+        id, session_id, active_episode_id, last_updated_at, payload_json
+      ) VALUES ($1, $2, $3, $4, $5::jsonb)
+      ON CONFLICT(session_id) DO UPDATE SET
+        id = excluded.id,
+        active_episode_id = excluded.active_episode_id,
+        last_updated_at = excluded.last_updated_at,
+        payload_json = excluded.payload_json
+      `,
+      [
+        thread.id,
+        thread.sessionId,
+        thread.activeEpisodeId,
+        thread.lastUpdatedAt,
+        payloadValue(thread)
+      ]
+    );
+    return thread;
+  }
+  async getActive(sessionId) {
+    const result = await this.connection.query(
+      `SELECT payload_json FROM aisha_threads WHERE session_id = $1`,
+      [sessionId]
+    );
+    return rowPayload(result.rows[0]);
+  }
+};
+var PostgresNoteVersioning = class {
+  constructor(connection) {
+    this.connection = connection;
+  }
+  connection;
+  validate(candidate) {
+    return new InMemoryNoteVersioning().validate(candidate);
+  }
+  async mergeOrSupersede(candidate, existing, context) {
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(existing);
+    const result = await versioning.mergeOrSupersede(
+      candidate,
+      existing,
+      context
+    );
+    await this.persistNotes(result.notesWritten, candidate.sourceEpisodeIds);
+    await this.persistLinks(result.linksWritten);
+    return result;
+  }
+  async persistReviewSignals(signals, subjectScope) {
+    if (!signals.length) return [];
+    const noteIds = signals.map((signal) => signal.noteId);
+    const targetNotes = await this.getNotesByIds(noteIds);
+    const resolvedSessionIds = (await Promise.all(
+      targetNotes.map((note) => this.resolveNoteSessionId(note))
+    )).filter((sessionId) => Boolean(sessionId));
+    const sessionIds = unique2(resolvedSessionIds);
+    const scopeNotes = await this.loadNotes({
+      sessionIds: sessionIds.length ? sessionIds : void 0,
+      subjectScope
+    });
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(scopeNotes);
+    const updated = await versioning.persistReviewSignals(
+      signals,
+      subjectScope
+    );
+    await this.persistNotes(updated);
+    return updated;
+  }
+  async listActiveNotes(filter) {
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(await this.loadNotes({ filter }));
+    return versioning.listActiveNotes(filter);
+  }
+  async listProvisionalNotes(filter) {
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(await this.loadNotes({ provisionalFilter: filter }));
+    return versioning.listProvisionalNotes(filter);
+  }
+  async evaluateProvisionalPromotion(filter) {
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(await this.loadNotes({ provisionalFilter: filter }));
+    const result = await versioning.evaluateProvisionalPromotion(filter);
+    await this.persistNotes([
+      ...result.promoted,
+      ...result.expired,
+      ...result.unchanged
+    ]);
+    return result;
+  }
+  async listContradictionEvidence(filter) {
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes(await this.loadNotes({ contradictionFilter: filter }));
+    return versioning.listContradictionEvidence(filter);
+  }
+  async operatorReview(noteId, decision, operatorId) {
+    const note = await this.getNoteById(noteId);
+    if (!note) return null;
+    const versioning = new InMemoryNoteVersioning();
+    await versioning.seedNotes([note]);
+    const updated = await versioning.operatorReview(
+      noteId,
+      decision,
+      operatorId
+    );
+    if (updated) await this.persistNotes([updated]);
+    return updated;
+  }
+  async listSupersededByIds(noteIds) {
+    if (!noteIds.length) return {};
+    const result = await this.connection.query(
+      `
+      SELECT DISTINCT ON (from_note_id)
+        from_note_id,
+        to_note.payload_json AS to_payload
+      FROM aisha_note_links link
+      JOIN aisha_notes to_note ON to_note.id = link.to_note_id
+      WHERE link.relation = 'supersedes'
+        AND link.from_note_id = ANY($1::text[])
+      ORDER BY from_note_id, link.created_at DESC
+      `,
+      [noteIds]
+    );
+    const out = {};
+    for (const row of result.rows) {
+      const prior = rowPayload({ payload_json: row.to_payload });
+      if (prior) out[String(row.from_note_id)] = prior.canonicalText;
+    }
+    return out;
+  }
+  async getNoteById(id) {
+    const result = await this.connection.query(
+      `SELECT payload_json FROM aisha_notes WHERE id = $1`,
+      [id]
+    );
+    return rowPayload(result.rows[0]);
+  }
+  async getNotesByIds(ids) {
+    if (!ids.length) return [];
+    const result = await this.connection.query(
+      `SELECT id, payload_json FROM aisha_notes WHERE id = ANY($1::text[])`,
+      [ids]
+    );
+    const byId = new Map(
+      result.rows.map((row) => [String(row.id), rowPayload(row)])
+    );
+    return ids.map((id) => byId.get(id)).filter((note) => Boolean(note));
+  }
+  async loadNotes(input = {}) {
+    const filter = input.filter ?? input.provisionalFilter ?? input.contradictionFilter;
+    const sessionIds = input.sessionIds ?? this.sessionIdsForFilter(filter);
+    const where = [];
+    const params = [];
+    if (sessionIds?.length) {
+      params.push(sessionIds);
+      where.push(`session_id = ANY($${params.length}::text[])`);
+    }
+    if (input.subjectScope) {
+      params.push(input.subjectScope.subjectKind);
+      where.push(`subject_kind = $${params.length}`);
+      if (input.subjectScope.subjectPersonId) {
+        params.push(input.subjectScope.subjectPersonId);
+        where.push(`subject_person_id = $${params.length}`);
+      }
+      if (input.subjectScope.relationshipContextPersonId) {
+        params.push(input.subjectScope.relationshipContextPersonId);
+        where.push(`relationship_context_person_id = $${params.length}`);
+      }
+    }
+    const sql = [
+      "SELECT payload_json FROM aisha_notes",
+      where.length ? `WHERE ${where.join(" AND ")}` : "",
+      "ORDER BY COALESCE(updated_at, created_at) DESC",
+      "LIMIT 500"
+    ].join(" ");
+    const result = await this.connection.query(sql, params);
+    return result.rows.map((row) => rowPayload(row)).filter((note) => Boolean(note));
+  }
+  sessionIdsForFilter(filter) {
+    const sessionId = "sessionId" in (filter ?? {}) ? filter.sessionId : void 0;
+    if (!sessionId) return void 0;
+    const includeGlobal = Boolean(filter && "includeGlobal" in filter && filter.includeGlobal);
+    return includeGlobal ? [sessionId, GLOBAL_SESSION_ID] : [sessionId];
+  }
+  async persistNotes(notes, fallbackEpisodeIds = []) {
+    for (const note of notes) {
+      const sessionId = await this.resolveNoteSessionId(note, fallbackEpisodeIds) ?? GLOBAL_SESSION_ID;
+      await this.connection.query(
+        `
+        INSERT INTO aisha_notes (
+          id, session_id, subtype, status, subject_kind, subject_speaker_id,
+          subject_person_id, relationship_context_person_id, confidence,
+          created_at, updated_at, payload_json
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb)
+        ON CONFLICT(id) DO UPDATE SET
+          session_id = excluded.session_id,
+          subtype = excluded.subtype,
+          status = excluded.status,
+          subject_kind = excluded.subject_kind,
+          subject_speaker_id = excluded.subject_speaker_id,
+          subject_person_id = excluded.subject_person_id,
+          relationship_context_person_id = excluded.relationship_context_person_id,
+          confidence = excluded.confidence,
+          updated_at = excluded.updated_at,
+          payload_json = excluded.payload_json
+        `,
+        [
+          note.id,
+          sessionId,
+          note.subtype,
+          note.status,
+          note.subjectKind,
+          note.subjectSpeakerId || null,
+          note.subjectPersonId || null,
+          note.relationshipContextPersonId || null,
+          note.confidence,
+          asIso(note.createdAt),
+          note.updatedAt || null,
+          payloadValue(note)
+        ]
+      );
+    }
+  }
+  async persistLinks(links) {
+    for (const link of links) {
+      const sessionId = await this.resolveLinkSessionId(link) ?? GLOBAL_SESSION_ID;
+      await this.connection.query(
+        `
+        INSERT INTO aisha_note_links (
+          id, session_id, from_note_id, to_note_id, relation, created_at, updated_at, payload_json
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+        ON CONFLICT(id) DO UPDATE SET
+          session_id = excluded.session_id,
+          from_note_id = excluded.from_note_id,
+          to_note_id = excluded.to_note_id,
+          relation = excluded.relation,
+          updated_at = excluded.updated_at,
+          payload_json = excluded.payload_json
+        `,
+        [
+          link.id,
+          sessionId,
+          link.fromNoteId,
+          link.toNoteId,
+          link.relation,
+          asIso(link.createdAt),
+          link.updatedAt || null,
+          payloadValue(link)
+        ]
+      );
+    }
+  }
+  async resolveNoteSessionId(note, fallbackEpisodeIds = []) {
+    const existing = await this.connection.query(
+      `SELECT session_id FROM aisha_notes WHERE id = $1`,
+      [note.id]
+    );
+    if (existing.rows[0]?.session_id) return String(existing.rows[0].session_id);
+    return this.resolveSessionIdFromEpisodeIds([
+      ...note.sourceEpisodeIds,
+      ...fallbackEpisodeIds
+    ]);
+  }
+  async resolveLinkSessionId(link) {
+    const result = await this.connection.query(
+      `
+      SELECT session_id FROM aisha_notes
+      WHERE id = $1 OR id = $2
+      ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END
+      LIMIT 1
+      `,
+      [link.fromNoteId, link.toNoteId]
+    );
+    return result.rows[0]?.session_id ? String(result.rows[0].session_id) : null;
+  }
+  async resolveSessionIdFromEpisodeIds(episodeIds) {
+    const ids = unique2(episodeIds.filter(Boolean));
+    if (!ids.length) return null;
+    const result = await this.connection.query(
+      `SELECT session_id FROM aisha_episodes WHERE id = ANY($1::text[]) LIMIT 1`,
+      [ids]
+    );
+    return result.rows[0]?.session_id ? String(result.rows[0].session_id) : null;
+  }
+};
+async function createPostgresProductionStores(config) {
+  const connection = new AishaPostgresConnection(config);
+  await connection.ensureSchema();
+  return {
+    connection,
+    turnStore: new PostgresTurnStore(connection),
+    snapshotStore: new PostgresSnapshotStore(connection),
+    episodeStore: new PostgresEpisodeStore(connection),
+    threadStore: new PostgresThreadStore(connection),
+    noteVersioning: new PostgresNoteVersioning(connection),
+    runtimeTransaction: new PostgresRuntimeTransaction(connection),
+    close: () => connection.close()
+  };
+}
+async function createPostgresProductionStoresFromEnv(env = process.env) {
+  return createPostgresProductionStores(resolveAishaPostgresConfigFromEnv(env));
+}
+
 // src/host/aishaHostAdapter.ts
 var cachedProductionDeps = null;
 var productionRuntimeBuilder = buildProductionRuntime;
+function persistenceDiagnostics(input = {}) {
+  const mode = input.mode ?? productionPersistenceMode();
+  const connected = input.connected === true;
+  const backend = input.backend ?? (connected ? mode === "postgres" ? "postgres" : "in-memory" : "unavailable");
+  return {
+    aishaPersistenceMode: mode,
+    aishaPersistenceBackend: backend,
+    aishaPersistenceConnected: connected,
+    aishaPersistenceFailureReason: input.failureReason ?? ""
+  };
+}
 function productionKeyFingerprint(apiKey) {
   const key = String(apiKey || "");
   const digest = createHash("sha256").update(key).digest("hex").slice(0, 10);
   return `${key.length}:${digest}`;
 }
-function productionRuntimeFingerprint(apiKey, timeoutMs, model) {
+function productionRuntimeFingerprint(apiKey, timeoutMs, model, persistence = "memory") {
   const timeout = Number.isFinite(Number(timeoutMs)) ? Math.max(1e3, Math.min(6e4, Number(timeoutMs))) : 0;
   const modelKey = String(model || "").trim() || "default-model";
-  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}`;
+  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}`;
 }
 function clearCachedProductionDeps(fingerprint) {
   if (cachedProductionDeps?.fingerprint === fingerprint) {
+    void cachedProductionDeps.postgresStores?.close().catch(() => void 0);
     cachedProductionDeps = null;
   }
+}
+function productionPersistenceMode() {
+  return String(process.env.AISHA_PERSISTENCE || "").trim().toLowerCase() === "postgres" ? "postgres" : "memory";
+}
+function traceWithPersistenceDiagnostics(trace, diagnostics) {
+  return {
+    ...trace,
+    aishaDiagnostics: {
+      ...trace.aishaDiagnostics ?? {},
+      ...diagnostics
+    }
+  };
 }
 function shouldClearCachedDepsAfterFailure(reason = "") {
   return /\b(api[_ -]?key|credential|auth|unauth|permission|invalid|forbidden|quota|gemini|provider|fetch|network|timeout)\b/i.test(
@@ -4012,7 +5506,20 @@ function buildTurnInput(req) {
     }
   };
 }
-function unavailableResponse(req, reason) {
+function unavailableResponse(req, reason, persistence = persistenceDiagnostics({
+  connected: false,
+  failureReason: reason
+})) {
+  const trace = traceWithPersistenceDiagnostics(
+    {
+      traceId: "unavailable",
+      sessionId: req.sessionId,
+      status: "failed",
+      events: [],
+      failureReason: reason
+    },
+    persistence
+  );
   return {
     ok: false,
     responses: [
@@ -4025,13 +5532,7 @@ function unavailableResponse(req, reason) {
     roomSocialState: emptyRoomSocialState(req.roomId),
     continuityEvents: [],
     relationshipDeltas: [],
-    trace: {
-      traceId: "unavailable",
-      sessionId: req.sessionId,
-      status: "failed",
-      events: [],
-      failureReason: reason
-    },
+    trace,
     engineMode: "unavailable",
     aishaEngineConnected: false,
     confidence: 0,
@@ -4050,43 +5551,90 @@ async function processAishaRequest(request, options = {}) {
   if (!deps && engineMode === "production") {
     const apiKey = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
     if (!apiKey) {
+      const mode = productionPersistenceMode();
       return unavailableResponse(
         request,
-        "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot."
+        "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+        persistenceDiagnostics({
+          mode,
+          connected: false,
+          failureReason: "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot."
+        })
       );
     }
     const timeoutMs = Number.isFinite(Number(options.productionGeminiTimeoutMs)) ? Math.max(1e3, Math.min(6e4, Number(options.productionGeminiTimeoutMs))) : void 0;
     const model = String(options.productionGeminiModel || "").trim() || void 0;
-    const keyFingerprint = productionRuntimeFingerprint(apiKey, timeoutMs, model);
+    const persistenceMode = productionPersistenceMode();
+    const keyFingerprint = productionRuntimeFingerprint(
+      apiKey,
+      timeoutMs,
+      model,
+      persistenceMode
+    );
     if (!cachedProductionDeps || cachedProductionDeps.fingerprint !== keyFingerprint) {
       try {
-        const turnStore = new InMemoryTurnStore();
-        const snapshotStore = new InMemorySnapshotStore();
-        const episodeStore = new FixtureEpisodeStore();
-        const threadStore = new FixtureThreadStore();
-        const noteVersioning = new FixtureNoteVersioning();
+        let postgresStores;
+        const stores = persistenceMode === "postgres" ? await createPostgresProductionStoresFromEnv() : void 0;
+        if (stores) {
+          postgresStores = stores;
+        }
+        const turnStore = stores?.turnStore ?? new InMemoryTurnStore();
+        const snapshotStore = stores?.snapshotStore ?? new InMemorySnapshotStore();
+        const episodeStore = stores?.episodeStore ?? new FixtureEpisodeStore();
+        const threadStore = stores?.threadStore ?? new FixtureThreadStore();
+        const noteVersioning = stores?.noteVersioning ?? new FixtureNoteVersioning();
         const depsForKey = productionRuntimeBuilder(
           { geminiApiKey: apiKey, geminiTimeoutMs: timeoutMs, geminiModel: model },
-          { turnStore, snapshotStore, episodeStore, threadStore, noteVersioning }
+          {
+            turnStore,
+            snapshotStore,
+            episodeStore,
+            threadStore,
+            noteVersioning,
+            runtimeTransaction: stores?.runtimeTransaction
+          }
         );
         cachedProductionDeps = {
           fingerprint: keyFingerprint,
-          deps: depsForKey
+          deps: depsForKey,
+          postgresStores,
+          persistenceDiagnostics: persistenceDiagnostics({
+            mode: persistenceMode,
+            backend: persistenceMode === "postgres" ? "postgres" : "in-memory",
+            connected: true
+          })
         };
       } catch (err) {
+        const reason = `Failed to boot A.I.S.H.A engine${persistenceMode === "postgres" ? " with Postgres persistence" : ""}: ${err instanceof Error ? err.message : String(err)}`;
         clearCachedProductionDeps(keyFingerprint);
         return unavailableResponse(
           request,
-          `Failed to boot A.I.S.H.A engine: ${err instanceof Error ? err.message : String(err)}`
+          reason,
+          persistenceDiagnostics({
+            mode: persistenceMode,
+            backend: "unavailable",
+            connected: false,
+            failureReason: reason
+          })
         );
       }
     }
     deps = cachedProductionDeps.deps;
   }
+  const activePersistenceDiagnostics = !options.deps && engineMode === "production" && cachedProductionDeps ? cachedProductionDeps.persistenceDiagnostics : persistenceDiagnostics({
+    mode: productionPersistenceMode(),
+    backend: options.deps ? "in-memory" : "unavailable",
+    connected: !!deps
+  });
   if (!deps) {
     return unavailableResponse(
       request,
-      "No ProcessTurnDeps provided. Set GEMINI_API_KEY for production, or provide fixture deps for testing."
+      "No ProcessTurnDeps provided. Set GEMINI_API_KEY for production, or provide fixture deps for testing.",
+      persistenceDiagnostics({
+        mode: productionPersistenceMode(),
+        connected: false,
+        failureReason: "No ProcessTurnDeps provided. Set GEMINI_API_KEY for production, or provide fixture deps for testing."
+      })
     );
   }
   const turnInput = buildTurnInput(request);
@@ -4095,17 +5643,29 @@ async function processAishaRequest(request, options = {}) {
     result = await processTurn(deps, turnInput);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return unavailableResponse(request, `processTurn threw: ${msg}`);
+    return unavailableResponse(
+      request,
+      `processTurn threw: ${msg}`,
+      persistenceDiagnostics({
+        mode: activePersistenceDiagnostics.aishaPersistenceMode,
+        backend: activePersistenceDiagnostics.aishaPersistenceBackend,
+        connected: activePersistenceDiagnostics.aishaPersistenceConnected,
+        failureReason: `processTurn threw: ${msg}`
+      })
+    );
   }
-  const engineTrace = {
-    traceId: result.trace.traceId,
-    sessionId: result.trace.sessionId,
-    status: result.trace.status,
-    events: result.trace.events,
-    failureReason: result.trace.failureReason,
-    criticLoopCycles: result.criticLoop?.cycleCount,
-    criticMaxCyclesHit: result.criticLoop?.maxCyclesHit
-  };
+  const engineTrace = traceWithPersistenceDiagnostics(
+    {
+      traceId: result.trace.traceId,
+      sessionId: result.trace.sessionId,
+      status: result.trace.status,
+      events: result.trace.events,
+      failureReason: result.trace.failureReason,
+      criticLoopCycles: result.criticLoop?.cycleCount,
+      criticMaxCyclesHit: result.criticLoop?.maxCyclesHit
+    },
+    activePersistenceDiagnostics
+  );
   if (!result.ok) {
     const reason = String(result.fallbackReason || engineTrace.failureReason || "");
     if (!options.deps && engineMode === "production") {
@@ -4113,7 +5673,7 @@ async function processAishaRequest(request, options = {}) {
       if (key && shouldClearCachedDepsAfterFailure(reason)) {
         const timeoutMs = Number.isFinite(Number(options.productionGeminiTimeoutMs)) ? Math.max(1e3, Math.min(6e4, Number(options.productionGeminiTimeoutMs))) : void 0;
         const model = String(options.productionGeminiModel || "").trim() || void 0;
-        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model));
+        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model, productionPersistenceMode()));
       }
     }
     return {
@@ -4179,6 +5739,16 @@ async function processAishaRequest(request, options = {}) {
     confidence: 1
   };
 }
+function __resetProductionDepsForTests() {
+  void cachedProductionDeps?.postgresStores?.close().catch(() => void 0);
+  cachedProductionDeps = null;
+  productionRuntimeBuilder = buildProductionRuntime;
+}
+async function __createPostgresProductionStoresForTests(env = process.env) {
+  return createPostgresProductionStoresFromEnv(env);
+}
 export {
+  __createPostgresProductionStoresForTests,
+  __resetProductionDepsForTests,
   processAishaRequest
 };

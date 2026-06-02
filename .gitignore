@@ -68,3 +68,5 @@ exports/
 *.syntaxfix.bak.*
 skills-lock.json
 packages/aisha-runtime-pack1/package-lock.json
+.vercel
+.env*

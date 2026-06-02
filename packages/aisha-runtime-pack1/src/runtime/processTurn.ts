@@ -729,18 +729,35 @@ export async function processTurn(
     trace.succeed();
 
     if (deps.asyncMemoryFollowup) {
-      await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
-        sessionId: input.sessionId,
-        episodeId: committed.episode.id,
-      });
-
-      trace.add({
-        stage: "memory.async_followup_scheduled",
-        at: deps.clock.nowIso(),
-        data: {
+      try {
+        await deps.asyncMemoryFollowup.scheduleEpisodeProcessing({
+          sessionId: input.sessionId,
           episodeId: committed.episode.id,
-        },
-      });
+        });
+
+        trace.add({
+          stage: "memory.async_followup_scheduled",
+          at: deps.clock.nowIso(),
+          data: {
+            episodeId: committed.episode.id,
+          },
+        });
+      } catch (error) {
+        const reason = compactErrorMessage(error);
+        trace.add({
+          stage: "memory.async_followup_failed",
+          at: deps.clock.nowIso(),
+          data: {
+            episodeId: committed.episode.id,
+            reason,
+          },
+        });
+        console.warn("[MEMORY] async followup failed after commit", {
+          sessionId: input.sessionId,
+          episodeId: committed.episode.id,
+          reason,
+        });
+      }
     }
 
     return buildSuccessResult({

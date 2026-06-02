@@ -31,6 +31,10 @@ import {
   FixtureThreadStore,
   FixtureNoteVersioning,
 } from "./inMemoryStores";
+import {
+  createPostgresProductionStoresFromEnv,
+  type AishaPostgresProductionStores,
+} from "../persistence/postgresStores";
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -38,10 +42,41 @@ let cachedProductionDeps:
   | {
       fingerprint: string;
       deps: ProcessTurnDeps;
+      postgresStores?: AishaPostgresProductionStores;
+      persistenceDiagnostics: AishaPersistenceDiagnostics;
     }
   | null = null;
 
 let productionRuntimeBuilder = buildProductionRuntime;
+
+type AishaPersistenceMode = "memory" | "postgres";
+type AishaPersistenceBackend = "in-memory" | "postgres" | "unavailable";
+
+interface AishaPersistenceDiagnostics {
+  aishaPersistenceMode: AishaPersistenceMode;
+  aishaPersistenceBackend: AishaPersistenceBackend;
+  aishaPersistenceConnected: boolean;
+  aishaPersistenceFailureReason: string;
+}
+
+function persistenceDiagnostics(input: {
+  mode?: AishaPersistenceMode;
+  backend?: AishaPersistenceBackend;
+  connected?: boolean;
+  failureReason?: string;
+} = {}): AishaPersistenceDiagnostics {
+  const mode = input.mode ?? productionPersistenceMode();
+  const connected = input.connected === true;
+  const backend =
+    input.backend ??
+    (connected ? (mode === "postgres" ? "postgres" : "in-memory") : "unavailable");
+  return {
+    aishaPersistenceMode: mode,
+    aishaPersistenceBackend: backend,
+    aishaPersistenceConnected: connected,
+    aishaPersistenceFailureReason: input.failureReason ?? "",
+  };
+}
 
 function productionKeyFingerprint(apiKey: string): string {
   const key = String(apiKey || "");
@@ -49,16 +84,42 @@ function productionKeyFingerprint(apiKey: string): string {
   return `${key.length}:${digest}`;
 }
 
-function productionRuntimeFingerprint(apiKey: string, timeoutMs?: number, model?: string): string {
+function productionRuntimeFingerprint(
+  apiKey: string,
+  timeoutMs?: number,
+  model?: string,
+  persistence = "memory",
+): string {
   const timeout = Number.isFinite(Number(timeoutMs)) ? Math.max(1000, Math.min(60000, Number(timeoutMs))) : 0;
   const modelKey = String(model || "").trim() || "default-model";
-  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}`;
+  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}`;
 }
 
 function clearCachedProductionDeps(fingerprint: string) {
   if (cachedProductionDeps?.fingerprint === fingerprint) {
+    void cachedProductionDeps.postgresStores?.close().catch(() => undefined);
     cachedProductionDeps = null;
   }
+}
+
+function productionPersistenceMode(): "memory" | "postgres" {
+  return String(process.env.AISHA_PERSISTENCE || "").trim().toLowerCase() ===
+    "postgres"
+    ? "postgres"
+    : "memory";
+}
+
+function traceWithPersistenceDiagnostics(
+  trace: AishaEngineTrace,
+  diagnostics: AishaPersistenceDiagnostics,
+): AishaEngineTrace {
+  return {
+    ...trace,
+    aishaDiagnostics: {
+      ...(trace.aishaDiagnostics ?? {}),
+      ...diagnostics,
+    },
+  };
 }
 
 function shouldClearCachedDepsAfterFailure(reason = ""): boolean {
@@ -153,7 +214,21 @@ function buildTurnInput(req: AishaStudioPulseRequest): TurnInput {
 function unavailableResponse(
   req: AishaStudioPulseRequest,
   reason: string,
+  persistence = persistenceDiagnostics({
+    connected: false,
+    failureReason: reason,
+  }),
 ): AishaStudioPulseResponse {
+  const trace = traceWithPersistenceDiagnostics(
+    {
+      traceId: "unavailable",
+      sessionId: req.sessionId,
+      status: "failed",
+      events: [],
+      failureReason: reason,
+    },
+    persistence,
+  );
   return {
     ok: false,
     responses: [
@@ -167,13 +242,7 @@ function unavailableResponse(
     roomSocialState: emptyRoomSocialState(req.roomId),
     continuityEvents: [],
     relationshipDeltas: [],
-    trace: {
-      traceId: "unavailable",
-      sessionId: req.sessionId,
-      status: "failed",
-      events: [],
-      failureReason: reason,
-    },
+    trace,
     engineMode: "unavailable",
     aishaEngineConnected: false,
     confidence: 0,
@@ -235,48 +304,108 @@ export async function processAishaRequest(
   if (!deps && engineMode === "production") {
     const apiKey = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
     if (!apiKey) {
+      const mode = productionPersistenceMode();
       return unavailableResponse(
         request,
         "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+        persistenceDiagnostics({
+          mode,
+          connected: false,
+          failureReason: "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+        }),
       );
     }
     const timeoutMs = Number.isFinite(Number(options.productionGeminiTimeoutMs))
       ? Math.max(1000, Math.min(60000, Number(options.productionGeminiTimeoutMs)))
       : undefined;
     const model = String(options.productionGeminiModel || "").trim() || undefined;
-    const keyFingerprint = productionRuntimeFingerprint(apiKey, timeoutMs, model);
+    const persistenceMode = productionPersistenceMode();
+    const keyFingerprint = productionRuntimeFingerprint(
+      apiKey,
+      timeoutMs,
+      model,
+      persistenceMode,
+    );
     if (!cachedProductionDeps || cachedProductionDeps.fingerprint !== keyFingerprint) {
       try {
-        const turnStore = new InMemoryTurnStore();
-        const snapshotStore = new InMemorySnapshotStore();
-        const episodeStore = new FixtureEpisodeStore();
-        const threadStore = new FixtureThreadStore();
+        let postgresStores: AishaPostgresProductionStores | undefined;
+        const stores =
+          persistenceMode === "postgres"
+            ? await createPostgresProductionStoresFromEnv()
+            : undefined;
+
+        if (stores) {
+          postgresStores = stores;
+        }
+
+        const turnStore = stores?.turnStore ?? new InMemoryTurnStore();
+        const snapshotStore = stores?.snapshotStore ?? new InMemorySnapshotStore();
+        const episodeStore = stores?.episodeStore ?? new FixtureEpisodeStore();
+        const threadStore = stores?.threadStore ?? new FixtureThreadStore();
         const noteVersioning =
-          new FixtureNoteVersioning() as unknown as import("../memory/types").INoteVersioning;
+          stores?.noteVersioning ??
+          (new FixtureNoteVersioning() as unknown as import("../memory/types").INoteVersioning);
 
         const depsForKey = productionRuntimeBuilder(
           { geminiApiKey: apiKey, geminiTimeoutMs: timeoutMs, geminiModel: model },
-          { turnStore, snapshotStore, episodeStore, threadStore, noteVersioning },
+          {
+            turnStore,
+            snapshotStore,
+            episodeStore,
+            threadStore,
+            noteVersioning,
+            runtimeTransaction: stores?.runtimeTransaction,
+          },
         );
         cachedProductionDeps = {
           fingerprint: keyFingerprint,
           deps: depsForKey,
+          postgresStores,
+          persistenceDiagnostics: persistenceDiagnostics({
+            mode: persistenceMode,
+            backend: persistenceMode === "postgres" ? "postgres" : "in-memory",
+            connected: true,
+          }),
         };
       } catch (err) {
+        const reason = `Failed to boot A.I.S.H.A engine${
+          persistenceMode === "postgres" ? " with Postgres persistence" : ""
+        }: ${err instanceof Error ? err.message : String(err)}`;
         clearCachedProductionDeps(keyFingerprint);
         return unavailableResponse(
           request,
-          `Failed to boot A.I.S.H.A engine: ${err instanceof Error ? err.message : String(err)}`,
+          reason,
+          persistenceDiagnostics({
+            mode: persistenceMode,
+            backend: "unavailable",
+            connected: false,
+            failureReason: reason,
+          }),
         );
       }
     }
     deps = cachedProductionDeps.deps;
   }
 
+  const activePersistenceDiagnostics =
+    !options.deps && engineMode === "production" && cachedProductionDeps
+      ? cachedProductionDeps.persistenceDiagnostics
+      : persistenceDiagnostics({
+          mode: productionPersistenceMode(),
+          backend: options.deps ? "in-memory" : "unavailable",
+          connected: !!deps,
+        });
+
   if (!deps) {
     return unavailableResponse(
       request,
       "No ProcessTurnDeps provided. Set GEMINI_API_KEY for production, or provide fixture deps for testing.",
+      persistenceDiagnostics({
+        mode: productionPersistenceMode(),
+        connected: false,
+        failureReason:
+          "No ProcessTurnDeps provided. Set GEMINI_API_KEY for production, or provide fixture deps for testing.",
+      }),
     );
   }
 
@@ -287,19 +416,31 @@ export async function processAishaRequest(
     result = await processTurn(deps, turnInput);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return unavailableResponse(request, `processTurn threw: ${msg}`);
+    return unavailableResponse(
+      request,
+      `processTurn threw: ${msg}`,
+      persistenceDiagnostics({
+        mode: activePersistenceDiagnostics.aishaPersistenceMode,
+        backend: activePersistenceDiagnostics.aishaPersistenceBackend,
+        connected: activePersistenceDiagnostics.aishaPersistenceConnected,
+        failureReason: `processTurn threw: ${msg}`,
+      }),
+    );
   }
 
   // Build the trace envelope from the engine trace
-  const engineTrace: AishaEngineTrace = {
-    traceId: result.trace.traceId,
-    sessionId: result.trace.sessionId,
-    status: result.trace.status,
-    events: result.trace.events,
-    failureReason: result.trace.failureReason,
-    criticLoopCycles: result.criticLoop?.cycleCount,
-    criticMaxCyclesHit: result.criticLoop?.maxCyclesHit,
-  };
+  const engineTrace: AishaEngineTrace = traceWithPersistenceDiagnostics(
+    {
+      traceId: result.trace.traceId,
+      sessionId: result.trace.sessionId,
+      status: result.trace.status,
+      events: result.trace.events,
+      failureReason: result.trace.failureReason,
+      criticLoopCycles: result.criticLoop?.cycleCount,
+      criticMaxCyclesHit: result.criticLoop?.maxCyclesHit,
+    },
+    activePersistenceDiagnostics,
+  );
 
   // If the engine fallback-path ran (ok=false), still return a structured response.
   if (!result.ok) {
@@ -311,7 +452,7 @@ export async function processAishaRequest(
           ? Math.max(1000, Math.min(60000, Number(options.productionGeminiTimeoutMs)))
           : undefined;
         const model = String(options.productionGeminiModel || "").trim() || undefined;
-        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model));
+        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model, productionPersistenceMode()));
       }
     }
     return {
@@ -406,6 +547,7 @@ export async function processAishaRequest(
 }
 
 export function __resetProductionDepsForTests() {
+  void cachedProductionDeps?.postgresStores?.close().catch(() => undefined);
   cachedProductionDeps = null;
   productionRuntimeBuilder = buildProductionRuntime;
 }
@@ -417,4 +559,10 @@ export function __setProductionRuntimeBuilderForTests(builder?: typeof buildProd
 
 export function __productionDepsCacheFingerprintForTests(): string {
   return cachedProductionDeps?.fingerprint ?? "";
+}
+
+export async function __createPostgresProductionStoresForTests(
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return createPostgresProductionStoresFromEnv(env);
 }
