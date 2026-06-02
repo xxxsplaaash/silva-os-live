@@ -1735,10 +1735,17 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /tensionScore/);
   assert.match(script, /roomMove/);
   assert.match(script, /statusEvents/);
+  assert.match(script, /socialMemory/);
+  assert.match(script, /function normalizeSocialMemory/);
+  assert.match(script, /statusMomentum/);
+  assert.match(script, /pairPressure/);
+  assert.match(script, /interruptionPressure/);
   assert.match(script, /normalizeRoomMove/);
   assert.match(script, /normalizeStatusEventKind/);
   assert.match(script, /room-move-chip/);
   assert.match(script, /status-event/);
+  assert.match(script, /social-memory-item/);
+  assert.match(script, /pair-pressure/);
   assert.match(html, /hierarchy-list/);
   assert.match(html, /dynamics-list/);
   assert.match(html, /continuity-fill/);
@@ -1759,6 +1766,9 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.dynamics-item/);
   assert.match(css, /\.room-move-chip/);
   assert.match(css, /\.dynamics-item\.status-event/);
+  assert.match(css, /\.social-memory-item/);
+  assert.match(css, /\.pair-pressure-friction/);
+  assert.match(css, /\.interruption-pressure/);
   assert.match(css, /\.continuity-meter/);
   assert.match(css, /body\.is-pulse-embed/);
   assert.match(script, /silvastudios\.co\.za/);

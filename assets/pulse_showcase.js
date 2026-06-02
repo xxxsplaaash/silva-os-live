@@ -26,7 +26,7 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.4.3';
+  var SHOWCASE_VERSION = '1.5.0';
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
     'https://silvastudios.co.za',
@@ -165,7 +165,13 @@
       alliances: [],
       interruptions: [],
       roomMove: 'observe',
-      statusEvents: []
+      statusEvents: [],
+      socialMemory: {
+        statusMomentum: [],
+        pairPressure: [],
+        recentRoomMoves: [],
+        interruptionPressure: 0
+      }
     };
   }
 
@@ -250,6 +256,63 @@
   function safeSpeakerId(value) {
     var id = safeToken(value, '');
     return SPEAKER_IDS.includes(id) ? id : '';
+  }
+
+  function boundedNumber(value, min, max) {
+    var number = Number(value);
+    if (!Number.isFinite(number)) return 0;
+    return Math.max(min, Math.min(max, Math.round(number)));
+  }
+
+  function normalizePairMove(value) {
+    var move = safeToken(value, 'silence');
+    return ['challenge', 'defense', 'redirect', 'alliance', 'interruption', 'silence'].includes(move) ? move : 'silence';
+  }
+
+  function normalizeOptionalRoomMove(value) {
+    var move = safeToken(value, '');
+    return ['anchor', 'challenge', 'redirect', 'defend', 'deflect', 'cool', 'escalate', 'observe'].includes(move) ? move : '';
+  }
+
+  function normalizeSocialMemory(value, fallbackValue) {
+    var source = value && typeof value === 'object' ? value : {};
+    var fallback = fallbackValue && typeof fallbackValue === 'object' ? fallbackValue : {};
+    var seenMomentum = {};
+    var seenPairs = {};
+    var momentumSource = Array.isArray(source.statusMomentum) ? source.statusMomentum : (Array.isArray(fallback.statusMomentum) ? fallback.statusMomentum : []);
+    var pairSource = Array.isArray(source.pairPressure) ? source.pairPressure : (Array.isArray(fallback.pairPressure) ? fallback.pairPressure : []);
+    var movesSource = Array.isArray(source.recentRoomMoves) ? source.recentRoomMoves : (Array.isArray(fallback.recentRoomMoves) ? fallback.recentRoomMoves : []);
+    return {
+      statusMomentum: momentumSource.map(function (item) {
+        var id = safeSpeakerId(item && item.speakerId);
+        if (!id || seenMomentum[id]) return null;
+        seenMomentum[id] = true;
+        var valueNumber = boundedNumber(item && item.value, -100, 100);
+        return valueNumber ? { speakerId: id, value: valueNumber } : null;
+      }).filter(Boolean).slice(0, 5),
+      pairPressure: pairSource.map(function (item) {
+        var between = Array.isArray(item && item.between) ? item.between.map(safeSpeakerId).filter(Boolean).sort() : [];
+        if (between.length !== 2 || between[0] === between[1]) return null;
+        var key = between.join(':');
+        if (seenPairs[key]) return null;
+        seenPairs[key] = true;
+        var affinity = boundedNumber(item && item.affinity, 0, 100);
+        var friction = boundedNumber(item && item.friction, 0, 100);
+        if (!affinity && !friction) return null;
+        return {
+          between: between,
+          affinity: affinity,
+          friction: friction,
+          lastMove: normalizePairMove(item && item.lastMove)
+        };
+      }).filter(Boolean).slice(0, 4),
+      recentRoomMoves: movesSource.map(normalizeOptionalRoomMove).filter(Boolean).slice(-5),
+      interruptionPressure: boundedNumber(
+        source.interruptionPressure != null ? source.interruptionPressure : fallback.interruptionPressure,
+        0,
+        100
+      )
+    };
   }
 
   function ledgerStatus(value) {
@@ -359,7 +422,8 @@
           };
         })
         .filter(Boolean)
-        .slice(0, 4)
+        .slice(0, 4),
+      socialMemory: normalizeSocialMemory(source.socialMemory, fallback.socialMemory)
     };
     if (!state.socialSignals.hierarchy.length) state.socialSignals.hierarchy = defaultSocialSignals().hierarchy;
     state.tensionScore = state.socialSignals.tension;
@@ -566,6 +630,7 @@
 
   function renderSocialSignals() {
     var signals = state.socialSignals || defaultSocialSignals();
+    var socialMemory = normalizeSocialMemory(signals.socialMemory || {}, defaultSocialSignals().socialMemory);
     if (el.hierarchyList) {
       el.hierarchyList.innerHTML = (signals.hierarchy || []).map(function (item) {
         var id = safeSpeakerId(item.speakerId);
@@ -602,6 +667,38 @@
           '</span></div>'
         );
       });
+      socialMemory.statusMomentum.slice(0, 3).forEach(function (item) {
+        var sign = item.value > 0 ? '+' : '';
+        rows.push(
+          '<div class="dynamics-item social-memory-item"><strong>' +
+          escapeHtml(speakerName(item.speakerId)) +
+          '</strong> momentum ' +
+          escapeHtml(sign + item.value) +
+          '</div>'
+        );
+      });
+      socialMemory.pairPressure.slice(0, 2).forEach(function (item) {
+        var dominant = item.friction > item.affinity ? 'friction' : 'affinity';
+        var value = dominant === 'friction' ? item.friction : item.affinity;
+        rows.push(
+          '<div class="dynamics-item pair-pressure pair-pressure-' + dominant + '"><strong>' +
+          escapeHtml(speakerName(item.between[0])) +
+          '</strong> / <strong>' +
+          escapeHtml(speakerName(item.between[1])) +
+          '</strong> ' +
+          escapeHtml(dominant) +
+          ' <span>' +
+          escapeHtml(value) +
+          '</span></div>'
+        );
+      });
+      if (socialMemory.interruptionPressure) {
+        rows.push(
+          '<div class="dynamics-item interruption-pressure">Interruption pressure <span>' +
+          escapeHtml(socialMemory.interruptionPressure) +
+          '</span></div>'
+        );
+      }
       (signals.interruptions || []).forEach(function (item) {
         rows.push(
           '<div class="dynamics-item interruption"><strong>' +

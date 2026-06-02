@@ -801,6 +801,8 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
             assert.match(request.messageText, /obsidian dashboards/i);
             assert.doesNotMatch(request.messageText, /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
             assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
+            assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /relationshipContext/);
+            assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /interruptionPressure/);
             return {
               ok: true,
               responses: [{
@@ -890,7 +892,20 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
             sessionId: 'showcase-test-session',
             mode: 'bad-mode',
             userText: 'I prefer obsidian dashboards with one red accent.',
-            recentTurns: [{ speakerId: 'user', text: 'hello' }]
+            recentTurns: [{ speakerId: 'user', text: 'hello' }],
+            roomState: {
+              roomMood: 'focused',
+              responseMode: 'single',
+              priorSpeaker: 'leah',
+              socialSignals: {
+                socialMemory: {
+                  statusMomentum: [{ speakerId: 'aisha', value: 46 }],
+                  pairPressure: [{ between: ['aisha', 'leah'], affinity: 62, friction: 18, lastMove: 'alliance' }],
+                  recentRoomMoves: ['redirect'],
+                  interruptionPressure: 17
+                }
+              }
+            }
           })
         });
         assert.equal(response.status, 200);
@@ -924,6 +939,10 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         assert.equal(data.socialSignals.roomMove, 'anchor');
         assert.ok(data.socialSignals.statusEvents.some(item => item.speakerId === 'aisha' && item.kind === 'continuity-anchor'));
         assert.ok(data.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
+        assert.ok(data.socialSignals.socialMemory);
+        assert.ok(data.socialSignals.socialMemory.statusMomentum.some(item => item.speakerId === 'aisha'));
+        assert.ok(data.socialSignals.socialMemory.pairPressure.some(item => item.between.includes('aisha') && item.between.includes('leah')));
+        assert.ok(data.socialSignals.socialMemory.interruptionPressure >= 0 && data.socialSignals.socialMemory.interruptionPressure <= 100);
         assert.doesNotMatch(JSON.stringify(data), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
       });
     } finally {
@@ -1027,7 +1046,18 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
                   { speakerId: 'leah', status: 71 },
                   { speakerId: 'aisha', status: 70 },
                   { speakerId: 'grok', status: 62 }
-                ]
+                ],
+                socialMemory: {
+                  statusMomentum: [
+                    { speakerId: 'leah', value: 54 },
+                    { speakerId: 'ghost', value: 99 }
+                  ],
+                  pairPressure: [
+                    { between: ['leah', 'grok'], affinity: 12, friction: 77, lastMove: 'challenge' }
+                  ],
+                  recentRoomMoves: ['challenge', 'redirect'],
+                  interruptionPressure: 64
+                }
               }
             }
           })
@@ -1067,6 +1097,9 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
         assert.ok(final.socialSignals.hierarchy.every(item => item.status >= 0 && item.status <= 100));
         assert.equal(final.socialSignals.roomMove, 'challenge');
         assert.ok(final.socialSignals.statusEvents.some(item => item.speakerId === 'aisha' && item.kind === 'continuity-anchor'));
+        assert.ok(final.socialSignals.socialMemory.statusMomentum.every(item => item.value >= -100 && item.value <= 100));
+        assert.ok(final.socialSignals.socialMemory.pairPressure.some(item => item.between.includes('grok') && item.between.includes('leah')));
+        assert.ok(final.socialSignals.socialMemory.recentRoomMoves.includes('challenge'));
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt|socialCues/);
       });
     } finally {

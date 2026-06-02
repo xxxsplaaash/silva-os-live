@@ -544,9 +544,25 @@ body.is-pulse-embed .ledger-panel {
   border-color: rgba(184, 168, 216, .28);
 }
 
-.dynamics-item.status-event span {
+.dynamics-item.status-event span,
+.pair-pressure span,
+.interruption-pressure span {
   color: var(--muted);
   font: 11px "DM Mono", ui-monospace, monospace;
+}
+
+.social-memory-item {
+  border-color: rgba(143, 212, 199, .22);
+}
+
+.pair-pressure-affinity {
+  border-color: rgba(88, 194, 139, .22);
+}
+
+.pair-pressure-friction,
+.interruption-pressure {
+  border-color: rgba(215, 168, 75, .30);
+  background: rgba(215, 168, 75, .045);
 }
 
 .presence-list,

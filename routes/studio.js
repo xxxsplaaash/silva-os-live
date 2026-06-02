@@ -1141,7 +1141,66 @@ function sanitizeShowcaseIncomingSocialSignals(value = {}) {
         };
       })
       .filter(Boolean)
-      .slice(0, 5)
+      .slice(0, 5),
+    socialMemory: sanitizeShowcaseIncomingSocialMemory(source.socialMemory || {})
+  };
+}
+
+function sanitizeShowcaseIncomingSocialMemory(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const pairMoves = new Set(['challenge', 'defense', 'redirect', 'alliance', 'interruption', 'silence']);
+  const roomMoves = new Set(['anchor', 'challenge', 'redirect', 'defend', 'deflect', 'cool', 'escalate', 'observe']);
+  const seenMomentum = new Set();
+  const seenPairs = new Set();
+  const safeNumber = (input, min, max) => {
+    const number = Number(input);
+    if (!Number.isFinite(number)) return 0;
+    return Math.max(min, Math.min(max, Math.round(number)));
+  };
+  const cleanSpeaker = (input) => {
+    const speaker = String(input || '').trim().toLowerCase();
+    return PULSE_SHOWCASE_SPEAKERS.includes(speaker) ? speaker : '';
+  };
+  const pairKey = (between = []) => {
+    const pair = Array.isArray(between) ? between.map(cleanSpeaker).filter(Boolean).sort() : [];
+    return pair.length === 2 && pair[0] !== pair[1] ? pair.join(':') : '';
+  };
+  return {
+    statusMomentum: (Array.isArray(source.statusMomentum) ? source.statusMomentum : [])
+      .map(item => {
+        const speakerId = cleanSpeaker(item?.speakerId);
+        if (!speakerId || seenMomentum.has(speakerId)) return null;
+        seenMomentum.add(speakerId);
+        const value = safeNumber(item?.value, -100, 100);
+        return value ? { speakerId, value } : null;
+      })
+      .filter(Boolean)
+      .slice(0, 5),
+    pairPressure: (Array.isArray(source.pairPressure) ? source.pairPressure : [])
+      .map(item => {
+        const key = pairKey(item?.between);
+        if (!key || seenPairs.has(key)) return null;
+        seenPairs.add(key);
+        const affinity = safeNumber(item?.affinity, 0, 100);
+        const friction = safeNumber(item?.friction, 0, 100);
+        if (!affinity && !friction) return null;
+        const lastMove = pairMoves.has(String(item?.lastMove || '').trim().toLowerCase())
+          ? String(item.lastMove).trim().toLowerCase()
+          : 'silence';
+        return {
+          between: key.split(':'),
+          affinity,
+          friction,
+          lastMove
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 4),
+    recentRoomMoves: (Array.isArray(source.recentRoomMoves) ? source.recentRoomMoves : [])
+      .map(item => String(item || '').trim().toLowerCase())
+      .filter(item => roomMoves.has(item))
+      .slice(-5),
+    interruptionPressure: safeNumber(source.interruptionPressure, 0, 100)
   };
 }
 

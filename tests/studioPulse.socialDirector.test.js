@@ -7,6 +7,7 @@ const path = require('node:path');
 
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
+const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
 const { validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 
@@ -329,6 +330,91 @@ test('showcase social signal projector maps social cues without creating truth',
   assert.ok(signals.statusEvents.some(item => item.kind === 'continuity-anchor' && item.speakerId === 'aisha'));
   assert.ok(signals.alliances.some(item => item.between.includes('aisha') && item.between.includes('grok')));
   assert.ok(signals.interruptions.some(item => item.kind === 'continuity-correction' && item.interrupter === 'aisha'));
+});
+
+test('showcase social signal projector carries bounded social memory without continuity rows', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'social_hierarchy_lab',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    messageEvents: [{ speakerId: 'leah', role: 'primary', tone: 'sharp challenge', text: 'That is a status move.' }],
+    silentReactions: [{ speakerId: 'vanya', visibleState: 'Cooling' }],
+    continuityLedger: [],
+    roomState: {
+      priorSpeaker: 'grok',
+      socialSignals: {
+        hierarchy: [
+          { speakerId: 'leah', status: 68 },
+          { speakerId: 'grok', status: 66 }
+        ],
+        socialMemory: {
+          statusMomentum: [
+            { speakerId: 'leah', value: 250 },
+            { speakerId: 'ghost', value: 90 },
+            { speakerId: 'grok', value: -250 }
+          ],
+          pairPressure: [
+            { between: ['leah', 'grok'], affinity: 500, friction: 500, lastMove: 'interruption' },
+            { between: ['leah', 'ghost'], affinity: 80, friction: 20, lastMove: 'alliance' }
+          ],
+          recentRoomMoves: ['redirect', 'not-real', 'challenge'],
+          interruptionPressure: 999
+        }
+      }
+    },
+    socialCues: {
+      roomMove: 'challenge',
+      tensionDelta: 5,
+      continuityDelta: 0,
+      speakerCues: [
+        { speakerId: 'leah', targetSpeakerId: 'grok', stance: 'dominant', statusDelta: 6, interruptionKind: 'status-cut' }
+      ]
+    },
+    diagnostics: {}
+  });
+
+  assert.equal(signals.roomMove, 'challenge');
+  assert.ok(signals.socialMemory);
+  assert.ok(signals.socialMemory.statusMomentum.every(item => item.value >= -100 && item.value <= 100));
+  assert.ok(signals.socialMemory.pairPressure.every(item => item.affinity >= 0 && item.affinity <= 100 && item.friction >= 0 && item.friction <= 100));
+  assert.ok(signals.socialMemory.pairPressure.some(item => item.between.includes('leah') && item.between.includes('grok')));
+  assert.equal(signals.socialMemory.pairPressure.some(item => item.between.includes('ghost')), false);
+  assert.ok(signals.socialMemory.interruptionPressure >= 0 && signals.socialMemory.interruptionPressure <= 100);
+  assert.ok(signals.socialMemory.recentRoomMoves.includes('challenge'));
+  assert.equal(Object.prototype.hasOwnProperty.call(signals, 'continuityLedger'), false);
+});
+
+test('room director prompt receives compact relationship context only as advisory state', () => {
+  const input = buildRoomDirectorInput({
+    message: 'Leah, challenge that drift.',
+    roomState: {
+      roomMood: 'sharp',
+      responseMode: 'small_exchange',
+      priorSpeaker: 'grok',
+      socialSignals: {
+        socialMemory: {
+          statusMomentum: [
+            { speakerId: 'leah', value: 71 },
+            { speakerId: 'ghost', value: 100 }
+          ],
+          pairPressure: [
+            { between: ['leah', 'grok'], affinity: 10, friction: 88, lastMove: 'interruption' },
+            { between: ['aisha', 'ghost'], affinity: 99, friction: 0, lastMove: 'alliance' }
+          ],
+          recentRoomMoves: ['challenge', 'fake-move'],
+          interruptionPressure: 93
+        }
+      }
+    }
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /relationshipContext/);
+  assert.match(prompt, /interruptionPressure/);
+  assert.match(prompt, /leah/);
+  assert.match(prompt, /grok/);
+  assert.doesNotMatch(prompt, /ghost|fake-move/);
+  assert.match(prompt, /never treat it as factual memory or a continuity ledger/);
 });
 
 test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async () => {
