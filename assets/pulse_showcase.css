@@ -34,6 +34,12 @@ body {
   overflow: hidden;
 }
 
+body.is-pulse-embed {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 button,
 textarea {
   font: inherit;
@@ -58,6 +64,12 @@ textarea {
   grid-template-rows: auto auto minmax(0, 1fr);
   padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   gap: 10px;
+}
+
+body.is-pulse-embed .pulse-shell {
+  height: auto;
+  min-height: 0;
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
 }
 
 .pulse-topbar,
@@ -188,6 +200,11 @@ textarea {
   overflow: hidden;
 }
 
+body.is-pulse-embed .room-panel {
+  min-height: 0;
+  overflow: visible;
+}
+
 .room-head {
   min-height: 72px;
   display: flex;
@@ -229,6 +246,11 @@ textarea {
   flex-direction: column;
   gap: 10px;
   scroll-behavior: smooth;
+}
+
+body.is-pulse-embed .room-feed {
+  min-height: 320px;
+  overflow: visible;
 }
 
 .message {
@@ -357,6 +379,10 @@ textarea {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   overflow: hidden;
+}
+
+body.is-pulse-embed .ledger-panel {
+  overflow: visible;
 }
 
 .ledger-section {

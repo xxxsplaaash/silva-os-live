@@ -26,6 +26,14 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
+  var SHOWCASE_VERSION = '1.4.3';
+  var EMBED_MODE = queryFlag('embed') === '1';
+  var TRUSTED_PARENT_ORIGINS = [
+    'https://silvastudios.co.za',
+    'https://www.silvastudios.co.za',
+    'http://localhost:3225',
+    'http://127.0.0.1:3225'
+  ];
 
   var state = {
     sessionId: readSessionId(),
@@ -41,13 +49,28 @@
     priorSpeaker: '',
     status: null,
     busy: false,
-    forceScroll: false
+    forceScroll: false,
+    embedMode: EMBED_MODE
   };
 
   var el = {};
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function queryFlag(name) {
+    try {
+      return new URLSearchParams(window.location.search || '').get(name) || '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function applyEmbedMode() {
+    document.body.classList.toggle('is-pulse-embed', EMBED_MODE);
+    var shell = document.querySelector('.pulse-shell');
+    if (shell) shell.setAttribute('data-embed', EMBED_MODE ? '1' : '0');
   }
 
   function apiUrl(path) {
@@ -399,6 +422,102 @@
     return HELD_TURN_MESSAGE;
   }
 
+  function isPersistenceConnected(source) {
+    var data = source || {};
+    if (data.persistence && data.persistence.connected === true) return true;
+    if (data.diagnostics && data.diagnostics.persistenceConnected === true) return true;
+    if (data.aishaPersistenceConnected === true) return true;
+    return false;
+  }
+
+  function persistenceMode(source) {
+    var data = source || {};
+    if (data.persistence && data.persistence.mode) return compact(data.persistence.mode, 32);
+    if (data.aishaPersistenceMode) return compact(data.aishaPersistenceMode, 32);
+    return isPersistenceConnected(data) ? 'postgres' : 'unknown';
+  }
+
+  function parentTargetOrigin() {
+    try {
+      if (!document.referrer) return '*';
+      var origin = new URL(document.referrer).origin;
+      return trustedParentOrigin(origin) ? origin : '';
+    } catch (err) {
+      return '*';
+    }
+  }
+
+  function parentEnvelope(type, payload) {
+    return Object.assign({
+      type: type,
+      source: 'studio-pulse-showcase',
+      version: SHOWCASE_VERSION,
+      embed: EMBED_MODE,
+      mode: state.mode
+    }, payload || {});
+  }
+
+  function postParentEvent(type, payload) {
+    try {
+      var target = parentTargetOrigin();
+      if (!target) return;
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(parentEnvelope(type, payload), target);
+      }
+    } catch (err) {}
+  }
+
+  function safeStatusPayload() {
+    var status = state.status || {};
+    return {
+      activeEngine: compact(status.activeEngine || 'checking', 80),
+      aishaEngineConnected: status.aishaEngineConnected === true,
+      persistenceConnected: isPersistenceConnected(status),
+      persistenceMode: persistenceMode(status),
+      statusKnown: status.ok === true
+    };
+  }
+
+  function safeTurnStatePayload(source) {
+    var data = source && typeof source === 'object' ? source : {};
+    var runtime = state.turnRuntime || defaultTurnRuntime();
+    var status = state.status || {};
+    return {
+      runtimePhase: normalizeRuntimePhase(data.runtimePhase || runtime.runtimePhase),
+      acceptedByPack1: data.acceptedByPack1 === true || runtime.acceptedByPack1 === true,
+      fallbackCategory: compact(data.fallbackCategory || runtime.fallbackCategory || '', 80),
+      activeEngine: compact(data.activeEngine || status.activeEngine || 'local-room-intelligence', 80),
+      persistenceConnected: isPersistenceConnected(data) || isPersistenceConnected(status),
+      roomMood: compact(data.roomMood || state.roomMood || 'focused', 40),
+      responseMode: compact(data.responseMode || state.responseMode || 'single', 40),
+      tension: Math.max(0, Math.min(100, Math.round(Number(state.socialSignals.tension || state.tensionScore || 0) || 0))),
+      continuityPressure: Math.max(0, Math.min(100, Math.round(Number(state.socialSignals.continuityPressure || 0) || 0))),
+      roomMove: normalizeRoomMove(state.socialSignals.roomMove || 'observe')
+    };
+  }
+
+  function reportReady() {
+    postParentEvent('PULSE_READY', {
+      height: currentHeight(),
+      statusKnown: !!(state.status && state.status.ok === true)
+    });
+  }
+
+  function reportStatus() {
+    postParentEvent('PULSE_STATUS', safeStatusPayload());
+  }
+
+  function reportTurnState(source) {
+    postParentEvent('PULSE_TURN_STATE', safeTurnStatePayload(source));
+  }
+
+  function reportError(category, message) {
+    postParentEvent('PULSE_ERROR', {
+      category: compact(category || 'turn-held', 48),
+      message: compact(message || HELD_TURN_MESSAGE, 120)
+    });
+  }
+
   function setMode(mode) {
     state.mode = MODES[mode] ? mode : 'social_hierarchy_lab';
     document.querySelector('.pulse-shell').dataset.mode = state.mode;
@@ -408,6 +527,7 @@
     el.roomModeTitle.textContent = MODES[state.mode];
     persistState();
     reportHeight();
+    reportStatus();
   }
 
   function renderStatus() {
@@ -591,6 +711,7 @@
       state.status = await apiJson('/api/studio/pulse-showcase/status');
       renderStatus();
       reportHeight();
+      reportStatus();
     } catch (err) {
       state.status = {
         activeEngine: 'local-room-intelligence',
@@ -598,6 +719,7 @@
         persistence: { mode: 'memory', connected: false }
       };
       renderStatus();
+      reportStatus();
     }
   }
 
@@ -665,6 +787,8 @@
     renderSocialSignals();
     renderPresence(payload.messageEvents || [], payload.silentReactions || []);
     persistState();
+    reportTurnState(payload);
+    reportHeight();
   }
 
   function handleStreamEvent(event, data, streamState) {
@@ -677,6 +801,7 @@
       state.status = data || state.status;
       updateTurnRuntime(data || {});
       renderStatus();
+      reportTurnState(data || {});
       return;
     }
     if (event === 'processing') {
@@ -768,6 +893,7 @@
         role: 'system',
         text: isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. The local room remains available.'
       });
+      reportError(isHeldTurnError(err) ? 'turn-held' : 'runtime-missed', isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. The local room remains available.');
       state.forceScroll = true;
       renderMessages();
     } finally {
@@ -795,24 +921,21 @@
       sessionStorage.removeItem(STATE_KEY);
     } catch (err) {}
     renderAll();
+    reportTurnState(defaultTurnRuntime());
+  }
+
+  function currentHeight() {
+    return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight || 0);
   }
 
   function reportHeight() {
-    try {
-      window.parent.postMessage({
-        type: 'PULSE_HEIGHT',
-        height: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight || 0)
-      }, '*');
-    } catch (err) {}
+    postParentEvent('PULSE_HEIGHT', {
+      height: currentHeight()
+    });
   }
 
   function trustedParentOrigin(origin) {
-    return [
-      'https://silvastudios.co.za',
-      'https://www.silvastudios.co.za',
-      'http://localhost:3225',
-      'http://127.0.0.1:3225'
-    ].includes(String(origin || '').trim());
+    return TRUSTED_PARENT_ORIGINS.includes(String(origin || '').trim());
   }
 
   function bind() {
@@ -854,14 +977,17 @@
       var data = event.data || {};
       if (data.type === 'PULSE_SET_MODE') setMode(data.mode);
       if (data.type === 'PULSE_RESET') resetSession();
+      if (data.type === 'PULSE_PING') reportReady();
     });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    applyEmbedMode();
     bind();
     restoreState();
     setMode(state.mode);
     renderAll();
     refreshStatus();
+    reportReady();
   });
 })();

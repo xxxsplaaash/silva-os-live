@@ -44,6 +44,8 @@ const PULSE_SHOWCASE_JS = path.join(ROOT, 'assets', 'pulse_showcase.js');
 const PULSE_SHOWCASE_CSS = path.join(ROOT, 'assets', 'pulse_showcase.css');
 const BUILD_VERCEL_STATIC = path.join(ROOT, 'scripts', 'build-vercel-static.mjs');
 const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
+const PULSE_WIX_RUNBOOK = path.join(ROOT, 'docs', 'STUDIO_PULSE_WIX_EMBED_RUNBOOK.md');
+const PULSE_PUBLIC_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-public.mjs');
 const AISHA_GEMINI_ADAPTER = path.join(ROOT, 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts');
 
 function readIndex() {
@@ -1676,6 +1678,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   const css = fs.readFileSync(PULSE_SHOWCASE_CSS, 'utf8');
   const build = fs.readFileSync(BUILD_VERCEL_STATIC, 'utf8');
   const vercel = fs.readFileSync(VERCEL_CONFIG, 'utf8');
+  const runbook = fs.readFileSync(PULSE_WIX_RUNBOOK, 'utf8');
+  const smoke = fs.readFileSync(PULSE_PUBLIC_SMOKE, 'utf8');
   const combined = `${html}\n${script}\n${css}`;
 
   assert.match(html, /Studio Pulse Showcase/);
@@ -1684,11 +1688,20 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /\/api\/studio\/pulse-showcase\/status/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn-stream/);
+  assert.doesNotMatch(script, /api\/studio\/pulse['"`\)]/);
   assert.match(script, /function parseSseBlock/);
   assert.match(script, /async function apiStream/);
   assert.match(script, /Stream unavailable\. Using stable turn path\./);
   assert.match(script, /sessionStorage/);
+  assert.match(script, /queryFlag\('embed'\) === '1'/);
+  assert.match(script, /is-pulse-embed/);
+  assert.match(script, /PULSE_READY/);
   assert.match(script, /PULSE_HEIGHT/);
+  assert.match(script, /PULSE_STATUS/);
+  assert.match(script, /PULSE_TURN_STATE/);
+  assert.match(script, /PULSE_ERROR/);
+  assert.match(script, /PULSE_SET_MODE/);
+  assert.match(script, /PULSE_RESET/);
   assert.match(script, /trustedParentOrigin/);
   assert.match(script, /function updateLedgerFromPayload/);
   assert.match(script, /payload\.continuityLedger/);
@@ -1741,12 +1754,29 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.room-move-chip/);
   assert.match(css, /\.dynamics-item\.status-event/);
   assert.match(css, /\.continuity-meter/);
+  assert.match(css, /body\.is-pulse-embed/);
   assert.match(script, /silvastudios\.co\.za/);
   assert.doesNotMatch(script, /EventSource|WebSocket/);
   assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
   assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
   assert.match(vercel, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);
+  assert.match(runbook, /https:\/\/silva-os-live\.vercel\.app\/pulse-showcase\?embed=1/);
+  assert.match(runbook, /PULSE_READY/);
+  assert.match(runbook, /PULSE_HEIGHT/);
+  assert.match(runbook, /PULSE_STATUS/);
+  assert.match(runbook, /PULSE_TURN_STATE/);
+  assert.match(runbook, /PULSE_ERROR/);
+  assert.match(runbook, /never posts user text/i);
+  assert.match(smoke, /frame-ancestors/i);
+  assert.match(smoke, /\/api\/studio\/pulse-showcase\/turn-stream/);
+  assert.match(smoke, /\/api\/studio\/pulse-showcase\/turn/);
+  assert.match(smoke, /PULSE_READY/);
+  assert.match(smoke, /PULSE_HEIGHT/);
+  assert.match(smoke, /PULSE_STATUS/);
+  assert.match(smoke, /PULSE_TURN_STATE/);
+  assert.match(smoke, /browser streaming turn/);
+  assert.match(smoke, /overflowX/);
 });
 
 test('A.I.S.H.A provider debug previews are gated behind explicit debug flags', () => {
