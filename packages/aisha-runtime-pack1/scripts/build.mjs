@@ -17,7 +17,7 @@ fs.rmSync(tmpDir, { recursive: true, force: true });
 fs.mkdirSync(distDir, { recursive: true });
 fs.mkdirSync(tmpDir, { recursive: true });
 
-const external = ["@google/generative-ai", "pg"];
+const external = ["@google/generative-ai", "@google/genai", "pg"];
 
 await build({
   entryPoints: [entryPoint],

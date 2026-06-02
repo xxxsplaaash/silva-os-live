@@ -21,10 +21,20 @@ export interface ProductionStores {
     shadowEvidenceStore?: ShadowEvidenceStore;
 }
 export interface ProductionRuntimeConfig {
-    geminiApiKey: string;
+    geminiApiKey?: string;
     geminiModel?: string;
     geminiMaxOutputTokens?: number;
     geminiTimeoutMs?: number;
+    vertexGemini?: {
+        enabled: boolean;
+        projectId: string;
+        location: string;
+        locationFallbacks?: string[];
+        keyFilename?: string;
+        useApplicationDefaultCredentials?: boolean;
+        fastModel?: string;
+        proModel?: string;
+    };
 }
 /**
  * Constructs the production ProcessTurnDeps for the real generator path.

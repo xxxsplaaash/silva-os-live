@@ -1674,6 +1674,57 @@ function extractRawText(payload) {
   const text = parts.map((part) => part.text ?? "").join("").trim();
   return text;
 }
+function extractProviderText(payload) {
+  const record = isRecord(payload) ? payload : {};
+  const textValue = record["text"];
+  if (typeof textValue === "string" && textValue.trim()) return textValue.trim();
+  if (typeof textValue === "function") {
+    try {
+      const maybe = textValue.call(payload);
+      if (typeof maybe === "string" && maybe.trim()) return maybe.trim();
+    } catch {
+    }
+  }
+  return extractRawText(record);
+}
+function isProviderRecoverableFailure(error) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /\b(quota|rate.?limit|resource_exhausted|too many requests|high demand|unavailable|overloaded|timeout|abort|429|503)\b/i.test(message);
+}
+function vertexLocationCandidates(config) {
+  return [
+    config.location,
+    ...Array.isArray(config.locationFallbacks) ? config.locationFallbacks : ["us-east4", "europe-west9", "global"]
+  ].map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.indexOf(item) === index);
+}
+function vertexModelCandidates(config) {
+  return [
+    config.model,
+    config.vertex?.fastModel,
+    "gemini-2.5-flash",
+    config.vertex?.proModel,
+    "gemini-2.5-pro"
+  ].map((item) => String(item || "").trim()).filter(Boolean).filter((item, index, arr) => arr.indexOf(item) === index);
+}
+async function createVertexGenAIClient(config, location) {
+  const mod = await import("@google/genai");
+  const GoogleGenAI = mod.GoogleGenAI;
+  if (!GoogleGenAI) throw new Error("vertex_genai_client_unavailable");
+  const previous = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!previous && config.keyFilename) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = config.keyFilename;
+  }
+  try {
+    return new GoogleGenAI({
+      vertexai: true,
+      project: config.projectId,
+      location,
+      ...config.keyFilename ? { googleAuthOptions: { keyFilename: config.keyFilename } } : {}
+    });
+  } finally {
+    if (!previous) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  }
+}
 function isRecord(value) {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -1752,9 +1803,79 @@ var GeminiGeneratorAdapter = class {
     this.config = config;
   }
   config;
+  hasVertexConfig() {
+    const vertex = this.config.vertex;
+    return !!(vertex?.enabled && vertex.projectId && vertex.location && (vertex.keyFilename || vertex.useApplicationDefaultCredentials));
+  }
+  async generateWithVertex(input) {
+    const vertex = this.config.vertex;
+    if (!vertex || !this.hasVertexConfig()) {
+      throw new Error("generation_config_error:missing_vertex_gemini_config");
+    }
+    let lastError = input.previousFailure;
+    for (const modelName of vertexModelCandidates(this.config)) {
+      for (const location of vertexLocationCandidates(vertex)) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+        try {
+          const client = await createVertexGenAIClient(vertex, location);
+          const payload = await client.models.generateContent(
+            {
+              model: modelName,
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: input.prompt.userMessage }]
+                }
+              ],
+              config: {
+                systemInstruction: input.prompt.systemPrompt,
+                temperature: 0,
+                maxOutputTokens: this.config.maxOutputTokens,
+                responseMimeType: "application/json",
+                responseJsonSchema: input.socialDirectorStructuredMode ? socialDirectorResponseSchema() : defaultResponseSchema(true)
+              }
+            },
+            { signal: controller.signal }
+          );
+          const raw = extractProviderText(payload);
+          console.error(`[T24_DEBUG] Vertex Gemini OK model=${modelName} location=${location} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
+          if (!raw) {
+            throw new Error("generation_empty_response");
+          }
+          return {
+            raw,
+            metadata: {
+              provider: "vertex-gemini",
+              model: modelName,
+              vertex_location: location,
+              prompt_token_estimate: input.promptTokenEstimate,
+              api_key_recovered: !!input.previousFailure,
+              ...input.socialDirectorStructuredMode ? { structuredOutputKind: "socialDirectorV1" } : {},
+              ...input.kPositionAblation ? { kPositionAblation: input.kPositionAblation } : {}
+            }
+          };
+        } catch (error) {
+          lastError = error;
+          const message = redactProviderDiagnostics(error instanceof Error ? error.message : String(error || ""));
+          console.error(`[T24_DEBUG] Vertex Gemini FAILED model=${modelName} location=${location} error=${message.slice(0, 500)}`);
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+    }
+    if (input.previousFailure && lastError !== input.previousFailure) {
+      const previous = input.previousFailure instanceof Error ? input.previousFailure.message : String(input.previousFailure || "");
+      const current = lastError instanceof Error ? lastError.message : String(lastError || "");
+      throw new Error(`gemini_api_failed_and_vertex_failed: api=${redactProviderDiagnostics(previous)} vertex=${redactProviderDiagnostics(current)}`);
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError || "vertex_gemini_failed"));
+  }
   async generate(input) {
-    if (!this.config.apiKey || !this.config.apiKey.trim()) {
-      throw new Error("generation_config_error:missing_gemini_api_key");
+    const hasApiKey = !!String(this.config.apiKey || "").trim();
+    const hasVertex = this.hasVertexConfig();
+    if (!hasApiKey && !hasVertex) {
+      throw new Error("generation_config_error:missing_gemini_or_vertex_credentials");
     }
     const biasCount = input.kPositionBiases?.length ?? 0;
     console.error(`[T24_DEBUG] generate() called model=${this.config.model} biasCount=${biasCount} sessionId=${input.sessionId}`);
@@ -1892,68 +2013,88 @@ Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, 
       console.log(`  finalPromptContainsForbiddenInternals: ${finalPromptContainsForbiddenInternals}`);
       console.log(`  finalPromptLength: ${full.length}`);
     }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.config.model)}:generateContent?key=${encodeURIComponent(this.config.apiKey)}`;
-      const response = await fetch(url, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: prompt.systemPrompt }]
-          },
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt.userMessage }]
-            }
-          ],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: this.config.maxOutputTokens,
-            responseMimeType: "application/json",
-            responseSchema: socialDirectorStructuredMode ? socialDirectorResponseSchema() : defaultResponseSchema(!!modifiedInput.studioPulseContext)
-          }
-        })
+    if (hasVertex) {
+      return this.generateWithVertex({
+        prompt,
+        socialDirectorStructuredMode,
+        promptTokenEstimate,
+        kPositionAblation
       });
-      const payload = await response.json();
-      if (!response.ok) {
-        const rawBody = redactProviderDiagnostics(JSON.stringify(payload)).slice(0, 800);
-        console.error(`[T24_DEBUG] Gemini API FAILED status=${response.status} model=${this.config.model} body=${rawBody}`);
-        const message = payload?.error?.message || `gemini_http_error:${response.status}`;
-        throw new Error(message);
-      }
-      const raw = extractRawText(payload);
-      console.error(`[T24_DEBUG] Gemini API OK model=${this.config.model} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
-      if (!raw) {
-        console.error(`[T24_DEBUG] Gemini returned empty raw. Full payload: ${JSON.stringify(payload).slice(0, 800)}`);
-        throw new Error("generation_empty_response");
-      }
-      return {
-        raw,
-        metadata: {
-          provider: "gemini",
-          model: this.config.model,
-          prompt_token_estimate: promptTokenEstimate,
-          finish_reason: payload.candidates?.[0]?.finishReason ?? null,
-          usage_metadata: payload.usageMetadata ?? null,
-          prompt_feedback: payload.promptFeedback ?? null,
-          ...socialDirectorStructuredMode ? { structuredOutputKind: "socialDirectorV1" } : {},
-          ...kPositionAblation ? { kPositionAblation } : {}
-        }
-      };
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("generation_timeout");
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
     }
+    let apiFailure;
+    if (hasApiKey) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(this.config.model)}:generateContent?key=${encodeURIComponent(String(this.config.apiKey || ""))}`;
+        const response = await fetch(url, {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: prompt.systemPrompt }]
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt.userMessage }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0,
+              maxOutputTokens: this.config.maxOutputTokens,
+              responseMimeType: "application/json",
+              responseSchema: socialDirectorStructuredMode ? socialDirectorResponseSchema() : defaultResponseSchema(!!modifiedInput.studioPulseContext)
+            }
+          })
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          const rawBody = redactProviderDiagnostics(JSON.stringify(payload)).slice(0, 800);
+          console.error(`[T24_DEBUG] Gemini API FAILED status=${response.status} model=${this.config.model} body=${rawBody}`);
+          const message = payload?.error?.message || `gemini_http_error:${response.status}`;
+          throw new Error(message);
+        }
+        const raw = extractRawText(payload);
+        console.error(`[T24_DEBUG] Gemini API OK model=${this.config.model} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
+        if (!raw) {
+          console.error(`[T24_DEBUG] Gemini returned empty raw. Full payload: ${JSON.stringify(payload).slice(0, 800)}`);
+          throw new Error("generation_empty_response");
+        }
+        return {
+          raw,
+          metadata: {
+            provider: "gemini",
+            model: this.config.model,
+            prompt_token_estimate: promptTokenEstimate,
+            finish_reason: payload.candidates?.[0]?.finishReason ?? null,
+            usage_metadata: payload.usageMetadata ?? null,
+            prompt_feedback: payload.promptFeedback ?? null,
+            ...socialDirectorStructuredMode ? { structuredOutputKind: "socialDirectorV1" } : {},
+            ...kPositionAblation ? { kPositionAblation } : {}
+          }
+        };
+      } catch (error) {
+        apiFailure = error instanceof Error && error.name === "AbortError" ? new Error("generation_timeout") : error;
+        if (!hasVertex || !isProviderRecoverableFailure(apiFailure)) {
+          throw apiFailure;
+        }
+        const message = apiFailure instanceof Error ? apiFailure.message : String(apiFailure || "");
+        console.error(`[T24_DEBUG] Gemini API recoverable failure; trying Vertex fallback model=${this.config.model} error=${redactProviderDiagnostics(message).slice(0, 500)}`);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    return this.generateWithVertex({
+      prompt,
+      socialDirectorStructuredMode,
+      promptTokenEstimate,
+      kPositionAblation,
+      previousFailure: apiFailure
+    });
   }
 };
 
@@ -3745,7 +3886,8 @@ function buildProductionRuntime(config, stores) {
     apiKey: config.geminiApiKey,
     model: config.geminiModel ?? "gemini-2.5-flash",
     maxOutputTokens: config.geminiMaxOutputTokens ?? 1e3,
-    timeoutMs: config.geminiTimeoutMs ?? 4e3
+    timeoutMs: config.geminiTimeoutMs ?? 4e3,
+    vertex: config.vertexGemini
   });
   const retrievalPlanner = new SimpleRetrievalPlanner({
     turnStore: stores.turnStore,
@@ -5404,10 +5546,10 @@ function productionKeyFingerprint(apiKey) {
   const digest = createHash("sha256").update(key).digest("hex").slice(0, 10);
   return `${key.length}:${digest}`;
 }
-function productionRuntimeFingerprint(apiKey, timeoutMs, model, persistence = "memory") {
+function productionRuntimeFingerprint(apiKey, timeoutMs, model, persistence = "memory", vertexFingerprint = "") {
   const timeout = Number.isFinite(Number(timeoutMs)) ? Math.max(1e3, Math.min(6e4, Number(timeoutMs))) : 0;
   const modelKey = String(model || "").trim() || "default-model";
-  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}`;
+  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}:${vertexFingerprint || "no-vertex"}`;
 }
 function clearCachedProductionDeps(fingerprint) {
   if (cachedProductionDeps?.fingerprint === fingerprint) {
@@ -5417,6 +5559,40 @@ function clearCachedProductionDeps(fingerprint) {
 }
 function productionPersistenceMode() {
   return String(process.env.AISHA_PERSISTENCE || "").trim().toLowerCase() === "postgres" ? "postgres" : "memory";
+}
+function csvList(value = "") {
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean).filter((item, index, arr) => arr.indexOf(item) === index);
+}
+function productionVertexGeminiConfigFromEnv(env = process.env) {
+  const keyFilename = String(env.VERTEX_SERVICE_ACCOUNT_JSON_PATH || env.GOOGLE_APPLICATION_CREDENTIALS || "").trim();
+  const authMode = String(env.VERTEX_AUTH_MODE || "").trim().toLowerCase();
+  const useApplicationDefaultCredentials = authMode === "adc" || authMode === "application-default";
+  const projectId = String(env.VERTEX_PROJECT_ID || "project-be35f944-1782-4f27-86f").trim();
+  const location = String(env.VERTEX_LOCATION || "us-central1").trim();
+  if (!projectId || !location || !keyFilename && !useApplicationDefaultCredentials) return void 0;
+  return {
+    enabled: true,
+    projectId,
+    location,
+    locationFallbacks: csvList(env.VERTEX_LOCATION_FALLBACKS || env.VERTEX_REGION_FALLBACKS || "us-east4,europe-west9,global"),
+    keyFilename,
+    useApplicationDefaultCredentials,
+    fastModel: String(env.VERTEX_GEMINI_FAST_MODEL || "gemini-2.5-flash").trim(),
+    proModel: String(env.VERTEX_GEMINI_PRO_MODEL || "gemini-2.5-pro").trim()
+  };
+}
+function productionVertexFingerprint(config) {
+  if (!config?.enabled) return "";
+  return [
+    "vertex",
+    config.projectId,
+    config.location,
+    (config.locationFallbacks || []).join("|"),
+    config.keyFilename ? `file:${config.keyFilename}` : "",
+    config.useApplicationDefaultCredentials ? "adc" : "",
+    config.fastModel || "",
+    config.proModel || ""
+  ].join(":");
 }
 function traceWithPersistenceDiagnostics(trace, diagnostics) {
   return {
@@ -5550,15 +5726,16 @@ async function processAishaRequest(request, options = {}) {
   const { engineMode = "fixture" } = options;
   if (!deps && engineMode === "production") {
     const apiKey = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) {
+    const vertexGemini = productionVertexGeminiConfigFromEnv();
+    if (!apiKey && !vertexGemini) {
       const mode = productionPersistenceMode();
       return unavailableResponse(
         request,
-        "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+        "No GEMINI_API_KEY or Vertex Gemini credentials found in environment. A.I.S.H.A cannot boot.",
         persistenceDiagnostics({
           mode,
           connected: false,
-          failureReason: "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot."
+          failureReason: "No GEMINI_API_KEY or Vertex Gemini credentials found in environment. A.I.S.H.A cannot boot."
         })
       );
     }
@@ -5569,7 +5746,8 @@ async function processAishaRequest(request, options = {}) {
       apiKey,
       timeoutMs,
       model,
-      persistenceMode
+      persistenceMode,
+      productionVertexFingerprint(vertexGemini)
     );
     if (!cachedProductionDeps || cachedProductionDeps.fingerprint !== keyFingerprint) {
       try {
@@ -5584,7 +5762,12 @@ async function processAishaRequest(request, options = {}) {
         const threadStore = stores?.threadStore ?? new FixtureThreadStore();
         const noteVersioning = stores?.noteVersioning ?? new FixtureNoteVersioning();
         const depsForKey = productionRuntimeBuilder(
-          { geminiApiKey: apiKey, geminiTimeoutMs: timeoutMs, geminiModel: model },
+          {
+            geminiApiKey: apiKey,
+            geminiTimeoutMs: timeoutMs,
+            geminiModel: model,
+            vertexGemini
+          },
           {
             turnStore,
             snapshotStore,
@@ -5670,10 +5853,17 @@ async function processAishaRequest(request, options = {}) {
     const reason = String(result.fallbackReason || engineTrace.failureReason || "");
     if (!options.deps && engineMode === "production") {
       const key = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
-      if (key && shouldClearCachedDepsAfterFailure(reason)) {
+      const vertexGemini = productionVertexGeminiConfigFromEnv();
+      if ((key || vertexGemini) && shouldClearCachedDepsAfterFailure(reason)) {
         const timeoutMs = Number.isFinite(Number(options.productionGeminiTimeoutMs)) ? Math.max(1e3, Math.min(6e4, Number(options.productionGeminiTimeoutMs))) : void 0;
         const model = String(options.productionGeminiModel || "").trim() || void 0;
-        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model, productionPersistenceMode()));
+        clearCachedProductionDeps(productionRuntimeFingerprint(
+          key,
+          timeoutMs,
+          model,
+          productionPersistenceMode(),
+          productionVertexFingerprint(vertexGemini)
+        ));
       }
     }
     return {

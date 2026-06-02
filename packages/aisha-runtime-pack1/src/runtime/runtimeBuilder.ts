@@ -117,10 +117,20 @@ export interface ProductionStores {
 }
 
 export interface ProductionRuntimeConfig {
-  geminiApiKey: string;
+  geminiApiKey?: string;
   geminiModel?: string;
   geminiMaxOutputTokens?: number;
   geminiTimeoutMs?: number;
+  vertexGemini?: {
+    enabled: boolean;
+    projectId: string;
+    location: string;
+    locationFallbacks?: string[];
+    keyFilename?: string;
+    useApplicationDefaultCredentials?: boolean;
+    fastModel?: string;
+    proModel?: string;
+  };
 }
 
 /**
@@ -142,6 +152,7 @@ export function buildProductionRuntime(
     model: config.geminiModel ?? "gemini-2.5-flash",
     maxOutputTokens: config.geminiMaxOutputTokens ?? 1000,
     timeoutMs: config.geminiTimeoutMs ?? 4000,
+    vertex: config.vertexGemini,
   });
 
   const retrievalPlanner = new SimpleRetrievalPlanner({

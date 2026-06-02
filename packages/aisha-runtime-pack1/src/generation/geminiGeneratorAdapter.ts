@@ -127,10 +127,22 @@ type GeminiGenerateContentResponse = {
 };
 
 export interface GeminiGeneratorAdapterConfig {
-  apiKey: string;
+  apiKey?: string;
   model: string;
   maxOutputTokens: number;
   timeoutMs: number;
+  vertex?: VertexGeminiAdapterConfig;
+}
+
+export interface VertexGeminiAdapterConfig {
+  enabled: boolean;
+  projectId: string;
+  location: string;
+  locationFallbacks?: string[];
+  keyFilename?: string;
+  useApplicationDefaultCredentials?: boolean;
+  fastModel?: string;
+  proModel?: string;
 }
 
 function estimatePromptTokens(text: string): number {
@@ -145,6 +157,71 @@ function extractRawText(payload: GeminiGenerateContentResponse): string {
     .trim();
 
   return text;
+}
+
+function extractProviderText(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const textValue = record["text"];
+  if (typeof textValue === "string" && textValue.trim()) return textValue.trim();
+  if (typeof textValue === "function") {
+    try {
+      const maybe = textValue.call(payload);
+      if (typeof maybe === "string" && maybe.trim()) return maybe.trim();
+    } catch {
+      // Fall through to candidate parsing.
+    }
+  }
+  return extractRawText(record as GeminiGenerateContentResponse);
+}
+
+function isProviderRecoverableFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /\b(quota|rate.?limit|resource_exhausted|too many requests|high demand|unavailable|overloaded|timeout|abort|429|503)\b/i.test(message);
+}
+
+function vertexLocationCandidates(config: VertexGeminiAdapterConfig): string[] {
+  return [
+    config.location,
+    ...(Array.isArray(config.locationFallbacks) ? config.locationFallbacks : ["us-east4", "europe-west9", "global"]),
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index);
+}
+
+function vertexModelCandidates(config: GeminiGeneratorAdapterConfig): string[] {
+  return [
+    config.model,
+    config.vertex?.fastModel,
+    "gemini-2.5-flash",
+    config.vertex?.proModel,
+    "gemini-2.5-pro",
+  ]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index);
+}
+
+async function createVertexGenAIClient(config: VertexGeminiAdapterConfig, location: string): Promise<any> {
+  const mod = await import("@google/genai");
+  const GoogleGenAI = (mod as any).GoogleGenAI;
+  if (!GoogleGenAI) throw new Error("vertex_genai_client_unavailable");
+
+  const previous = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!previous && config.keyFilename) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = config.keyFilename;
+  }
+
+  try {
+    return new GoogleGenAI({
+      vertexai: true,
+      project: config.projectId,
+      location,
+      ...(config.keyFilename ? { googleAuthOptions: { keyFilename: config.keyFilename } } : {}),
+    });
+  } finally {
+    if (!previous) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -229,9 +306,99 @@ function defaultResponseSchema(isStudioPulseMode = false): Record<string, unknow
 export class GeminiGeneratorAdapter implements IGeneratorAdapter {
   constructor(private readonly config: GeminiGeneratorAdapterConfig) {}
 
+  private hasVertexConfig(): boolean {
+    const vertex = this.config.vertex;
+    return !!(
+      vertex?.enabled &&
+      vertex.projectId &&
+      vertex.location &&
+      (vertex.keyFilename || vertex.useApplicationDefaultCredentials)
+    );
+  }
+
+  private async generateWithVertex(input: {
+    prompt: { systemPrompt: string; userMessage: string };
+    socialDirectorStructuredMode: boolean;
+    promptTokenEstimate: number;
+    kPositionAblation?: { biasInputCount: number; adjustmentsApplied: string[]; realizedIntent: string };
+    previousFailure?: unknown;
+  }): Promise<GeneratorOutput> {
+    const vertex = this.config.vertex;
+    if (!vertex || !this.hasVertexConfig()) {
+      throw new Error("generation_config_error:missing_vertex_gemini_config");
+    }
+
+    let lastError: unknown = input.previousFailure;
+    for (const modelName of vertexModelCandidates(this.config)) {
+      for (const location of vertexLocationCandidates(vertex)) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+        try {
+          const client = await createVertexGenAIClient(vertex, location);
+          const payload = await client.models.generateContent(
+            {
+              model: modelName,
+              contents: [
+                {
+                  role: "user",
+                  parts: [{ text: input.prompt.userMessage }],
+                },
+              ],
+              config: {
+                systemInstruction: input.prompt.systemPrompt,
+                temperature: 0.0,
+                maxOutputTokens: this.config.maxOutputTokens,
+                responseMimeType: "application/json",
+                responseJsonSchema: input.socialDirectorStructuredMode
+                  ? socialDirectorResponseSchema()
+                  : defaultResponseSchema(true),
+              },
+            },
+            { signal: controller.signal },
+          );
+
+          const raw = extractProviderText(payload);
+          console.error(`[T24_DEBUG] Vertex Gemini OK model=${modelName} location=${location} rawLength=${raw.length} rawPreview=${raw.slice(0, 120)}`);
+
+          if (!raw) {
+            throw new Error("generation_empty_response");
+          }
+
+          return {
+            raw,
+            metadata: {
+              provider: "vertex-gemini",
+              model: modelName,
+              vertex_location: location,
+              prompt_token_estimate: input.promptTokenEstimate,
+              api_key_recovered: !!input.previousFailure,
+              ...(input.socialDirectorStructuredMode ? { structuredOutputKind: "socialDirectorV1" } : {}),
+              ...(input.kPositionAblation ? { kPositionAblation: input.kPositionAblation } : {}),
+            },
+          };
+        } catch (error) {
+          lastError = error;
+          const message = redactProviderDiagnostics(error instanceof Error ? error.message : String(error || ""));
+          console.error(`[T24_DEBUG] Vertex Gemini FAILED model=${modelName} location=${location} error=${message.slice(0, 500)}`);
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+    }
+
+    if (input.previousFailure && lastError !== input.previousFailure) {
+      const previous = input.previousFailure instanceof Error ? input.previousFailure.message : String(input.previousFailure || "");
+      const current = lastError instanceof Error ? lastError.message : String(lastError || "");
+      throw new Error(`gemini_api_failed_and_vertex_failed: api=${redactProviderDiagnostics(previous)} vertex=${redactProviderDiagnostics(current)}`);
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError || "vertex_gemini_failed"));
+  }
+
   async generate(input: GeneratorInput): Promise<GeneratorOutput> {
-    if (!this.config.apiKey || !this.config.apiKey.trim()) {
-      throw new Error("generation_config_error:missing_gemini_api_key");
+    const hasApiKey = !!String(this.config.apiKey || "").trim();
+    const hasVertex = this.hasVertexConfig();
+    if (!hasApiKey && !hasVertex) {
+      throw new Error("generation_config_error:missing_gemini_or_vertex_credentials");
     }
 
     const biasCount = input.kPositionBiases?.length ?? 0;
@@ -404,14 +571,24 @@ REQUIRED: Use one concrete hook from the user's message, one room-awareness hook
       console.log(`  finalPromptLength: ${full.length}`);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+    if (hasVertex) {
+      return this.generateWithVertex({
+        prompt,
+        socialDirectorStructuredMode,
+        promptTokenEstimate,
+        kPositionAblation,
+      });
+    }
 
-    try {
+    let apiFailure: unknown;
+    if (hasApiKey) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
+      try {
       const url =
         `https://generativelanguage.googleapis.com/v1beta/models/` +
         `${encodeURIComponent(this.config.model)}:generateContent?key=` +
-        `${encodeURIComponent(this.config.apiKey)}`;
+        `${encodeURIComponent(String(this.config.apiKey || ""))}`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -472,13 +649,26 @@ REQUIRED: Use one concrete hook from the user's message, one room-awareness hook
           ...(kPositionAblation ? { kPositionAblation } : {}),
         },
       } as GeneratorOutput;
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new Error("generation_timeout");
+      } catch (error) {
+        apiFailure = error instanceof Error && error.name === "AbortError"
+          ? new Error("generation_timeout")
+          : error;
+        if (!hasVertex || !isProviderRecoverableFailure(apiFailure)) {
+          throw apiFailure;
+        }
+        const message = apiFailure instanceof Error ? apiFailure.message : String(apiFailure || "");
+        console.error(`[T24_DEBUG] Gemini API recoverable failure; trying Vertex fallback model=${this.config.model} error=${redactProviderDiagnostics(message).slice(0, 500)}`);
+      } finally {
+        clearTimeout(timeout);
       }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
     }
+
+    return this.generateWithVertex({
+      prompt,
+      socialDirectorStructuredMode,
+      promptTokenEstimate,
+      kPositionAblation,
+      previousFailure: apiFailure,
+    });
   }
 }

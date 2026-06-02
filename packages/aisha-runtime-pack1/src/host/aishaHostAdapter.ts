@@ -89,10 +89,11 @@ function productionRuntimeFingerprint(
   timeoutMs?: number,
   model?: string,
   persistence = "memory",
+  vertexFingerprint = "",
 ): string {
   const timeout = Number.isFinite(Number(timeoutMs)) ? Math.max(1000, Math.min(60000, Number(timeoutMs))) : 0;
   const modelKey = String(model || "").trim() || "default-model";
-  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}`;
+  return `${productionKeyFingerprint(apiKey)}:${timeout || "default-timeout"}:${modelKey}:${persistence}:${vertexFingerprint || "no-vertex"}`;
 }
 
 function clearCachedProductionDeps(fingerprint: string) {
@@ -107,6 +108,47 @@ function productionPersistenceMode(): "memory" | "postgres" {
     "postgres"
     ? "postgres"
     : "memory";
+}
+
+function csvList(value = ""): string[] {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item, index, arr) => arr.indexOf(item) === index);
+}
+
+function productionVertexGeminiConfigFromEnv(env = process.env) {
+  const keyFilename = String(env.VERTEX_SERVICE_ACCOUNT_JSON_PATH || env.GOOGLE_APPLICATION_CREDENTIALS || "").trim();
+  const authMode = String(env.VERTEX_AUTH_MODE || "").trim().toLowerCase();
+  const useApplicationDefaultCredentials = authMode === "adc" || authMode === "application-default";
+  const projectId = String(env.VERTEX_PROJECT_ID || "project-be35f944-1782-4f27-86f").trim();
+  const location = String(env.VERTEX_LOCATION || "us-central1").trim();
+  if (!projectId || !location || (!keyFilename && !useApplicationDefaultCredentials)) return undefined;
+  return {
+    enabled: true,
+    projectId,
+    location,
+    locationFallbacks: csvList(env.VERTEX_LOCATION_FALLBACKS || env.VERTEX_REGION_FALLBACKS || "us-east4,europe-west9,global"),
+    keyFilename,
+    useApplicationDefaultCredentials,
+    fastModel: String(env.VERTEX_GEMINI_FAST_MODEL || "gemini-2.5-flash").trim(),
+    proModel: String(env.VERTEX_GEMINI_PRO_MODEL || "gemini-2.5-pro").trim(),
+  };
+}
+
+function productionVertexFingerprint(config: ReturnType<typeof productionVertexGeminiConfigFromEnv>): string {
+  if (!config?.enabled) return "";
+  return [
+    "vertex",
+    config.projectId,
+    config.location,
+    (config.locationFallbacks || []).join("|"),
+    config.keyFilename ? `file:${config.keyFilename}` : "",
+    config.useApplicationDefaultCredentials ? "adc" : "",
+    config.fastModel || "",
+    config.proModel || "",
+  ].join(":");
 }
 
 function traceWithPersistenceDiagnostics(
@@ -303,15 +345,16 @@ export async function processAishaRequest(
 
   if (!deps && engineMode === "production") {
     const apiKey = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) {
+    const vertexGemini = productionVertexGeminiConfigFromEnv();
+    if (!apiKey && !vertexGemini) {
       const mode = productionPersistenceMode();
       return unavailableResponse(
         request,
-        "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+        "No GEMINI_API_KEY or Vertex Gemini credentials found in environment. A.I.S.H.A cannot boot.",
         persistenceDiagnostics({
           mode,
           connected: false,
-          failureReason: "No GEMINI_API_KEY found in environment. A.I.S.H.A cannot boot.",
+          failureReason: "No GEMINI_API_KEY or Vertex Gemini credentials found in environment. A.I.S.H.A cannot boot.",
         }),
       );
     }
@@ -325,6 +368,7 @@ export async function processAishaRequest(
       timeoutMs,
       model,
       persistenceMode,
+      productionVertexFingerprint(vertexGemini),
     );
     if (!cachedProductionDeps || cachedProductionDeps.fingerprint !== keyFingerprint) {
       try {
@@ -347,7 +391,12 @@ export async function processAishaRequest(
           (new FixtureNoteVersioning() as unknown as import("../memory/types").INoteVersioning);
 
         const depsForKey = productionRuntimeBuilder(
-          { geminiApiKey: apiKey, geminiTimeoutMs: timeoutMs, geminiModel: model },
+          {
+            geminiApiKey: apiKey,
+            geminiTimeoutMs: timeoutMs,
+            geminiModel: model,
+            vertexGemini,
+          },
           {
             turnStore,
             snapshotStore,
@@ -447,12 +496,19 @@ export async function processAishaRequest(
     const reason = String(result.fallbackReason || engineTrace.failureReason || "");
     if (!options.deps && engineMode === "production") {
       const key = String(options.productionGeminiApiKey || process.env.GEMINI_API_KEY || "").trim();
-      if (key && shouldClearCachedDepsAfterFailure(reason)) {
+      const vertexGemini = productionVertexGeminiConfigFromEnv();
+      if ((key || vertexGemini) && shouldClearCachedDepsAfterFailure(reason)) {
         const timeoutMs = Number.isFinite(Number(options.productionGeminiTimeoutMs))
           ? Math.max(1000, Math.min(60000, Number(options.productionGeminiTimeoutMs)))
           : undefined;
         const model = String(options.productionGeminiModel || "").trim() || undefined;
-        clearCachedProductionDeps(productionRuntimeFingerprint(key, timeoutMs, model, productionPersistenceMode()));
+        clearCachedProductionDeps(productionRuntimeFingerprint(
+          key,
+          timeoutMs,
+          model,
+          productionPersistenceMode(),
+          productionVertexFingerprint(vertexGemini),
+        ));
       }
     }
     return {
