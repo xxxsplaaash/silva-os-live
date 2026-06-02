@@ -1771,6 +1771,10 @@ async function createVertexGenAIClient(config, location) {
   if (!previous && config.keyFilename) {
     process.env.GOOGLE_APPLICATION_CREDENTIALS = config.keyFilename;
   }
+  const previousGoogleApiKey = process.env.GOOGLE_API_KEY;
+  const previousGeminiApiKey = process.env.GEMINI_API_KEY;
+  delete process.env.GOOGLE_API_KEY;
+  delete process.env.GEMINI_API_KEY;
   try {
     return new GoogleGenAI({
       vertexai: true,
@@ -1780,6 +1784,10 @@ async function createVertexGenAIClient(config, location) {
     });
   } finally {
     if (!previous) delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (previousGoogleApiKey == null) delete process.env.GOOGLE_API_KEY;
+    else process.env.GOOGLE_API_KEY = previousGoogleApiKey;
+    if (previousGeminiApiKey == null) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previousGeminiApiKey;
   }
 }
 function isRecord(value) {

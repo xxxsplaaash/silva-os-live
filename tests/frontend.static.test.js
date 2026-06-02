@@ -1742,6 +1742,8 @@ test('A.I.S.H.A provider debug previews are gated behind explicit debug flags', 
   assert.match(adapter, /process\.env\.AISHA_DEBUG/);
   assert.match(adapter, /process\.env\.T24_DEBUG/);
   assert.match(adapter, /function logProviderDebug/);
+  assert.match(adapter, /delete process\.env\.GOOGLE_API_KEY/);
+  assert.match(adapter, /delete process\.env\.GEMINI_API_KEY/);
   assert.doesNotMatch(adapter, /console\.error\(`\[T24_DEBUG\]/);
   assert.match(adapter, /logProviderDebug\(`\[T24_DEBUG\]/);
 });
