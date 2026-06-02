@@ -29,6 +29,9 @@ function read(file) {
 }
 
 async function withStudioServer(fn) {
+  if (typeof studioRouter.__resetPulseShowcaseGuardForTests === 'function') {
+    studioRouter.__resetPulseShowcaseGuardForTests();
+  }
   const app = express();
   app.use(express.json({ limit: '2mb' }));
   app.use('/api/studio', studioRouter);
@@ -93,6 +96,47 @@ function parseSseEvents(value = '') {
       return { event, data: JSON.parse(data) };
     })
     .filter(Boolean);
+}
+
+function showcaseAishaResponse(request, text = 'The guarded turn landed cleanly.') {
+  return {
+    ok: true,
+    responses: [{
+      speakerId: 'aisha',
+      content: JSON.stringify({
+        roomBeat: 'A guarded public turn is processed.',
+        roomMood: 'focused',
+        responseMode: 'single',
+        speakers: [
+          { speakerId: 'aisha', role: 'primary', tone: 'precise', text }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] },
+        socialCues: {
+          roomMove: 'observe',
+          tensionDelta: 0,
+          continuityDelta: 0,
+          speakerCues: [
+            { speakerId: 'aisha', stance: 'dominant', statusDelta: 1 }
+          ]
+        }
+      })
+    }],
+    memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+    stateEnvelope: { mood: 0.2 },
+    relationshipDeltas: [],
+    trace: {
+      status: 'succeeded',
+      aishaDiagnostics: {
+        aishaPersistenceMode: 'postgres',
+        aishaPersistenceBackend: 'postgres',
+        aishaPersistenceConnected: true
+      }
+    },
+    engineMode: 'production',
+    aishaEngineConnected: true,
+    confidence: 0.91
+  };
 }
 
 async function withMockProvider(output, fn) {
@@ -476,6 +520,238 @@ test('Studio Pulse showcase status reports public Pack 1 and persistence shape',
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;
       else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase guard allows trusted origins and no-origin smoke calls', async () => {
+  await withStudioServer(async baseUrl => {
+    const noOrigin = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`);
+    assert.equal(noOrigin.status, 200);
+
+    const allowed = await fetch(`${baseUrl}/api/studio/pulse-showcase/status`, {
+      headers: { origin: 'https://silva-os-live.vercel.app' }
+    });
+    assert.equal(allowed.status, 200);
+    assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://silva-os-live.vercel.app');
+    assert.match(allowed.headers.get('vary') || '', /Origin/);
+
+    const preflight = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://www.silvastudios.co.za',
+        'access-control-request-method': 'POST'
+      }
+    });
+    assert.equal(preflight.status, 204);
+    assert.equal(preflight.headers.get('access-control-allow-origin'), 'https://www.silvastudios.co.za');
+  });
+});
+
+test('Studio Pulse showcase guard blocks untrusted origins before Pack 1 is called', async () => {
+  await withAishaFlag('true', async () => {
+    let aishaCalls = 0;
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        aishaCalls += 1;
+        return showcaseAishaResponse(request);
+      }
+    }));
+
+    await withStudioServer(async baseUrl => {
+      const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: 'https://not-silva.example'
+        },
+        body: JSON.stringify({
+          sessionId: 'blocked-origin-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'This should not reach Pack 1.'
+        })
+      });
+      assert.equal(response.status, 403);
+      const body = await response.json();
+      assert.equal(body.ok, false);
+      assert.equal(body.error, 'pulse-showcase-origin-blocked');
+      assert.match(body.message, /room held that turn/i);
+      assert.equal(aishaCalls, 0);
+      assert.doesNotMatch(JSON.stringify(body), /Pack 1|rate limit|quota|test-room-provider-key|AIza/i);
+    });
+  });
+});
+
+test('Studio Pulse showcase guard rate-limits by session and IP without leaking internals', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => showcaseAishaResponse(request)
+    }));
+
+    await withStudioServer(async baseUrl => {
+      for (let index = 0; index < 8; index += 1) {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'rate-session',
+            mode: 'social_hierarchy_lab',
+            userText: `Session guard turn ${index}`
+          })
+        });
+        assert.equal(response.status, 200);
+      }
+      const sessionLimited = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'rate-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'Session guard turn 9'
+        })
+      });
+      assert.equal(sessionLimited.status, 429);
+      const sessionBody = await sessionLimited.json();
+      assert.equal(sessionBody.error, 'pulse-showcase-rate-limited');
+      assert.match(sessionBody.message, /room held that turn/i);
+    });
+
+    await withStudioServer(async baseUrl => {
+      for (let index = 0; index < 30; index += 1) {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.41' },
+          body: JSON.stringify({
+            sessionId: `rate-ip-session-${index}`,
+            mode: 'social_hierarchy_lab',
+            userText: `IP guard turn ${index}`
+          })
+        });
+        assert.equal(response.status, 200);
+      }
+      const ipLimited = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.41' },
+        body: JSON.stringify({
+          sessionId: 'rate-ip-session-over',
+          mode: 'social_hierarchy_lab',
+          userText: 'IP guard turn 31'
+        })
+      });
+      assert.equal(ipLimited.status, 429);
+      const ipBody = await ipLimited.json();
+      assert.equal(ipBody.error, 'pulse-showcase-rate-limited');
+      assert.doesNotMatch(JSON.stringify(ipBody), /Pack 1|quota|test-room-provider-key|AIza/i);
+    });
+  });
+});
+
+test('Studio Pulse showcase guard rejects overlapping and over-cap streams before Pack 1', async () => {
+  await withAishaFlag('true', async () => {
+    let releaseFirst;
+    let aishaCalls = 0;
+    const firstGate = new Promise(resolve => {
+      releaseFirst = resolve;
+    });
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        aishaCalls += 1;
+        if (request.sessionId === 'stream-conflict-session') await firstGate;
+        return showcaseAishaResponse(request);
+      }
+    }));
+
+    await withStudioServer(async baseUrl => {
+      const first = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        body: JSON.stringify({
+          sessionId: 'stream-conflict-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'Hold this stream open.'
+        })
+      });
+      assert.equal(first.status, 200);
+
+      const second = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        body: JSON.stringify({
+          sessionId: 'stream-conflict-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'This overlapping stream should be held.'
+        })
+      });
+      assert.equal(second.status, 409);
+      const secondBody = await second.json();
+      assert.equal(secondBody.error, 'pulse-showcase-stream-active');
+      assert.match(secondBody.message, /room held that turn/i);
+      assert.equal(aishaCalls, 1);
+
+      releaseFirst();
+      const firstEvents = parseSseEvents(await first.text());
+      assert.equal(firstEvents[firstEvents.length - 1].event, 'final');
+    });
+
+    await withStudioServer(async baseUrl => {
+      studioRouter.__resetPulseShowcaseGuardForTests({ activeStreams: 40 });
+      const capped = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        body: JSON.stringify({
+          sessionId: 'stream-cap-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'The instance cap should hold this stream.'
+        })
+      });
+      assert.equal(capped.status, 503);
+      const cappedBody = await capped.json();
+      assert.equal(cappedBody.error, 'pulse-showcase-stream-capacity');
+      assert.match(cappedBody.message, /room held that turn/i);
+      assert.equal(aishaCalls, 1);
+    });
+  });
+});
+
+test('Studio Pulse showcase telemetry is structured and never logs user text or raw internals', async () => {
+  await withAishaFlag('true', async () => {
+    const originalTelemetry = process.env.PULSE_SHOWCASE_TELEMETRY;
+    const originalLog = console.log;
+    const logs = [];
+    process.env.PULSE_SHOWCASE_TELEMETRY = '1';
+    console.log = value => logs.push(String(value || ''));
+    try {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => showcaseAishaResponse(request, 'Telemetry-safe response.')
+      }));
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'telemetry-session',
+            mode: 'continuity_breaker',
+            userText: 'NEVER_LOG_THIS_USER_CLAIM'
+          })
+        });
+        assert.equal(response.status, 200);
+        assert.ok(logs.length >= 1);
+        const event = JSON.parse(logs.find(line => /pulse_showcase_turn/.test(line)));
+        assert.equal(event.event, 'pulse_showcase_turn');
+        assert.equal(event.mode, 'continuity_breaker');
+        assert.equal(event.endpoint, 'turn');
+        assert.equal(event.statusCode, 200);
+        assert.equal(event.acceptedByPack1, true);
+        assert.equal(event.persistenceConnected, true);
+        assert.equal(typeof event.sessionHash, 'string');
+        assert.equal(Object.prototype.hasOwnProperty.call(event, 'ledgerCounts'), true);
+        assert.doesNotMatch(logs.join('\n'), /NEVER_LOG_THIS_USER_CLAIM|socialCues|generatorPrompt|aishaDiagnostics|test-room-provider-key|AIza/);
+      });
+    } finally {
+      console.log = originalLog;
+      if (originalTelemetry == null) delete process.env.PULSE_SHOWCASE_TELEMETRY;
+      else process.env.PULSE_SHOWCASE_TELEMETRY = originalTelemetry;
     }
   });
 });

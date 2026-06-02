@@ -24,6 +24,8 @@
   var SESSION_KEY = 'studio_pulse_showcase_session_id';
   var STATE_KEY = 'studio_pulse_showcase_state';
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
+  var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
+  var HELD_TURN_STATUSES = [403, 409, 429, 503];
 
   var state = {
     sessionId: readSessionId(),
@@ -53,6 +55,17 @@
     return base + path;
   }
 
+  function pulseError(message, status) {
+    var err = new Error(message || HELD_TURN_MESSAGE);
+    err.status = Number(status || 0) || 0;
+    err.safeHeldTurn = HELD_TURN_STATUSES.includes(err.status);
+    return err;
+  }
+
+  function isHeldTurnError(err) {
+    return err && (err.safeHeldTurn === true || HELD_TURN_STATUSES.includes(Number(err.status || 0)));
+  }
+
   async function apiJson(path, options) {
     var response = await fetch(apiUrl(path), Object.assign({
       headers: { 'Content-Type': 'application/json' },
@@ -60,7 +73,7 @@
     }, options || {}));
     var data = await response.json().catch(function () { return {}; });
     if (!response.ok) {
-      throw new Error(data.error || data.message || ('Request failed: ' + response.status));
+      throw pulseError(data.message || data.error || ('Request failed: ' + response.status), response.status);
     }
     return data;
   }
@@ -89,7 +102,7 @@
     }, options || {}));
     if (!response.ok) {
       var failure = await response.json().catch(function () { return {}; });
-      throw new Error(failure.error || failure.message || ('Request failed: ' + response.status));
+      throw pulseError(failure.message || failure.error || ('Request failed: ' + response.status), response.status);
     }
     if (!response.body || !response.body.getReader) throw new Error('Streaming body is unavailable.');
     var reader = response.body.getReader();
@@ -380,6 +393,10 @@
       fallbackCategory: category,
       runtimePhase: normalizeRuntimePhase(data.runtimePhase)
     };
+  }
+
+  function heldTurnMessage() {
+    return HELD_TURN_MESSAGE;
   }
 
   function setMode(mode) {
@@ -716,6 +733,7 @@
       applyTurnPayload(streamState.finalPayload, { messagesAlreadyRendered: streamState.messagesRendered });
       return;
     } catch (err) {
+      if (isHeldTurnError(err)) throw err;
       if (el.processingStatus) el.processingStatus.textContent = 'Stream unavailable. Using stable turn path.';
       var payload = await apiJson('/api/studio/pulse-showcase/turn', {
         method: 'POST',
@@ -748,7 +766,7 @@
         speakerId: 'aisha',
         speakerName: 'A.I.S.H.A',
         role: 'system',
-        text: 'Runtime missed that turn. The local room remains available.'
+        text: isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. The local room remains available.'
       });
       state.forceScroll = true;
       renderMessages();

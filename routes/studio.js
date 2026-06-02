@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('node:crypto');
 const router = express.Router();
 const { outageResponse, clarificationResponse, quietRoomResult } = require('../lib/studio/fallback');
 const { parseGeminiText, parseStudioJson, wrapPlainTextAsStudioResponse, normalizeCouncilResponse } = require('../lib/studio/parse');
@@ -842,6 +843,22 @@ function resolveSocialDirectorRuntimeOptions(providerConfig = {}) {
 const PULSE_SHOWCASE_MODES = Object.freeze(['social_hierarchy_lab', 'continuity_breaker']);
 const PULSE_SHOWCASE_MAX_USER_TEXT = 500;
 const PULSE_SHOWCASE_SPEAKERS = Object.freeze(['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+const PULSE_SHOWCASE_SAFE_HOLD_MESSAGE = 'The room held that turn. Try again in a moment.';
+const PULSE_SHOWCASE_ALLOWED_ORIGINS = Object.freeze([
+  'https://silva-os-live.vercel.app',
+  'https://silvastudios.co.za',
+  'https://www.silvastudios.co.za'
+]);
+const PULSE_SHOWCASE_LOCAL_ORIGIN_RX = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/i;
+const PULSE_SHOWCASE_SESSION_TURN_LIMIT = 8;
+const PULSE_SHOWCASE_SESSION_WINDOW_MS = 60 * 1000;
+const PULSE_SHOWCASE_IP_TURN_LIMIT = 30;
+const PULSE_SHOWCASE_IP_WINDOW_MS = 10 * 60 * 1000;
+const PULSE_SHOWCASE_ACTIVE_STREAM_LIMIT = 40;
+const pulseShowcaseSessionBuckets = new Map();
+const pulseShowcaseIpBuckets = new Map();
+const pulseShowcaseActiveStreamSessions = new Set();
+const pulseShowcaseActiveStreams = new Set();
 
 function hasVertexRuntimeCredentials() {
   return !!String(
@@ -855,6 +872,230 @@ function hasVertexRuntimeCredentials() {
 function normalizePulseShowcaseMode(value = '') {
   const mode = String(value || '').trim().toLowerCase();
   return PULSE_SHOWCASE_MODES.includes(mode) ? mode : 'social_hierarchy_lab';
+}
+
+function pulseShowcaseRequestId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function pulseShowcaseHash(value = '') {
+  return crypto.createHash('sha256').update(String(value || '')).digest('hex').slice(0, 14);
+}
+
+function pulseShowcaseOrigin(req) {
+  return String(req.get?.('origin') || '').trim();
+}
+
+function pulseShowcaseAllowedOrigin(origin = '') {
+  const clean = String(origin || '').trim().replace(/\/+$/, '');
+  return !clean || PULSE_SHOWCASE_ALLOWED_ORIGINS.includes(clean) || PULSE_SHOWCASE_LOCAL_ORIGIN_RX.test(clean);
+}
+
+function applyPulseShowcaseCors(req, res) {
+  const origin = pulseShowcaseOrigin(req);
+  if (!origin || !pulseShowcaseAllowedOrigin(origin)) return;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type,accept');
+}
+
+function safePulseShowcaseError(res, statusCode, error) {
+  return res.status(statusCode).json({
+    ok: false,
+    error,
+    message: PULSE_SHOWCASE_SAFE_HOLD_MESSAGE
+  });
+}
+
+function pulseShowcaseClientIp(req) {
+  const forwarded = String(req.get?.('x-forwarded-for') || '').split(',')[0].trim();
+  return safeRuntimeStatusText(forwarded || req.ip || req.socket?.remoteAddress || 'unknown').slice(0, 80) || 'unknown';
+}
+
+function pulseShowcaseEndpoint(req) {
+  return String(req.path || req.originalUrl || '').includes('turn-stream')
+    ? 'turn-stream'
+    : String(req.path || req.originalUrl || '').includes('turn')
+      ? 'turn'
+      : 'status';
+}
+
+function pulseShowcaseTelemetryEnabled() {
+  return process.env.NODE_ENV === 'production' || String(process.env.PULSE_SHOWCASE_TELEMETRY || '').trim() === '1';
+}
+
+function pulseShowcaseLedgerCounts(continuityLedger = []) {
+  return (Array.isArray(continuityLedger) ? continuityLedger : []).reduce((acc, item) => {
+    const status = String(item?.status || '').trim().toLowerCase();
+    if (status === 'active') acc.active += 1;
+    if (status === 'superseded') acc.superseded += 1;
+    if (status === 'disputed') acc.disputed += 1;
+    acc.total += 1;
+    return acc;
+  }, { total: 0, active: 0, superseded: 0, disputed: 0 });
+}
+
+function logPulseShowcaseTurnTelemetry(fields = {}) {
+  if (!pulseShowcaseTelemetryEnabled()) return;
+  const payload = {
+    event: 'pulse_showcase_turn',
+    requestId: safeRuntimeStatusText(fields.requestId || '', 80),
+    sessionHash: pulseShowcaseHash(fields.sessionId || ''),
+    mode: normalizePulseShowcaseMode(fields.mode),
+    endpoint: safeRuntimeStatusText(fields.endpoint || '', 40),
+    statusCode: Number(fields.statusCode || 0) || 0,
+    latencyMs: Math.max(0, Math.round(Number(fields.latencyMs || 0) || 0)),
+    activeEngine: safeRuntimeStatusText(fields.activeEngine || '', 80),
+    acceptedByPack1: fields.acceptedByPack1 === true,
+    fallbackCategory: normalizePulseShowcaseFallbackCategory(fields.fallbackCategory || ''),
+    persistenceConnected: fields.persistenceConnected === true,
+    ledgerCounts: pulseShowcaseLedgerCounts(fields.continuityLedger || []),
+    roomMove: safeRuntimeStatusText(fields.roomMove || '', 40)
+  };
+  console.log(JSON.stringify(payload));
+}
+
+function prunePulseShowcaseBuckets(now = Date.now()) {
+  if (pulseShowcaseSessionBuckets.size > 2000) {
+    for (const [key, bucket] of pulseShowcaseSessionBuckets.entries()) {
+      if (bucket.resetAt <= now) pulseShowcaseSessionBuckets.delete(key);
+    }
+  }
+  if (pulseShowcaseIpBuckets.size > 2000) {
+    for (const [key, bucket] of pulseShowcaseIpBuckets.entries()) {
+      if (bucket.resetAt <= now) pulseShowcaseIpBuckets.delete(key);
+    }
+  }
+}
+
+function hitPulseShowcaseBucket(map, key, limit, windowMs, now = Date.now()) {
+  const bucketKey = String(key || 'unknown');
+  const existing = map.get(bucketKey);
+  const bucket = existing && existing.resetAt > now
+    ? existing
+    : { count: 0, resetAt: now + windowMs };
+  bucket.count += 1;
+  map.set(bucketKey, bucket);
+  return bucket.count <= limit;
+}
+
+function guardPulseShowcaseOrigin(req, res, requestId = pulseShowcaseRequestId()) {
+  applyPulseShowcaseCors(req, res);
+  const origin = pulseShowcaseOrigin(req);
+  if (!pulseShowcaseAllowedOrigin(origin)) {
+    logPulseShowcaseTurnTelemetry({
+      requestId,
+      endpoint: pulseShowcaseEndpoint(req),
+      statusCode: 403,
+      latencyMs: 0,
+      fallbackCategory: 'origin-blocked'
+    });
+    safePulseShowcaseError(res, 403, 'pulse-showcase-origin-blocked');
+    return false;
+  }
+  return true;
+}
+
+function guardPulseShowcaseTurn(req, res, parsed = {}, options = {}) {
+  const requestId = options.requestId || pulseShowcaseRequestId();
+  if (options.originChecked !== true && !guardPulseShowcaseOrigin(req, res, requestId)) return { ok: false };
+  const now = Date.now();
+  prunePulseShowcaseBuckets(now);
+  const sessionId = parsed.sessionId || pulseShowcaseSessionId('');
+  const ip = pulseShowcaseClientIp(req);
+  const sessionAllowed = hitPulseShowcaseBucket(
+    pulseShowcaseSessionBuckets,
+    sessionId,
+    PULSE_SHOWCASE_SESSION_TURN_LIMIT,
+    PULSE_SHOWCASE_SESSION_WINDOW_MS,
+    now
+  );
+  const ipAllowed = hitPulseShowcaseBucket(
+    pulseShowcaseIpBuckets,
+    ip,
+    PULSE_SHOWCASE_IP_TURN_LIMIT,
+    PULSE_SHOWCASE_IP_WINDOW_MS,
+    now
+  );
+  if (!sessionAllowed || !ipAllowed) {
+    logPulseShowcaseTurnTelemetry({
+      requestId,
+      sessionId,
+      mode: parsed.mode,
+      endpoint: pulseShowcaseEndpoint(req),
+      statusCode: 429,
+      latencyMs: 0,
+      fallbackCategory: 'rate-limited'
+    });
+    safePulseShowcaseError(res, 429, 'pulse-showcase-rate-limited');
+    return { ok: false };
+  }
+
+  if (options.stream === true) {
+    const acquired = acquirePulseShowcaseStream(sessionId, requestId);
+    if (!acquired.ok) {
+      logPulseShowcaseTurnTelemetry({
+        requestId,
+        sessionId,
+        mode: parsed.mode,
+        endpoint: 'turn-stream',
+        statusCode: acquired.statusCode,
+        latencyMs: 0,
+        fallbackCategory: acquired.category
+      });
+      safePulseShowcaseError(res, acquired.statusCode, acquired.error);
+      return { ok: false };
+    }
+    return { ok: true, requestId, startedAt: now, releaseStream: acquired.release };
+  }
+
+  return { ok: true, requestId, startedAt: now };
+}
+
+function acquirePulseShowcaseStream(sessionId = '', requestId = '') {
+  const id = String(sessionId || '').trim();
+  if (pulseShowcaseActiveStreamSessions.has(id)) {
+    return {
+      ok: false,
+      statusCode: 409,
+      error: 'pulse-showcase-stream-active',
+      category: 'stream-active'
+    };
+  }
+  if (pulseShowcaseActiveStreams.size >= PULSE_SHOWCASE_ACTIVE_STREAM_LIMIT) {
+    return {
+      ok: false,
+      statusCode: 503,
+      error: 'pulse-showcase-stream-capacity',
+      category: 'stream-capacity'
+    };
+  }
+  const token = `${id}:${requestId || pulseShowcaseRequestId()}`;
+  pulseShowcaseActiveStreamSessions.add(id);
+  pulseShowcaseActiveStreams.add(token);
+  let released = false;
+  return {
+    ok: true,
+    release: () => {
+      if (released) return;
+      released = true;
+      pulseShowcaseActiveStreamSessions.delete(id);
+      pulseShowcaseActiveStreams.delete(token);
+    }
+  };
+}
+
+function __resetPulseShowcaseGuardForTests(options = {}) {
+  pulseShowcaseSessionBuckets.clear();
+  pulseShowcaseIpBuckets.clear();
+  pulseShowcaseActiveStreamSessions.clear();
+  pulseShowcaseActiveStreams.clear();
+  const activeStreams = Math.max(0, Math.round(Number(options.activeStreams || 0) || 0));
+  for (let index = 0; index < activeStreams; index += 1) {
+    pulseShowcaseActiveStreams.add(`test-stream-${index}`);
+  }
 }
 
 function pulseShowcaseSessionId(value = '') {
@@ -2504,19 +2745,62 @@ router.get('/pulse/aisha-status', async (req, res) => {
   res.json(status);
 });
 
+router.options('/pulse-showcase/status', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  res.status(204).end();
+});
+
+router.options('/pulse-showcase/turn', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  res.status(204).end();
+});
+
+router.options('/pulse-showcase/turn-stream', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  res.status(204).end();
+});
+
 router.get('/pulse-showcase/status', async (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
   const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
   res.json(publicPulseShowcaseStatus(status));
 });
 
 router.post('/pulse-showcase/turn', async (req, res) => {
+  const requestId = pulseShowcaseRequestId();
+  if (!guardPulseShowcaseOrigin(req, res, requestId)) return;
   const parsed = parsePulseShowcaseTurnRequest(req.body || {});
   if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
+  const guard = guardPulseShowcaseTurn(req, res, parsed, { stream: false, originChecked: true, requestId });
+  if (!guard.ok) return;
 
   try {
     const result = await buildPulseShowcaseTurnPayload(parsed);
+    logPulseShowcaseTurnTelemetry({
+      requestId: guard.requestId,
+      sessionId: parsed.sessionId,
+      mode: parsed.mode,
+      endpoint: 'turn',
+      statusCode: result.statusCode || 200,
+      latencyMs: Date.now() - guard.startedAt,
+      activeEngine: result.payload?.activeEngine,
+      acceptedByPack1: result.payload?.acceptedByPack1,
+      fallbackCategory: result.payload?.fallbackCategory || result.payload?.diagnostics?.fallbackCategory || '',
+      persistenceConnected: result.payload?.diagnostics?.persistenceConnected,
+      continuityLedger: result.payload?.continuityLedger || [],
+      roomMove: result.payload?.socialSignals?.roomMove || ''
+    });
     res.status(result.statusCode).json(result.payload);
   } catch (err) {
+    logPulseShowcaseTurnTelemetry({
+      requestId: guard.requestId,
+      sessionId: parsed.sessionId,
+      mode: parsed.mode,
+      endpoint: 'turn',
+      statusCode: 500,
+      latencyMs: Date.now() - guard.startedAt,
+      fallbackCategory: 'turn-failed'
+    });
     res.status(500).json({
       ok: false,
       error: 'pulse-showcase-turn-failed',
@@ -2526,8 +2810,19 @@ router.post('/pulse-showcase/turn', async (req, res) => {
 });
 
 router.post('/pulse-showcase/turn-stream', async (req, res) => {
+  const requestId = pulseShowcaseRequestId();
+  if (!guardPulseShowcaseOrigin(req, res, requestId)) return;
   const parsed = parsePulseShowcaseTurnRequest(req.body || {});
   if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
+  const guard = guardPulseShowcaseTurn(req, res, parsed, { stream: true, originChecked: true, requestId });
+  if (!guard.ok) return;
+  let released = false;
+  const releaseStream = () => {
+    if (released) return;
+    released = true;
+    guard.releaseStream?.();
+  };
+  res.once('close', releaseStream);
 
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
@@ -2565,6 +2860,20 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
     (payload.silentReactions || []).forEach(item => writePulseShowcaseSse(res, 'silent_reaction', item));
     writePulseShowcaseSse(res, 'ledger', { continuityLedger: payload.continuityLedger || [] });
     writePulseShowcaseSse(res, 'final', payload);
+    logPulseShowcaseTurnTelemetry({
+      requestId: guard.requestId,
+      sessionId: parsed.sessionId,
+      mode: parsed.mode,
+      endpoint: 'turn-stream',
+      statusCode: result.statusCode || 200,
+      latencyMs: Date.now() - guard.startedAt,
+      activeEngine: payload.activeEngine,
+      acceptedByPack1: payload.acceptedByPack1,
+      fallbackCategory: payload.fallbackCategory || payload.diagnostics?.fallbackCategory || '',
+      persistenceConnected: payload.diagnostics?.persistenceConnected,
+      continuityLedger: payload.continuityLedger || [],
+      roomMove: payload.socialSignals?.roomMove || ''
+    });
     res.end();
   } catch (err) {
     writePulseShowcaseSse(res, 'error', {
@@ -2572,7 +2881,18 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
       error: 'pulse-showcase-turn-stream-failed',
       message: safeRuntimeStatusText(err?.message || err || '')
     });
+    logPulseShowcaseTurnTelemetry({
+      requestId: guard.requestId,
+      sessionId: parsed.sessionId,
+      mode: parsed.mode,
+      endpoint: 'turn-stream',
+      statusCode: 200,
+      latencyMs: Date.now() - guard.startedAt,
+      fallbackCategory: 'turn-stream-failed'
+    });
     res.end();
+  } finally {
+    releaseStream();
   }
 });
 
@@ -4960,5 +5280,7 @@ async function handlePulseIdle(req, res) {
 
 router.post('/pulse/spark', handlePulseIdle);
 router.post('/pulse/idle-tick', handlePulseIdle);
+
+router.__resetPulseShowcaseGuardForTests = __resetPulseShowcaseGuardForTests;
 
 module.exports = router;
