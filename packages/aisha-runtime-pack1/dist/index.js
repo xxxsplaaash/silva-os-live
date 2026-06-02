@@ -2707,7 +2707,7 @@ function isEphemeralChatter(text) {
   );
 }
 function hasStrongPreferenceSignal(text) {
-  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like)\b/i.test(
+  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is)\b/i.test(
     text
   );
 }
@@ -2720,7 +2720,7 @@ function hasStrongProfileSignal(text) {
   return /\b(?:i am|i'm|i usually|i tend to|i always|i never)\b/i.test(text);
 }
 function looksPreferenceLike(text) {
-  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|prefer|like|love|hate)\b/i.test(
+  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
     text
   );
 }
@@ -2798,6 +2798,28 @@ var SimpleNoteExtractionSandbox = class {
               subjectKind: "user",
               sourceEpisodeIds: [episode.id],
               provenanceReason: "heuristic_boundary_pattern"
+            });
+            continue;
+          }
+        }
+        const slotPrefMatch = text.match(
+          /\bmy\s+([a-z0-9 _-]{2,80}?)\s+preference\s+is\s+(.+?)(?:[.!?]|$)/i
+        );
+        if (slotPrefMatch) {
+          const slot = cleanBehavioralValue(slotPrefMatch[1]).toLowerCase();
+          const cleaned = cleanExtractedValue(slotPrefMatch[2]);
+          if (slot.length > 0 && cleaned.length > 0) {
+            candidates.push({
+              subtype: "K_pref",
+              canonicalText: `User ${slot} preference: ${cleaned}`,
+              normalizedValue: normalizeValue(`${slot} preference: ${cleaned}`),
+              confidence: hedgePenalty(0.88),
+              extractionConfidenceRaw: 0.88,
+              status: "active",
+              provenanceChain: ["heuristic_slot_preference_pattern"],
+              subjectKind: "user",
+              sourceEpisodeIds: [episode.id],
+              provenanceReason: "heuristic_slot_preference_pattern"
             });
             continue;
           }
@@ -3122,7 +3144,7 @@ function detectSubtypeIntent(turn) {
     pref += 1;
     profile += 1;
   }
-  if (/\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|order|favorite|prefer|preference|like|love|hate)\b/.test(
+  if (/\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
     text
   )) {
     pref += 3;
@@ -3165,6 +3187,9 @@ function compareRankedNotes(a, b) {
   if (b.subjectMatch !== a.subjectMatch) {
     return b.subjectMatch - a.subjectMatch;
   }
+  if (b.sessionAffinity !== a.sessionAffinity) {
+    return b.sessionAffinity - a.sessionAffinity;
+  }
   if (b.subtypeRelevance !== a.subtypeRelevance) {
     return b.subtypeRelevance - a.subtypeRelevance;
   }
@@ -3179,10 +3204,11 @@ function compareRankedNotes(a, b) {
   }
   return a.note.id.localeCompare(b.note.id);
 }
-function rankNotes(turn, notes) {
+function rankNotes(turn, notes, sessionEpisodeIds = /* @__PURE__ */ new Set()) {
   return notes.map((note) => ({
     note,
     subjectMatch: subjectMatchStrength(turn, note),
+    sessionAffinity: note.sourceEpisodeIds.some((id) => sessionEpisodeIds.has(id)) ? 1 : 0,
     subtypeRelevance: subtypeRelevanceScore(turn, note),
     confidence: note.confidence,
     recency: noteRecency(note),
@@ -3235,7 +3261,11 @@ var SimpleRetrievalPlanner = class {
     const activeThreadRecord = await this.deps.threadStore.getActive(sessionId);
     const threadEpisodeIds = activeThreadRecord?.episodeIds.slice(-MAX_THREAD_EPISODES) ?? [];
     const activeThread = await this.deps.episodeStore.getByIds(threadEpisodeIds);
-    const activeNotes = await this.buildActiveNotesLane(sessionId, currentTurn);
+    const activeNotes = await this.buildActiveNotesLane(
+      sessionId,
+      currentTurn,
+      new Set(threadEpisodeIds)
+    );
     const supportingEpisodes = this.selectSupportingEpisodes(
       activeThread,
       currentTurn
@@ -3253,7 +3283,7 @@ var SimpleRetrievalPlanner = class {
       supersessionContext
     };
   }
-  async buildActiveNotesLane(sessionId, currentTurn) {
+  async buildActiveNotesLane(sessionId, currentTurn, sessionEpisodeIds = /* @__PURE__ */ new Set()) {
     const rawCandidates = await this.deps.noteVersioning.listActiveNotes({
       sessionId,
       subjectPersonId: currentTurn.relationshipTargetPersonId,
@@ -3273,7 +3303,7 @@ var SimpleRetrievalPlanner = class {
       currentTurn,
       activeNotes: penalized
     });
-    const ranked = rankNotes(currentTurn, reviewed);
+    const ranked = rankNotes(currentTurn, reviewed, sessionEpisodeIds);
     return applySubtypeDiversity(currentTurn, ranked);
   }
   selectSupportingEpisodes(activeThread, currentTurn) {

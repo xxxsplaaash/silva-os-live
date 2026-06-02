@@ -48,7 +48,7 @@ function isEphemeralChatter(text: string): boolean {
 }
 
 function hasStrongPreferenceSignal(text: string): boolean {
-  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like)\b/i.test(
+  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is)\b/i.test(
     text,
   );
 }
@@ -69,7 +69,7 @@ function hasStrongProfileSignal(text: string): boolean {
 }
 
 function looksPreferenceLike(text: string): boolean {
-  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|prefer|like|love|hate)\b/i.test(
+  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
     text,
   );
 }
@@ -204,6 +204,34 @@ export class SimpleNoteExtractionSandbox implements INoteExtractionSandbox {
               sourceEpisodeIds: [episode.id],
               provenanceReason: "heuristic_boundary_pattern",
             } as NoteCandidate);
+            continue;
+          }
+        }
+
+        // ── Group A0: Explicit slot preference ───────────────────────────────
+        // Example: "My dashboard preference is obsidian with one red accent."
+        // This is a direct stable preference, not an inferred behavior, so it can
+        // become active immediately and uses a colon-normalized slot for safe
+        // supersession when the same slot changes later.
+        const slotPrefMatch = text.match(
+          /\bmy\s+([a-z0-9 _-]{2,80}?)\s+preference\s+is\s+(.+?)(?:[.!?]|$)/i,
+        );
+        if (slotPrefMatch) {
+          const slot = cleanBehavioralValue(slotPrefMatch[1]).toLowerCase();
+          const cleaned = cleanExtractedValue(slotPrefMatch[2]);
+          if (slot.length > 0 && cleaned.length > 0) {
+            candidates.push({
+              subtype: "K_pref",
+              canonicalText: `User ${slot} preference: ${cleaned}`,
+              normalizedValue: normalizeValue(`${slot} preference: ${cleaned}`),
+              confidence: hedgePenalty(0.88),
+              extractionConfidenceRaw: 0.88,
+              status: "active",
+              provenanceChain: ["heuristic_slot_preference_pattern"],
+              subjectKind: "user",
+              sourceEpisodeIds: [episode.id],
+              provenanceReason: "heuristic_slot_preference_pattern",
+            });
             continue;
           }
         }

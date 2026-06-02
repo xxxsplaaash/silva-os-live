@@ -91,7 +91,7 @@ function detectSubtypeIntent(turn: TurnRecord): {
   }
 
   if (
-    /\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|order|favorite|prefer|preference|like|love|hate)\b/.test(
+    /\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
       text,
     )
   ) {
@@ -160,6 +160,7 @@ function evidenceCount(note: NoteRecord): number {
 type RankedNote = {
   note: NoteRecord;
   subjectMatch: number;
+  sessionAffinity: number;
   subtypeRelevance: number;
   confidence: number;
   recency: number;
@@ -169,6 +170,10 @@ type RankedNote = {
 function compareRankedNotes(a: RankedNote, b: RankedNote): number {
   if (b.subjectMatch !== a.subjectMatch) {
     return b.subjectMatch - a.subjectMatch;
+  }
+
+  if (b.sessionAffinity !== a.sessionAffinity) {
+    return b.sessionAffinity - a.sessionAffinity;
   }
 
   if (b.subtypeRelevance !== a.subtypeRelevance) {
@@ -190,11 +195,16 @@ function compareRankedNotes(a: RankedNote, b: RankedNote): number {
   return a.note.id.localeCompare(b.note.id);
 }
 
-function rankNotes(turn: TurnRecord, notes: NoteRecord[]): RankedNote[] {
+function rankNotes(
+  turn: TurnRecord,
+  notes: NoteRecord[],
+  sessionEpisodeIds: Set<string> = new Set(),
+): RankedNote[] {
   return notes
     .map((note) => ({
       note,
       subjectMatch: subjectMatchStrength(turn, note),
+      sessionAffinity: note.sourceEpisodeIds.some((id) => sessionEpisodeIds.has(id)) ? 1 : 0,
       subtypeRelevance: subtypeRelevanceScore(turn, note),
       confidence: note.confidence,
       recency: noteRecency(note),
@@ -283,7 +293,11 @@ export class SimpleRetrievalPlanner implements IRetrievalPlanner {
       activeThreadRecord?.episodeIds.slice(-MAX_THREAD_EPISODES) ?? [];
     const activeThread = await this.deps.episodeStore.getByIds(threadEpisodeIds);
 
-    const activeNotes = await this.buildActiveNotesLane(sessionId, currentTurn);
+    const activeNotes = await this.buildActiveNotesLane(
+      sessionId,
+      currentTurn,
+      new Set(threadEpisodeIds),
+    );
     const supportingEpisodes = this.selectSupportingEpisodes(
       activeThread,
       currentTurn,
@@ -310,6 +324,7 @@ export class SimpleRetrievalPlanner implements IRetrievalPlanner {
   private async buildActiveNotesLane(
     sessionId: string,
     currentTurn: TurnRecord,
+    sessionEpisodeIds: Set<string> = new Set(),
   ): Promise<NoteRecord[]> {
     const rawCandidates = await this.deps.noteVersioning.listActiveNotes({
       sessionId,
@@ -335,7 +350,7 @@ export class SimpleRetrievalPlanner implements IRetrievalPlanner {
       activeNotes: penalized,
     });
 
-    const ranked = rankNotes(currentTurn, reviewed);
+    const ranked = rankNotes(currentTurn, reviewed, sessionEpisodeIds);
     return applySubtypeDiversity(currentTurn, ranked);
   }
 

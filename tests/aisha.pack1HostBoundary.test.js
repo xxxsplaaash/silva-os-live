@@ -271,3 +271,20 @@ test('Pack 1 social-director prompt builder prefers generatorPrompt over turn ra
   assert.match(source, /socialDirectorGeneratorPrompt\(input\)\s*\?\?/);
   assert.match(source, /readString\(turn,\s*"rawText"\)/);
 });
+
+test('Pack 1 extractor and retrieval prioritize durable dashboard slot preferences', () => {
+  const extractionSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'memory', 'noteExtractionSandbox.ts'),
+    'utf8'
+  );
+  const retrievalSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'memory', 'retrievalPlanner.ts'),
+    'utf8'
+  );
+  assert.match(extractionSource, /my \[a-z0-9 _-\]\{2,80\} preference is/);
+  assert.match(extractionSource, /heuristic_slot_preference_pattern/);
+  assert.match(extractionSource, /User \$\{slot\} preference: \$\{cleaned\}/);
+  assert.match(retrievalSource, /sessionAffinity/);
+  assert.match(retrievalSource, /sessionEpisodeIds\.has\(id\)/);
+  assert.match(retrievalSource, /dashboard\|design\|aesthetic/);
+});
