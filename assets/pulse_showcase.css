@@ -332,6 +332,26 @@ textarea {
   cursor: not-allowed;
 }
 
+.processing-status {
+  display: none;
+  min-height: 26px;
+  align-items: center;
+  border: 1px solid rgba(232, 0, 30, .26);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--soft);
+  background: rgba(232, 0, 30, .06);
+  font: 11px "DM Mono", ui-monospace, monospace;
+}
+
+.is-busy .processing-status {
+  display: flex;
+}
+
+.is-busy .room-panel {
+  border-color: rgba(232, 0, 30, .24);
+}
+
 .ledger-panel {
   min-height: 0;
   display: grid;
@@ -371,6 +391,25 @@ textarea {
   color: var(--soft);
   font-size: 13px;
   text-align: right;
+  min-width: 96px;
+  overflow-wrap: anywhere;
+}
+
+.signal-meter {
+  height: 6px;
+  margin-top: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .07);
+}
+
+.signal-meter span {
+  display: block;
+  width: 18%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+  transition: width 450ms ease;
 }
 
 .presence-list,
@@ -396,16 +435,54 @@ textarea {
   font-size: 13px;
 }
 
+.presence-item span:last-child {
+  min-width: 78px;
+  color: var(--muted);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.presence-state-speaking,
+.presence-state-primary,
+.presence-state-active {
+  border-color: rgba(232, 0, 30, .38);
+  background: rgba(232, 0, 30, .07);
+}
+
+.presence-state-watching,
+.presence-state-listening {
+  opacity: .86;
+}
+
 .ledger-scroll {
   min-height: 0;
   overflow: auto;
 }
 
-.ledger-item strong {
+.ledger-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.ledger-item strong,
+.ledger-item em {
   display: block;
+  font: 11px "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ledger-item strong {
   color: var(--text);
-  font-size: 12px;
-  margin-bottom: 4px;
+}
+
+.ledger-item em {
+  color: var(--muted);
+  font-style: normal;
+  text-align: right;
 }
 
 .ledger-item span {
@@ -413,6 +490,28 @@ textarea {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.ledger-status-active {
+  border-color: rgba(88, 194, 139, .28);
+}
+
+.ledger-status-superseded {
+  border-color: rgba(215, 168, 75, .34);
+  background: rgba(215, 168, 75, .045);
+}
+
+.ledger-status-disputed {
+  border-color: rgba(232, 0, 30, .42);
+  background: rgba(232, 0, 30, .065);
+}
+
+.ledger-source-pack1-memory .ledger-meta em {
+  color: var(--green);
+}
+
+.ledger-source-showcase-session .ledger-meta em {
+  color: var(--amber);
 }
 
 .empty-state {

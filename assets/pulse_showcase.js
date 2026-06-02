@@ -29,8 +29,13 @@
     mode: 'social_hierarchy_lab',
     messages: [],
     ledger: [],
+    presence: {},
+    roomMood: 'focused',
+    responseMode: 'single',
+    tensionScore: 18,
     status: null,
-    busy: false
+    busy: false,
+    forceScroll: false
   };
 
   var el = {};
@@ -78,7 +83,11 @@
       sessionStorage.setItem(STATE_KEY, JSON.stringify({
         mode: state.mode,
         messages: state.messages.slice(-30),
-        ledger: state.ledger.slice(0, 16)
+        ledger: state.ledger.slice(0, 16),
+        presence: state.presence,
+        roomMood: state.roomMood,
+        responseMode: state.responseMode,
+        tensionScore: state.tensionScore
       }));
     } catch (err) {}
   }
@@ -91,6 +100,10 @@
       if (saved && MODES[saved.mode]) state.mode = saved.mode;
       if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(-30);
       if (Array.isArray(saved.ledger)) state.ledger = saved.ledger.slice(0, 16);
+      if (saved.presence && typeof saved.presence === 'object') state.presence = saved.presence;
+      if (saved.roomMood) state.roomMood = compact(saved.roomMood, 40) || state.roomMood;
+      if (saved.responseMode) state.responseMode = compact(saved.responseMode, 40) || state.responseMode;
+      if (Number.isFinite(Number(saved.tensionScore))) state.tensionScore = Math.max(0, Math.min(100, Number(saved.tensionScore)));
     } catch (err) {}
   }
 
@@ -105,6 +118,81 @@
 
   function compact(value, max) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, max || 500);
+  }
+
+  function safeToken(value, fallback) {
+    var token = String(value || fallback || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-');
+    return token || fallback || 'unknown';
+  }
+
+  function ledgerStatus(value) {
+    var status = safeToken(value, 'active');
+    return ['active', 'superseded', 'disputed'].includes(status) ? status : 'active';
+  }
+
+  function ledgerSource(value) {
+    var source = safeToken(value, 'showcase-session');
+    return source === 'pack1-memory' ? 'pack1-memory' : 'showcase-session';
+  }
+
+  function isNearBottom(node) {
+    if (!node) return true;
+    return node.scrollHeight - node.scrollTop - node.clientHeight < 80;
+  }
+
+  function continuityStats() {
+    return state.ledger.reduce(function (acc, item) {
+      var status = ledgerStatus(item.status);
+      acc.total += 1;
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, { total: 0, active: 0, superseded: 0, disputed: 0 });
+  }
+
+  function computeTension(payload) {
+    var mood = compact(payload && payload.roomMood || state.roomMood || '', 40).toLowerCase();
+    var base = {
+      calm: 10,
+      focused: 24,
+      playful: 30,
+      sharp: 48,
+      tense: 68,
+      hostile: 82,
+      fragile: 64
+    }[mood] || 28;
+    var stats = continuityStats();
+    if (stats.superseded) base += 12;
+    if (stats.disputed) base += 22;
+    if (payload && payload.diagnostics && payload.diagnostics.fallbackUsed) base += 12;
+    return Math.max(0, Math.min(100, base));
+  }
+
+  function updatePresence(events, silentReactions) {
+    var next = {};
+    ['aisha', 'vanya', 'leah', 'claudia', 'grok'].forEach(function (id) {
+      next[id] = state.presence[id] || 'listening';
+    });
+    (silentReactions || []).forEach(function (item) {
+      var id = safeToken(item.speakerId, '');
+      if (next[id]) next[id] = compact(item.visibleState || 'watching', 40) || 'watching';
+    });
+    (events || []).forEach(function (item) {
+      var id = safeToken(item.speakerId, '');
+      if (next[id]) next[id] = compact(item.visibleState || item.role || 'speaking', 40) || 'speaking';
+    });
+    state.presence = next;
+  }
+
+  function updateLedgerFromPayload(payload) {
+    if (!Array.isArray(payload && payload.continuityLedger) || !payload.continuityLedger.length) return;
+    state.ledger = payload.continuityLedger.slice(0, 16).map(function (item) {
+      return {
+        id: compact(item.id || item.text || '', 120),
+        text: compact(item.text || item.canonicalText || '', 280),
+        status: ledgerStatus(item.status),
+        source: ledgerSource(item.source)
+      };
+    }).filter(function (item) { return item.text; });
   }
 
   function setMode(mode) {
@@ -127,7 +215,13 @@
     el.persistenceValue.textContent = status.persistence
       ? (status.persistence.mode + (status.persistence.connected ? ' connected' : ' pending'))
       : '--';
+    el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
+    var stats = continuityStats();
+    el.continuityValue.textContent = stats.total
+      ? (stats.active + ' active, ' + stats.superseded + ' superseded, ' + stats.disputed + ' disputed')
+      : 'waiting';
     el.sessionValue.textContent = state.sessionId.slice(0, 32);
+    if (el.tensionFill) el.tensionFill.style.width = state.tensionScore + '%';
   }
 
   function speakerDot(id) {
@@ -135,8 +229,10 @@
   }
 
   function renderMessages() {
+    var shouldStick = state.forceScroll || isNearBottom(el.feed);
     if (!state.messages.length) {
       el.feed.innerHTML = '<div class="empty-state">The room is waiting for the first turn.</div>';
+      state.forceScroll = false;
       return;
     }
     el.feed.innerHTML = state.messages.map(function (message) {
@@ -151,15 +247,21 @@
         '</article>'
       ].join('');
     }).join('');
-    el.feed.scrollTop = el.feed.scrollHeight;
+    if (shouldStick) el.feed.scrollTop = el.feed.scrollHeight;
+    state.forceScroll = false;
   }
 
   function renderLedger() {
     el.ledger.innerHTML = state.ledger.length
       ? state.ledger.map(function (item) {
+        var status = ledgerStatus(item.status);
+        var source = ledgerSource(item.source);
         return [
-          '<div class="ledger-item">',
-          '<strong>' + escapeHtml((item.status || 'active').toUpperCase()) + '</strong>',
+          '<div class="ledger-item ledger-status-' + status + ' ledger-source-' + source + '">',
+          '<div class="ledger-meta">',
+          '<strong>' + escapeHtml(status.toUpperCase()) + '</strong>',
+          '<em>' + escapeHtml(source) + '</em>',
+          '</div>',
           '<span>' + escapeHtml(item.text || '') + '</span>',
           '</div>'
         ].join('');
@@ -168,26 +270,40 @@
   }
 
   function renderPresence(events, silentReactions) {
-    var active = {};
-    (events || []).forEach(function (item) { active[item.speakerId] = item.role || 'speaking'; });
-    (silentReactions || []).forEach(function (item) { if (!active[item.speakerId]) active[item.speakerId] = item.visibleState || 'watching'; });
+    if (events || silentReactions) updatePresence(events || [], silentReactions || []);
     var ids = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
     el.presence.innerHTML = ids.map(function (id) {
+      var visibleState = compact(state.presence[id] || 'listening', 40);
       return [
-        '<div class="presence-item">',
+        '<div class="presence-item presence-state-' + safeToken(visibleState, 'listening') + '">',
         '<span>' + speakerDot(id) + ' ' + escapeHtml(CHARACTER_NAMES[id]) + '</span>',
-        '<span>' + escapeHtml(active[id] || 'listening') + '</span>',
+        '<span>' + escapeHtml(visibleState) + '</span>',
         '</div>'
       ].join('');
     }).join('');
   }
 
   function renderAll() {
+    el.roomMood.textContent = 'Mood: ' + state.roomMood;
+    el.responseMode.textContent = 'Mode: ' + state.responseMode;
     renderStatus();
     renderMessages();
     renderLedger();
-    renderPresence([], []);
+    renderPresence();
     el.charCount.textContent = (el.userText.value || '').length + '/500';
+    reportHeight();
+  }
+
+  function setBusy(value) {
+    state.busy = value === true;
+    document.body.classList.toggle('is-busy', state.busy);
+    el.send.disabled = state.busy;
+    el.userText.disabled = state.busy;
+    el.userText.setAttribute('aria-busy', state.busy ? 'true' : 'false');
+    document.querySelectorAll('.mode-button, .reset-button').forEach(function (button) {
+      button.disabled = state.busy;
+    });
+    if (el.processingStatus) el.processingStatus.setAttribute('aria-hidden', state.busy ? 'false' : 'true');
     reportHeight();
   }
 
@@ -222,10 +338,9 @@
     var text = compact(el.userText.value, 500);
     if (!text) return;
 
-    state.busy = true;
-    el.send.disabled = true;
-    el.userText.disabled = true;
+    setBusy(true);
     state.messages.push({ speakerId: 'user', speakerName: 'You', role: 'user', text: text });
+    state.forceScroll = true;
     el.userText.value = '';
     renderMessages();
     el.charCount.textContent = '0/500';
@@ -254,12 +369,14 @@
           connected: !!(payload.diagnostics && payload.diagnostics.persistenceConnected)
         }
       };
-      el.roomMood.textContent = 'Mood: ' + (payload.roomMood || 'focused');
-      el.responseMode.textContent = 'Mode: ' + (payload.responseMode || 'single');
+      state.roomMood = compact(payload.roomMood || 'focused', 40) || 'focused';
+      state.responseMode = compact(payload.responseMode || 'single', 40) || 'single';
+      el.roomMood.textContent = 'Mood: ' + state.roomMood;
+      el.responseMode.textContent = 'Mode: ' + state.responseMode;
       (payload.messageEvents || []).forEach(function (item) { state.messages.push(item); });
-      if (Array.isArray(payload.continuityLedger) && payload.continuityLedger.length) {
-        state.ledger = payload.continuityLedger;
-      }
+      updateLedgerFromPayload(payload);
+      state.tensionScore = computeTension(payload);
+      state.forceScroll = true;
       renderStatus();
       renderMessages();
       renderLedger();
@@ -272,11 +389,10 @@
         role: 'system',
         text: 'Runtime missed that turn. The local room remains available.'
       });
+      state.forceScroll = true;
       renderMessages();
     } finally {
-      state.busy = false;
-      el.send.disabled = false;
-      el.userText.disabled = false;
+      setBusy(false);
       el.userText.focus();
       reportHeight();
     }
@@ -286,6 +402,11 @@
     state.sessionId = makeSessionId();
     state.messages = [];
     state.ledger = [];
+    state.presence = {};
+    state.roomMood = 'focused';
+    state.responseMode = 'single';
+    state.tensionScore = 18;
+    state.forceScroll = true;
     try {
       sessionStorage.setItem(SESSION_KEY, state.sessionId);
       sessionStorage.removeItem(STATE_KEY);
@@ -322,9 +443,13 @@
     el.userText = $('user-text');
     el.charCount = $('char-count');
     el.send = $('send-turn');
+    el.processingStatus = $('processing-status');
     el.engineValue = $('engine-value');
     el.persistenceValue = $('persistence-value');
+    el.roomSignalValue = $('room-signal-value');
+    el.continuityValue = $('continuity-value');
     el.sessionValue = $('session-value');
+    el.tensionFill = $('tension-fill');
     el.presence = $('presence-list');
     el.ledger = $('ledger-list');
 

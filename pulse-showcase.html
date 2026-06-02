@@ -47,6 +47,7 @@
       <form class="room-input" id="room-form">
         <label class="sr-only" for="user-text">Message</label>
         <textarea id="user-text" maxlength="500" rows="2" placeholder="Enter the room"></textarea>
+        <div class="processing-status" id="processing-status" aria-live="polite">Room is processing the turn.</div>
         <div class="input-actions">
           <span id="char-count">0/500</span>
           <button type="submit" id="send-turn">Send</button>
@@ -60,8 +61,13 @@
         <dl class="status-list">
           <div><dt>Engine</dt><dd id="engine-value">--</dd></div>
           <div><dt>Persistence</dt><dd id="persistence-value">--</dd></div>
+          <div><dt>Room</dt><dd id="room-signal-value">--</dd></div>
+          <div><dt>Continuity</dt><dd id="continuity-value">--</dd></div>
           <div><dt>Session</dt><dd id="session-value">--</dd></div>
         </dl>
+        <div class="signal-meter" aria-hidden="true">
+          <span id="tension-fill"></span>
+        </div>
       </section>
 
       <section class="ledger-section">
