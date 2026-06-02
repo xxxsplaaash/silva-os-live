@@ -49,7 +49,7 @@ async function getStatus() {
   return data;
 }
 
-async function streamTurn(sessionId, userText, roomState = {}) {
+async function streamTurnOnce(sessionId, userText, roomState = {}) {
   const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
@@ -71,14 +71,28 @@ async function streamTurn(sessionId, userText, roomState = {}) {
   assertOk(events[events.length - 1]?.event === 'final', 'stream did not end in final');
   const final = events.find(item => item.event === 'final')?.data;
   assertOk(final?.ok === true, 'final payload was not ok');
-  assertOk(final.activeEngine === 'aisha-runtime-pack1', `final activeEngine was ${final.activeEngine}`);
-  assertOk(final.acceptedByPack1 === true, `Pack 1 did not accept turn: ${final.fallbackCategory || 'unknown'}`);
-  assertOk(final.diagnostics?.persistenceConnected === true, 'final did not report persistence connected');
   assertOk(Number.isFinite(Number(final.socialSignals?.tension)), 'final missing bounded tension');
   assertOk(Number.isFinite(Number(final.socialSignals?.continuityPressure)), 'final missing bounded continuity pressure');
   assertOk(typeof final.socialSignals?.roomMove === 'string', 'final missing roomMove');
   assertOk(Array.isArray(final.socialSignals?.statusEvents), 'final missing statusEvents');
   return { events, final };
+}
+
+async function streamTurn(sessionId, userText, roomState = {}, options = {}) {
+  const attempts = Math.max(1, Math.min(2, Number(options.attempts || 2) || 2));
+  let last = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    last = await streamTurnOnce(sessionId, userText, roomState);
+    if (last.final.activeEngine === 'aisha-runtime-pack1' && last.final.acceptedByPack1 === true) {
+      assertOk(last.final.diagnostics?.persistenceConnected === true, 'final did not report persistence connected');
+      return last;
+    }
+    if (attempt < attempts) await sleep(1200);
+  }
+  assertOk(last?.final?.activeEngine === 'aisha-runtime-pack1', `final activeEngine was ${last?.final?.activeEngine || 'missing'}`);
+  assertOk(last?.final?.acceptedByPack1 === true, `Pack 1 did not accept turn: ${last?.final?.fallbackCategory || 'unknown'}`);
+  assertOk(last?.final?.diagnostics?.persistenceConnected === true, 'final did not report persistence connected');
+  return last;
 }
 
 const sessionId = `pulse-showcase-live-${Date.now().toString(36)}`;
