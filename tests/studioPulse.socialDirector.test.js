@@ -10,6 +10,7 @@ const os = require('node:os');
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
 const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
+const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
 const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 
@@ -386,6 +387,151 @@ test('social director fallback answers the failed muscle-building transcript ins
       assertCleanVisible(body);
     });
   });
+});
+
+test('showcase-shaped fallback lets current practical prompt beat advisory open-floor mode', async () => {
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'LOL I WANNA GROW MY MUSCLES',
+      openFloor: true,
+      recentTurns: [],
+      roomState: { roomMood: 'focused' }
+    },
+    callAishaEngine: async () => mockAishaContent('', {
+      aishaEngineConnected: false,
+      engineMode: 'unavailable',
+      fallbackReason: 'not-connected',
+      trace: { status: 'failed', reason: 'not-connected' }
+    })
+  });
+
+  const body = result.payload;
+  const text = visibleText(body);
+  assert.equal(result.statusCode, 200);
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.equal(body.responseMode, 'small_exchange');
+  assert.doesNotMatch(text, /\b(Open floor can be a room|jazz hands|panel show)\b/i);
+  assert.match(text, /\b(training week|full-body|progressive overload|protein|sleep)\b/i);
+  assertCleanVisible(body);
+});
+
+test('social director fallback changes shape instead of repeating fitness recovery', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+        { speakerId: 'vanya', role: 'primary', text: 'Fair. The room dropped the thread; the objective is your actual ask: start building muscle without turning it into chaos.' },
+        { speakerId: 'claudia', role: 'side', text: 'Start with three full-body sessions a week, track a few basic lifts, eat enough protein, and sleep like recovery is part of the plan.' },
+        { speakerId: 'grok', role: 'closer', text: 'If it hurts sharply or you have a medical condition, get a real professional involved. Otherwise consistency beats theatrics.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'BRUH...', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
+      assert.doesNotMatch(text, /Start with three full-body sessions a week/i);
+      assert.match(text, /\b(No more loop|three training days|week one|boring enough to repeat)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback changes shape again after the no-more-loop recovery', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+        { speakerId: 'vanya', role: 'primary', text: 'Yeah, fair. No more loop: your next move is one simple week, not another speech about the objective.' },
+        { speakerId: 'claudia', role: 'side', text: 'Pick three training days, write the exercises down, and add one tiny progression each week.' },
+        { speakerId: 'grok', role: 'closer', text: 'If the plan cannot survive week one, it was decoration. Start boring enough to repeat.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'BRUH...', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
+      assert.doesNotMatch(text, /No more loop/i);
+      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|run out of excuses)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback treats training-adjacent food as nutrition, not stale workout script', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', role: 'side', text: 'Three full-body sessions, enough food, and sleep.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'i am hungry and want to train later, what should i eat?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.equal(body.responseMode, 'small_exchange');
+      assert.match(text, /\b(protein|carbs|water|digest|before training)\b/i);
+      assert.doesNotMatch(text, /\b(three full-body sessions|progressive overload|basic pushes|squats or hinges)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback does not let old fitness context hijack open floor', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'i am hungry and want to train later, what should i eat?' },
+        { speakerId: 'aisha', role: 'primary', text: 'For training, focus on lean protein and complex carbohydrates.' },
+        { speakerId: 'claudia', role: 'side', text: 'A balanced meal with chicken or fish, rice or sweet potato, and vegetables will support your training.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'open floor: what should the room watch next?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.equal(body.responseMode, 'open_floor');
+      assert.doesNotMatch(text, /\b(full-body|training week|progressive overload|protein|sharp pain|basic pushes|squats|hinges)\b/i);
+      assert.match(text, /\b(Open floor|panel show|room)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director quality validator rejects stale fitness answer after open-floor pivot', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Old fitness context leaks into a new open-floor prompt.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'host', text: 'Start simple: you need a repeatable training week.' },
+      { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'Three full-body sessions, enough protein, and sleep.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: ['Beginner muscle-building guidance.'] }
+  }, {
+    userMessage: 'open floor: what should the room watch next?',
+    recentTurns: [{ speakerId: 'user', text: 'i am hungry and want to train later, what should i eat?' }]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('stale-topic-answer:fitness'));
+});
+
+test('social director quality validator rejects generic operational check-in reports', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room reports status.',
+    roomMood: 'focused',
+    responseMode: 'open_floor',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'We are focused. The work is proceeding.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Everyone is engaged with their current tasks. The energy is steady.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Operational status is green. No immediate blockers.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'how is everyone?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('generic-status-report'));
 });
 
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
@@ -963,6 +1109,21 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const accepted = calls <= 4;
     const userText = String(req.body?.userText || '');
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
+    const text = (() => {
+      if (/wanna grow/i.test(userText)) return 'Start with three full-body training days, enough protein, sleep, and slow progressive overload.';
+      if (/where do i start/i.test(userText)) return 'Begin with three training days this week and track the lifts before adding volume.';
+      if (/what is the objective/i.test(userText)) return 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.';
+      if (/bruh/i.test(userText)) return 'No more loop. Keep week one boring enough to repeat, then add one small progression.';
+      if (/how is everyone/i.test(userText)) return 'The room is present, slightly restless, and still tracking the thread.';
+      if (/hungry/i.test(userText)) return 'Eat something steady: protein, carbs, water, and enough time before training.';
+      if (/obsidian/i.test(userText)) return 'Recorded dashboard preference: obsidian with one red accent.';
+      if (/pale blue/i.test(userText)) return 'Updated dashboard preference: pale blue with no red accents.';
+      if (/what changed/i.test(userText)) return 'Changed: active preference is pale blue with no red accents. Prior record: obsidian with one red accent.';
+      if (/open floor/i.test(userText)) return 'Open floor, but not chaos. The room should watch the next visible decision.';
+      return isFitness
+        ? 'Start with training, food, and recovery matched to the week.'
+        : 'The room keeps the turn bounded.';
+    })();
     const payload = {
       ok: true,
       sessionId: 'script-test-session',
@@ -976,9 +1137,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
         speakerName: 'Vanya',
         role: 'primary',
         tone: 'steady',
-        text: isFitness
-          ? 'Start with three full-body training days, enough protein, sleep, and slow progressive overload.'
-          : 'The room keeps the turn bounded.',
+        text,
         visibleState: 'Reading'
       }],
       silentReactions: [],
@@ -1012,14 +1171,16 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
   try {
     const result = await runNodeScript(['scripts/smoke-pulse-showcase-turn-acceptance.mjs'], {
       BACKEND_URL: `http://127.0.0.1:${port}`,
+      CHECK_FRONTEND_VERSION: '0',
       SESSION_ID: 'script-test-session'
     });
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.counts.accepted, 4);
-    assert.equal(summary.counts.repaired, 4);
+    assert.equal(summary.counts.repaired, 6);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 8);
+    assert.equal(calls, 10);
+    assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
     await new Promise(resolve => server.close(resolve));

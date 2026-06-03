@@ -1400,6 +1400,93 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
   });
 });
 
+test('Studio Pulse showcase fallback answers What changed from Pack 1 memory evidence', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{ speakerId: 'aisha', content: 'not valid room json' }],
+            memorySummary: {
+              activeTruths: [
+                {
+                  noteId: 'pref-new',
+                  canonicalText: 'User dashboard preference: pale blue with no red accents',
+                  status: 'active',
+                  supersededPriorText: 'User dashboard preference: obsidian with one red accent'
+                }
+              ],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-continuity-fallback-change',
+            mode: 'continuity_breaker',
+            userText: 'What changed?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+              { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.diagnostics.runtimeConnected, true);
+        assert.match(text, /pale blue with no red accents/i);
+        assert.match(text, /obsidian with one red accent/i);
+        assert.match(text, /\bChanged:|Prior record:|superseded\b/i);
+        assert.ok(final.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
+        assert.ok(final.continuityLedger.some(item => item.status === 'superseded' && /obsidian/.test(item.text)));
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|not valid room json/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase distinguishes connected Pack 1 turn rejection from unavailable runtime', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

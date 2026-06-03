@@ -4,21 +4,27 @@ const BACKEND_URL = String(
   process.env.BACKEND_URL ||
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
+const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.6.4');
+const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
-const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|sets|reps|gym|lift)\b/i;
+const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one)\b/i;
+const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
 
 const PROMPTS = [
-  { mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
-  { mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
-  { mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },
-  { mode: 'social_hierarchy_lab', userText: 'BRUH...', expectsFitness: true },
-  { mode: 'social_hierarchy_lab', userText: 'how is everyone?' },
-  { mode: 'continuity_breaker', userText: 'Leah, challenge Grok, then let A.I.S.H.A anchor the contradiction ledger.' },
-  { mode: 'continuity_breaker', userText: 'Actually my dashboard preference is pale blue with no red accents.' },
-  { mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?' }
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'BRUH...', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'how is everyone?' },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'i am hungry and want to train later, what should i eat?' },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?', rejectsStaleFitness: true },
+  { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'My dashboard preference is obsidian with one red accent.' },
+  { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'Actually my dashboard preference is pale blue with no red accents.' },
+  { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'What changed?', expectsChange: true }
 ];
 
 function assertOk(condition, message) {
@@ -54,9 +60,28 @@ function classify(final = {}) {
   return 'fallback';
 }
 
+function visibleText(final = {}) {
+  return (Array.isArray(final.messageEvents) ? final.messageEvents : [])
+    .map(item => String(item.text || ''))
+    .join('\n');
+}
+
+function visibleKey(value = '') {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sessionIdFor(group = 'main') {
+  return `${SESSION_ID}-${String(group || 'main').replace(/[^a-z0-9-]/gi, '-')}`;
+}
+
 async function streamTurn(prompt, prior = {}, recentTurns = []) {
+  const startedAt = Date.now();
   const body = {
-    sessionId: SESSION_ID,
+    sessionId: sessionIdFor(prompt.sessionGroup),
     mode: prompt.mode,
     userText: prompt.userText,
     recentTurns,
@@ -81,12 +106,17 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   assertOk(events.some(item => item.event === 'final'), 'stream missing final');
   const final = events.find(item => item.event === 'final')?.data || {};
   assertOk(final.ok === true, 'final payload was not ok');
-  const visible = (Array.isArray(final.messageEvents) ? final.messageEvents : [])
-    .map(item => String(item.text || ''))
-    .join('\n');
+  const visible = visibleText(final);
   if (prompt.expectsFitness) {
     assertOk(!FITNESS_REFUSAL_RX.test(visible), `fitness transcript refused the user intent: ${visible}`);
     assertOk(FITNESS_ANSWER_RX.test(visible), `fitness transcript did not answer the muscle-building context: ${visible}`);
+  }
+  if (prompt.rejectsStaleFitness) {
+    assertOk(!FITNESS_ANSWER_RX.test(visible), `topic pivot leaked stale fitness context: ${visible}`);
+  }
+  if (prompt.expectsChange) {
+    assertOk(CHANGE_ANSWER_RX.test(visible), `continuity change prompt did not cite changed ledger evidence: ${visible}`);
+    assertOk(/pale blue/i.test(visible) && /obsidian/i.test(visible), `continuity change prompt missed active/prior values: ${visible}`);
   }
   const fallbackCategory = String(final.fallbackCategory || final.diagnostics?.fallbackCategory || '');
   return {
@@ -103,15 +133,31 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     fallbackCategory,
     traceStatus: String(final.diagnostics?.traceStatus || ''),
     persistenceConnected: final.diagnostics?.persistenceConnected === true,
+    latencyMs: Date.now() - startedAt,
     messageCount: Array.isArray(final.messageEvents) ? final.messageEvents.length : 0,
     ledgerCount: Array.isArray(final.continuityLedger) ? final.continuityLedger.length : 0,
     roomMood: String(final.roomMood || ''),
     responseMode: String(final.responseMode || ''),
+    visibleText: visible,
     socialSignals: final.socialSignals || {},
     messageEvents: Array.isArray(final.messageEvents) ? final.messageEvents : []
   };
 }
 
+async function assertFrontendVersion() {
+  if (!CHECK_FRONTEND_VERSION) return null;
+  const url = `${FRONTEND_URL}/assets/pulse_showcase.js`;
+  const response = await fetch(url, { headers: { accept: 'application/javascript,text/plain,*/*' } });
+  const text = await response.text();
+  assertOk(response.ok, `frontend JS failed HTTP ${response.status}: ${text.slice(0, 160)}`);
+  assertOk(!LEAK_RX.test(text), 'frontend JS leaked prompt/runtime internals or secret-like material');
+  const match = text.match(/SHOWCASE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+  assertOk(match, 'frontend JS missing SHOWCASE_VERSION');
+  assertOk(match[1] === EXPECTED_SHOWCASE_VERSION, `frontend SHOWCASE_VERSION is ${match[1]}, expected ${EXPECTED_SHOWCASE_VERSION}`);
+  return { frontendUrl: FRONTEND_URL, showcaseVersion: match[1] };
+}
+
+const frontend = await assertFrontendVersion();
 const statusResponse = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/status?refresh=1`, {
   headers: { accept: 'application/json' }
 });
@@ -124,11 +170,20 @@ assertOk(status.aishaEngineConnected === true, 'Pack 1 is not connected');
 assertOk(status.persistence?.connected === true, 'Pack 1 persistence is not connected');
 
 const results = [];
-let prior = {};
-const recentTurns = [];
+const groupState = new Map();
 for (const prompt of PROMPTS) {
-  recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
-  const result = await streamTurn(prompt, prior, recentTurns.slice(-8));
+  const group = prompt.sessionGroup || 'main';
+  const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '' };
+  state.recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
+  const result = await streamTurn(prompt, state.prior, state.recentTurns.slice(-8));
+  const currentVisibleKey = visibleKey(result.visibleText);
+  assertOk(!currentVisibleKey || currentVisibleKey !== state.previousVisibleKey, `repeated visible answer block after prompt "${prompt.userText}": ${result.visibleText}`);
+  state.previousVisibleKey = currentVisibleKey;
+  console.error([
+    `\nUSER: ${prompt.userText}`,
+    `state: ${result.classification} accepted=${result.acceptedByPack1} quality=${result.qualityAccepted} repaired=${result.repairedByRuntime} engine=${result.activeEngine} fallback=${result.fallbackCategory || '-'} qfail=${result.qualityFailureCategory || '-'} latency=${result.latencyMs}ms`,
+    ...(result.messageEvents || []).map(item => `- ${item.speakerName || item.speakerId} [${item.role || 'message'}]: ${item.text || ''}`)
+  ].join('\n'));
   results.push({
     prompt: result.prompt,
     mode: result.mode,
@@ -143,23 +198,28 @@ for (const prompt of PROMPTS) {
     fallbackCategory: result.fallbackCategory,
     traceStatus: result.traceStatus,
     persistenceConnected: result.persistenceConnected,
+    latencyMs: result.latencyMs,
     messageCount: result.messageCount,
-    ledgerCount: result.ledgerCount
+    ledgerCount: result.ledgerCount,
+    visiblePreview: result.visibleText.slice(0, 360)
   });
-  prior = {
+  state.prior = {
     roomMood: result.roomMood,
     responseMode: result.responseMode,
     priorSpeaker: '',
     socialSignals: result.socialSignals
   };
   for (const event of result.messageEvents) {
-    recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });
+    state.recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });
   }
+  groupState.set(group, state);
 }
 
 const summary = {
   backendUrl: BACKEND_URL,
+  ...(frontend ? { frontend } : {}),
   sessionId: SESSION_ID,
+  sessionIds: Object.fromEntries([...new Set(PROMPTS.map(item => item.sessionGroup || 'main'))].map(group => [group, sessionIdFor(group)])),
   status: {
     activeEngine: status.activeEngine,
     aishaEngineConnected: status.aishaEngineConnected,

@@ -1714,6 +1714,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.6\.4'/);
   assert.match(script, /acceptedByPack1/);
   assert.match(script, /qualityAccepted/);
   assert.match(script, /repairedByRuntime/);
