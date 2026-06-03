@@ -25,7 +25,7 @@ const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'BRUH...', expectsFitness: true },
-  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'how is everyone?' },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'how is everyone?', expectsCheckIn: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'I am hungry before training, what should I eat?', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'new topic: what movie should we watch tonight?', rejectsStaleFitness: true, expectsMovie: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?', rejectsStaleFitness: true, expectsMovie: true },
@@ -156,6 +156,10 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsMovie) {
     assertOk(/\b(Arrival|Spider-Verse|Spider Verse|The Menu|comfort|tension|spectacle|thriller|comedy|horror|action|drama|animation|quiet pressure|voltage|bite|title|movie|film)\b/i.test(visible), `movie/open-floor prompt did not produce a useful watch direction: ${visible}`);
+  }
+  if (prompt.expectsCheckIn) {
+    assertOk(/\b(room|present|here|everyone|temperature|watching|operational|restless|held)\b/i.test(visible), `check-in prompt did not answer room presence: ${visible}`);
+    assertOk(!/\b(workout|training|incline push-ups|backpack rows|log reps|data is clear|excuses are not|next steps are logged)\b/i.test(visible), `check-in prompt leaked stale practical context: ${visible}`);
   }
   if (prompt.expectsRoomTension) {
     assertOk(/\b(tension|friction|pressure|fake|useful|customer support|polished|room)\b/i.test(visible), `room tension prompt did not answer tension: ${visible}`);

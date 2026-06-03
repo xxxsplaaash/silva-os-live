@@ -1032,6 +1032,46 @@ test('social director quality validator rejects live thin movie and fake-quality
   assert.ok(fakeCheck.issues.includes('operational-jargon') || fakeCheck.issues.includes('social-question-ignored'));
 });
 
+test('social director quality validator rejects stale accepted answers for check-in and room tension', () => {
+  const staleCheckIn = validateDirectorOutput({
+    roomBeat: 'The room checks in.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'We are tracking the workout. Next steps are logged.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'The incline push-ups are logged. Next is backpack rows, focus on form.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'The data is clear. Excuses are not.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'how is everyone?',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }]
+  });
+
+  assert.equal(staleCheckIn.ok, false);
+  assert.ok(staleCheckIn.issues.includes('generic-status-report'));
+
+  const staleTension = validateDirectorOutput({
+    roomBeat: 'The room names tension.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The consensus is clear. Arrival it is.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Excellent choice. It has that quiet intensity we were looking for.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'The constraint was met. The title follows.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'everyone, what is the actual tension in this room?',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' }]
+  });
+
+  assert.equal(staleTension.ok, false);
+  assert.ok(staleTension.issues.includes('stale-topic-answer:prior-topic') || staleTension.issues.includes('social-question-ignored'));
+});
+
 test('social director quality validator rejects stress turns answered with meta process loops', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room repeats its own meta critique.',
