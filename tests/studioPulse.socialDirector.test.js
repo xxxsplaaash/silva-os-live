@@ -1705,6 +1705,25 @@ test('social director quality validator rejects stale planning posture in food a
   assert.equal(liveGenericLunch.ok, false);
   assert.ok(liveGenericLunch.issues.includes('generic-advice-column'));
   assert.ok(liveGenericLunch.issues.includes('product-generic-advice:food'));
+
+  const vagueLunch = validateDirectorOutput({
+    roomBeat: 'The room talks around lunch without naming food.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Focus on the plan. Lunch is a simple fuel stop.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'A quick meal before the first decision block. Something easily digestible.' },
+      { speakerId: 'leah', role: 'closer', tone: 'flat', text: 'Or just grab whatever is fastest so we can get back to the build. No time for gourmet.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+
+  assert.equal(vagueLunch.ok, false);
+  assert.ok(vagueLunch.issues.includes('food-answer-dodged'));
+  assert.ok(vagueLunch.issues.includes('product-weak-food-answer:food'));
 });
 
 test('social director quality validator rejects fake design implementation promises', () => {
@@ -1925,6 +1944,12 @@ test('visible response evaluator rejects generic food advice and weak denial con
     userMessage: 'quick help: what should I eat for lunch?'
   });
   assert.ok(liveFoodIssues.some(item => item.family === 'generic-advice'));
+
+  const vagueFoodIssues = evaluateVisibleResponse({
+    visibleText: 'Focus on the plan. Lunch is a simple fuel stop. Something easily digestible. Grab whatever is fastest.',
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+  assert.ok(vagueFoodIssues.some(item => item.family === 'weak-food-answer'));
 
   const denial = validateDirectorOutput({
     roomBeat: 'A.I.S.H.A cites only the old record.',
