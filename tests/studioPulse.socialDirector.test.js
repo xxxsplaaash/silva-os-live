@@ -454,6 +454,66 @@ test('room director repair prompt names valid schema and enum constraints', () =
   assert.match(prompt, /Every speaker must have concrete visible dialogue/);
 });
 
+test('social director defaults to fast structured model without changing main Pulse route', async () => {
+  await withAishaFlag('true', async () => {
+    await withEnvVar('SOCIAL_DIRECTOR_MODEL', null, async () => {
+      let socialOptions = null;
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async (_request, options) => {
+          socialOptions = options;
+          return mockAishaJson({
+            roomBeat: 'Vanya keeps the room warm and brief.',
+            roomMood: 'playful',
+            responseMode: 'single',
+            speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'The room is open without turning into a queue.' }],
+            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+            stateUpdates: { notes: [] }
+          });
+        }
+      }));
+      await withStudioServer(async baseUrl => {
+        const providerConfig = { textPrimary: { provider: 'gemini', apiKey: 'test-room-provider-key', label: 'Mock Gemini' } };
+        const { body } = await postSocial(baseUrl, 'hi team', { providerConfig });
+        assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(socialOptions.productionGeminiModel, 'gemini-2.5-flash-lite');
+      });
+
+      let pulseOptions = null;
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async (request, options) => {
+          pulseOptions = options;
+          return {
+            ok: true,
+            responses: [{ speakerId: request.activeSpeakerId || 'vanya', content: 'The room is awake and keeping it short.' }],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: { status: 'succeeded' },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.88
+          };
+        }
+      }));
+      const originalFetch = global.fetch;
+      try {
+        global.fetch = async (url, options) => {
+          if (String(url).startsWith('http://127.0.0.1:')) return originalFetch(url, options);
+          throw new Error('external provider should not be called for default model isolation test');
+        };
+        await withStudioServer(async baseUrl => {
+          const providerConfig = { textPrimary: { provider: 'gemini', apiKey: 'test-room-provider-key', label: 'Mock Gemini' } };
+          const { body } = await postPulse(baseUrl, 'hi team', { providerConfig });
+          assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+          assert.equal(Object.prototype.hasOwnProperty.call(pulseOptions, 'productionGeminiModel'), false);
+        });
+      } finally {
+        global.fetch = originalFetch;
+      }
+    });
+  });
+});
+
 test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async () => {
   await withAishaFlag('true', async () => {
     await withEnvVar('SOCIAL_DIRECTOR_MODEL', 'gemini-2.5-flash-lite', async () => {
