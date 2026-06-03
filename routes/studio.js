@@ -65,7 +65,12 @@ const {
   callAishaEngine,
   getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
-const { runSocialDirectorTurn, socialCuesForPayload } = require('../lib/studio/socialDirector');
+const {
+  runSocialDirectorTurn,
+  socialCuesForPayload,
+  socialFallbackFor,
+  validateDirectorOutput
+} = require('../lib/studio/socialDirector');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 const { continuityProofFromLedger, emptyContinuityProof } = require('../lib/studio/showcaseContinuityProof');
 const { createAishaStudioPulseRequest } = require('../lib/aisha/aishaTypes');
@@ -1486,23 +1491,70 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const memorySummary = payload.memorySummary || {};
   const stateUpdates = payload.stateUpdates || {};
   const debug = payload.debugSummary || {};
-  const socialCues = socialCuesForPayload(payload);
-  const responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
-  const roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
-  const messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
-  const silentReactions = sanitizeShowcaseSilentReactions(payload.silentReactions || []);
+  let socialCues = socialCuesForPayload(payload);
+  let responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
+  let roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
+  let messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
+  let silentReactions = sanitizeShowcaseSilentReactions(payload.silentReactions || []);
   const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates);
   const continuityProof = continuityProofFromLedger(continuityLedger);
-  const activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
+  let activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
   const aishaEngineConnected = payload.aishaConnected === true;
   const traceStatus = safeRuntimeStatusText(debug.aishaTraceStatus || '');
-  const fallbackUsed = payload.validation?.fallbackUsed === true || activeEngine !== 'aisha-runtime-pack1';
-  const fallbackCategory = fallbackUsed
+  let fallbackUsed = payload.validation?.fallbackUsed === true || activeEngine !== 'aisha-runtime-pack1';
+  let fallbackCategory = fallbackUsed
     ? normalizePulseShowcaseFallbackCategory(debug.failureCategory || payload.validation?.failureCategory || payload.validation?.source || 'local-fallback')
     : '';
-  const qualityAccepted = payload.qualityAccepted === true && fallbackUsed !== true;
-  const repairedByRuntime = payload.repairedByRuntime === true || debug.repaired === true;
-  const qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
+  let qualityAccepted = payload.qualityAccepted === true && fallbackUsed !== true;
+  let repairedByRuntime = payload.repairedByRuntime === true
+    || debug.repaired === true
+    || (payload.aishaConnected === true && fallbackCategory === 'quality-rejected');
+  let qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
+  const publicQuality = validateDirectorOutput({
+    roomBeat: payload.roomBeat || '',
+    roomMood,
+    responseMode,
+    speakers: messageEvents.map(item => ({
+      speakerId: item.speakerId,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })),
+    silentReactions: silentReactions.map(item => ({
+      speakerId: item.speakerId,
+      visibleState: item.visibleState
+    })),
+    stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
+  }, { userMessage: userText, recentTurns });
+  if (!publicQuality.ok && fallbackUsed !== true) {
+    const fallbackOutput = socialFallbackFor(userText, {
+      history: recentTurns,
+      recentTurns,
+      roomState,
+      memorySummary
+    });
+    const fallbackValidation = validateDirectorOutput(fallbackOutput, { userMessage: userText, recentTurns });
+    const fallbackSafe = fallbackValidation.output || fallbackOutput || {};
+    responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
+    roomMood = safeShowcaseText(fallbackSafe.roomMood || roomMood, 40) || roomMood;
+    messageEvents = sanitizeShowcaseMessages((Array.isArray(fallbackSafe.speakers) ? fallbackSafe.speakers : []).map(item => ({
+      speakerId: item.speakerId,
+      speakerName: item.speakerName,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })));
+    silentReactions = sanitizeShowcaseSilentReactions(fallbackSafe.silentReactions || []);
+    socialCues = null;
+    activeEngine = 'local-social-director';
+    fallbackUsed = true;
+    fallbackCategory = 'quality-rejected';
+    qualityAccepted = false;
+    repairedByRuntime = true;
+    qualityFailureCategory = normalizePulseShowcaseFallbackCategory(publicQuality.issues?.[0] || fallbackValidation.issues?.[0] || 'quality-rejected');
+  }
   const runtimeStatusConnected = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
   const runtimeConnected = aishaEngineConnected || (runtimeStatusConnected && fallbackCategory !== 'invalid-key');
   const diagnostics = {

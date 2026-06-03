@@ -1924,6 +1924,15 @@ test('visible response evaluator rejects generic food advice and weak denial con
   });
   assert.ok(vagueNormal.some(item => item.family === 'weak-next-move'));
 
+  const coreProblemNormal = evaluateVisibleResponse({
+    visibleText: 'The loop is clear. Let us reset. Today, focus on one task: identify the core problem you need solved.',
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+  assert.ok(coreProblemNormal.some(item => item.family === 'weak-next-move'));
+
   const staleRoomState = evaluateVisibleResponse({
     visibleText: 'A comedy sounds like a good reset. It has a solid script and minimal existential dread.',
     userMessage: 'everyone, what is the actual tension in this room?',
