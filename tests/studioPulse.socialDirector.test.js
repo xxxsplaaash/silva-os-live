@@ -1117,6 +1117,11 @@ test('visible response evaluator flags audit-level product failures', () => {
   }).includes('self-theater'));
 
   assert.ok(families({
+    userMessage: 'My dashboard preference is obsidian with one red accent.',
+    visibleText: "Obsidian with a red accent. That's a clear aesthetic choice. What's the operational plan for implementing that?"
+  }).includes('self-theater'));
+
+  assert.ok(families({
     userMessage: 'answer normally, what should I do today?',
     visibleText: 'What is the one thing you need to do next, and what part of the last answer was useful?'
   }).includes('weak-next-move'));
@@ -2030,6 +2035,21 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(liveExecutionPreference.ok, false);
   assert.ok(liveExecutionPreference.issues.includes('operational-jargon'));
   assert.ok(liveExecutionPreference.issues.includes('product-self-theater:meta-language'));
+
+  const liveImplementationQuestion = validateDirectorOutput({
+    roomBeat: 'The room asks for implementation work after a preference claim.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Obsidian with a red accent. Name the operational plan for implementing that.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My dashboard preference is obsidian with one red accent.' });
+
+  assert.equal(liveImplementationQuestion.ok, false);
+  assert.ok(liveImplementationQuestion.issues.includes('operational-jargon'));
+  assert.ok(liveImplementationQuestion.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
