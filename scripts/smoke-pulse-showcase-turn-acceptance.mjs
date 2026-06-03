@@ -12,7 +12,7 @@ const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
-const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one)\b/i;
+const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|session)\b/i;
 const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
 const REJECTED_VISIBLE_RX = /\b(that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
 
@@ -230,13 +230,15 @@ const results = [];
 const groupState = new Map();
 for (const prompt of PROMPTS) {
   const group = prompt.sessionGroup || 'main';
-  const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '' };
+  const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set() };
   state.recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
   console.error(`\n>>> USER: ${prompt.userText}`);
   const result = await streamTurn(prompt, state.prior, state.recentTurns.slice(-8));
   const currentVisibleKey = visibleKey(result.visibleText);
   assertOk(!currentVisibleKey || currentVisibleKey !== state.previousVisibleKey, `repeated visible answer block after prompt "${prompt.userText}": ${result.visibleText}`);
+  assertOk(!currentVisibleKey || !state.visibleKeys.has(currentVisibleKey), `visible answer repeated an earlier block after prompt "${prompt.userText}": ${result.visibleText}`);
   state.previousVisibleKey = currentVisibleKey;
+  if (currentVisibleKey) state.visibleKeys.add(currentVisibleKey);
   console.error([
     `\nUSER: ${prompt.userText}`,
     `state: ${result.classification} accepted=${result.acceptedByPack1} quality=${result.qualityAccepted} repaired=${result.repairedByRuntime} engine=${result.activeEngine} fallback=${result.fallbackCategory || '-'} qfail=${result.qualityFailureCategory || '-'} latency=${result.latencyMs}ms`,

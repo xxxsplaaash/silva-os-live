@@ -436,6 +436,27 @@ test('social director fallback changes shape instead of repeating fitness recove
   });
 });
 
+test('social director fallback changes shape after current fitness base recovery', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
+        { speakerId: 'grok', role: 'closer', text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed; stupidity is optional.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHAT IS THE OBJECTIVE?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /Start at home this week/i);
+      assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
+      assert.match(text, /\b(No more loop|three training days|week one|boring enough to repeat)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback changes shape again after the no-more-loop recovery', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
