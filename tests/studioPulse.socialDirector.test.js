@@ -1829,6 +1829,28 @@ test('social director quality validator rejects fake design implementation promi
   assert.ok(liveConfigurationMiss.issues.includes('continuity-question-ignored'));
   assert.ok(liveConfigurationMiss.issues.includes('operational-jargon'));
   assert.ok(liveConfigurationMiss.issues.includes('product-self-theater:meta-language'));
+
+  const updatedSystem = validateDirectorOutput({
+    roomBeat: 'The room gives a useful continuity contrast then pretends the system changed.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The last preference was obsidian with one red accent. The current preference is pale blue with no red accents.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'I have updated the system to reflect the pale blue preference. No red accents.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+
+  assert.equal(updatedSystem.ok, false);
+  assert.ok(updatedSystem.issues.includes('operational-jargon'));
+  assert.ok(updatedSystem.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
