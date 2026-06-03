@@ -1301,19 +1301,19 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
                   speakerId: 'vanya',
                   role: 'primary',
                   tone: 'warm reset',
-                  text: 'Start simple. Build a repeatable training week before you chase heroic intensity.'
+                  text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
                 },
                 {
                   speakerId: 'claudia',
                   role: 'side',
                   tone: 'practical',
-                  text: 'Three full-body sessions, basic lifts, enough protein, and sleep. Track the work.'
+                  text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.'
                 },
                 {
                   speakerId: 'grok',
                   role: 'closer',
                   tone: 'dry diagnostic',
-                  text: 'Progressive overload is the signal. Sharp pain is not.'
+                  text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'
                 }
               ],
               silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
@@ -1390,7 +1390,7 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
         assert.equal(finalRuntime.qualityAccepted, true);
         assert.equal(finalRuntime.repairedByRuntime, true);
         assert.doesNotMatch(text, /\b(objective is clear|not discussing|focus is required|personal fitness routines)\b/i);
-        assert.match(text, /\b(full-body|protein|sleep|progressive overload|training week|muscle)\b/i);
+        assert.match(text, /\b(incline push-ups|backpack rows|split squats|hip hinges|plank|reps)\b/i);
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|personal fitness routines/);
       });
     } finally {

@@ -345,19 +345,19 @@ test('social director quality validator accepts useful short fitness guidance in
         speakerId: 'vanya',
         role: 'primary',
         tone: 'warm reset',
-        text: 'Start simple: build a repeatable training week before you chase heroic intensity.'
+        text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
       },
       {
         speakerId: 'claudia',
         role: 'side',
         tone: 'practical',
-        text: 'Three full-body sessions, basic lifts, enough protein, and sleep. Track the work.'
+        text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.'
       },
       {
         speakerId: 'grok',
         role: 'closer',
         tone: 'dry diagnostic',
-        text: 'Progressive overload is the signal. Sharp pain is not.'
+        text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'
       }
     ],
     silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
@@ -382,7 +382,7 @@ test('social director fallback answers the failed muscle-building transcript ins
       assert.equal(body.activeEngine, 'local-social-director');
       assert.equal(body.responseMode, 'small_exchange');
       assert.doesNotMatch(text, /\b(objective is clear|not discussing|focus is required|personal fitness routines)\b/i);
-      assert.match(text, /\b(full-body|protein|sleep|progressive overload|training week|muscle)\b/i);
+      assert.match(text, /\b(incline push-ups|backpack rows|split squats|hip hinges|plank|reps)\b/i);
       assert.ok(body.messageEvents.some(item => item.speakerId === 'claudia'));
       assertCleanVisible(body);
     });
@@ -411,7 +411,7 @@ test('showcase-shaped fallback lets current practical prompt beat advisory open-
   assert.equal(body.activeEngine, 'local-social-director');
   assert.equal(body.responseMode, 'small_exchange');
   assert.doesNotMatch(text, /\b(Open floor can be a room|jazz hands|panel show)\b/i);
-  assert.match(text, /\b(training week|full-body|progressive overload|protein|sleep)\b/i);
+  assert.match(text, /\b(incline push-ups|backpack rows|split squats|hip hinges|plank|reps)\b/i);
   assertCleanVisible(body);
 });
 
@@ -469,7 +469,7 @@ test('social director fallback treats training-adjacent food as nutrition, not s
 
       assert.equal(body.ok, true);
       assert.equal(body.responseMode, 'small_exchange');
-      assert.match(text, /\b(protein|carbs|water|digest|before training)\b/i);
+      assert.match(text, /\b(banana|yoghurt|eggs and toast|rice and chicken|water|heavy)\b/i);
       assert.doesNotMatch(text, /\b(three full-body sessions|progressive overload|basic pushes|squats or hinges)\b/i);
       assert.doesNotMatch(text, /\b(recorded change|claim first|anchor the difference)\b/i);
       assertCleanVisible(body);
@@ -662,6 +662,39 @@ test('social director quality validator rejects live generic bodyweight and nutr
 
   assert.equal(nutrition.ok, false);
   assert.ok(nutrition.issues.includes('generic-advice-column'));
+});
+
+test('social director quality validator rejects live thin movie and fake-quality answers', () => {
+  const movie = validateDirectorOutput({
+    roomBeat: 'A new topic enters.',
+    roomMood: 'playful',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'A new topic. What are the options for tonight?' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Something that doesn't require a deep dive. We have limited bandwidth for plot complexity." },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'Agreed. No documentaries or anything that requires homework.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: what movie should we watch tonight?' });
+
+  assert.equal(movie.ok, false);
+  assert.ok(movie.issues.includes('movie-answer-too-thin'));
+
+  const fakeCheck = validateDirectorOutput({
+    roomBeat: 'Grok evaluates the prior answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'flat', text: 'The capability was present. The taste under pressure is the variable that needs calibration.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: "We are here to be useful, not to perform. Let's move to the next item." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(fakeCheck.ok, false);
+  assert.ok(fakeCheck.issues.includes('operational-jargon') || fakeCheck.issues.includes('social-question-ignored'));
 });
 
 test('social director quality validator rejects stress turns answered with meta process loops', () => {
