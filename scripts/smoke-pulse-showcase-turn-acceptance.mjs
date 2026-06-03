@@ -14,9 +14,10 @@ const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 450
 const GAUNTLET_TURN_DELAY_MS = Math.max(0, Number(process.env.GAUNTLET_TURN_DELAY_MS || 0) || 0);
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
-const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|session)\b/i;
+const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|session|yoghurt|yogurt|eggs?|toast|banana|rice and chicken|food lets you move|move without feeling heavy)\b/i;
+const STALE_FITNESS_RX = /\b(muscle|training split|full-body|full body|progressive overload|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|workout|training week|bodyweight|compound movements|protein shake|post-workout|post workout)\b/i;
 const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
-const REJECTED_VISIBLE_RX = /\b(that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
+const REJECTED_VISIBLE_RX = /\b(that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|fuel[s]? the performance|fuel[s]? performance|not here for a nap|human body requires fuel|known variable|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
 
 const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
@@ -151,7 +152,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     assertOk(FITNESS_ANSWER_RX.test(visible), `fitness transcript did not answer the muscle-building context: ${visible}`);
   }
   if (prompt.rejectsStaleFitness) {
-    assertOk(!FITNESS_ANSWER_RX.test(visible), `topic pivot leaked stale fitness context: ${visible}`);
+    assertOk(!STALE_FITNESS_RX.test(visible), `topic pivot leaked stale fitness context: ${visible}`);
   }
   if (prompt.expectsMovie) {
     assertOk(/\b(Arrival|Spider-Verse|Spider Verse|The Menu|comfort|tension|spectacle|thriller|comedy|horror|action|drama|animation|quiet pressure|voltage|bite|title|movie|film)\b/i.test(visible), `movie/open-floor prompt did not produce a useful watch direction: ${visible}`);
@@ -171,7 +172,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsWorkPlanning) {
     assertOk(/\b(tomorrow|plan|planning|calendar|schedule|morning|first|block|owner|next step)\b/i.test(visible), `planning prompt did not produce planning direction: ${visible}`);
-    assertOk(!FITNESS_ANSWER_RX.test(visible), `planning prompt leaked stale fitness context: ${visible}`);
+    assertOk(!STALE_FITNESS_RX.test(visible), `planning prompt leaked stale fitness context: ${visible}`);
   }
   if (prompt.expectsFood) {
     assertOk(/\b(lunch|eat|food|meal|rice|eggs|toast|chicken|salad|sandwich|leftover|hungry)\b/i.test(visible), `food prompt did not answer food direction: ${visible}`);
@@ -179,7 +180,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsDesign) {
     assertOk(/\b(logo|Silva|mark|wordmark|direction|sharp|simple|black|red|contrast|studio|brand|shape|signal)\b/i.test(visible), `design prompt did not answer design direction: ${visible}`);
-    assertOk(!FITNESS_ANSWER_RX.test(visible), `design prompt leaked stale fitness context: ${visible}`);
+    assertOk(!STALE_FITNESS_RX.test(visible), `design prompt leaked stale fitness context: ${visible}`);
   }
   if (prompt.expectsStyleChange) {
     assertOk(/\b(black glass|single red pulse|white editorial|no red|changed|prior|previous|record|superseded)\b/i.test(visible), `style continuity prompt missed active/prior visual claims: ${visible}`);

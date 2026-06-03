@@ -845,6 +845,28 @@ test('social director quality validator rejects live generic bodyweight and nutr
 
   assert.equal(acceptedLiveNutrition.ok, false);
   assert.ok(acceptedLiveNutrition.issues.includes('generic-advice-column'));
+
+  const liveFuelVariable = validateDirectorOutput({
+    roomBeat: 'The room gives the live fuel-variable answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "If you have time, eggs and toast. If you're heading out soon, a banana with some yogurt should do." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "Make sure it fuels the performance, not just the hunger. We're not here for a nap." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'The human body requires fuel. This is a known variable.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I am hungry before training, what should I eat?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' }
+    ]
+  });
+
+  assert.equal(liveFuelVariable.ok, false);
+  assert.ok(liveFuelVariable.issues.includes('generic-advice-column'));
 });
 
 test('social director quality validator rejects current live accepted fitness boilerplate', () => {
