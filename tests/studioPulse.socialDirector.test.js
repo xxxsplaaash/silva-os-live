@@ -1724,6 +1724,28 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(parameters.ok, false);
   assert.ok(parameters.issues.includes('operational-jargon'));
   assert.ok(parameters.issues.includes('product-self-theater:meta-language'));
+
+  const systemConfig = validateDirectorOutput({
+    roomBeat: 'The room pretends the preference changed a system.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The preference has been updated. Obsidian with one red accent is no longer the selection.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Noted. I will update the system configuration to reflect the pale blue preference.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+
+  assert.equal(systemConfig.ok, false);
+  assert.ok(systemConfig.issues.includes('operational-jargon'));
+  assert.ok(systemConfig.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
@@ -1760,6 +1782,15 @@ test('social director quality validator rejects logo direction answers that punt
 });
 
 test('visible response evaluator rejects generic food advice and weak denial continuity', () => {
+  const inventedTask = evaluateVisibleResponse({
+    visibleText: 'The stress indicates a need for clarity. Today, focus on one task: finalize the Q3 brief. No other objectives.',
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+  assert.ok(inventedTask.some(item => item.family === 'weak-next-move'));
+
   const foodIssues = evaluateVisibleResponse({
     visibleText: 'Choose lean protein with complex carbs. A turkey sandwich on whole wheat or a protein bar and apple can hold you over.',
     userMessage: 'quick help: what should I eat for lunch?'
