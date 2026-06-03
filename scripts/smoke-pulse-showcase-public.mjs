@@ -235,8 +235,10 @@ async function checkBrowserStreamingTurn() {
     ]);
     await page.waitForFunction(() => {
       const text = document.body.innerText || '';
-      return text.includes('Pack 1 accepted')
+      return text.includes('Room answer accepted')
+        || text.includes('Pack 1 accepted')
         || text.includes('Runtime repaired turn')
+        || text.includes('Runtime repaired answer')
         || text.includes('Fallback carried this turn');
     }, null, { timeout: 45000 });
     const result = await page.evaluate(() => ({
