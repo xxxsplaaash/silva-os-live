@@ -703,6 +703,38 @@ test('social director quality validator rejects live generic bodyweight and nutr
 });
 
 test('social director quality validator rejects current live accepted fitness boilerplate', () => {
+  const browserFirstTurn = validateDirectorOutput({
+    roomBeat: 'The browser gauntlet saw a generic first-turn fitness answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "That's a solid goal. Start with three days a week, focus on bodyweight basics like push-ups and squats." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "Ensure you're eating enough protein and getting decent sleep. Those are the foundations before you even think about adding weight." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: "Just don't expect miracles overnight. The real work is in the consistent effort, not the initial enthusiasm." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(browserFirstTurn.ok, false);
+  assert.ok(browserFirstTurn.issues.includes('generic-advice-column'));
+
+  const liveApiFirstTurn = validateDirectorOutput({
+    roomBeat: 'The API gauntlet saw generic first-turn fitness advice.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'Start with three days a week. Focus on bodyweight exercises like incline push-ups and backpack rows.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "Track your lifts. If you're not measuring progress, you're just guessing." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: "Don't forget to hydrate. And maybe find a workout buddy to keep you honest." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(liveApiFirstTurn.ok, false);
+  assert.ok(liveApiFirstTurn.issues.includes('generic-advice-column'));
+
   const weekPlan = validateDirectorOutput({
     roomBeat: 'The room answers like a fitness column.',
     roomMood: 'focused',
@@ -737,6 +769,28 @@ test('social director quality validator rejects current live accepted fitness bo
 
   assert.equal(shortWindow.ok, false);
   assert.ok(shortWindow.issues.includes('generic-advice-column'));
+
+  const liveShortWindow = validateDirectorOutput({
+    roomBeat: 'The room leaks the exact live short-window boilerplate.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'Twenty minutes is enough for a focused session. We can structure it around compound movements that hit multiple muscle groups.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Ensure the form is correct before adding reps. Sharp pain means stop, not push through.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: 'Focus on execution. The time constraint sharpens the objective.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+    ]
+  });
+
+  assert.equal(liveShortWindow.ok, false);
+  assert.ok(liveShortWindow.issues.includes('generic-advice-column'));
 
   const objectiveDrift = validateDirectorOutput({
     roomBeat: 'The room loses the concrete muscle context.',
@@ -822,6 +876,20 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(coldAcceptance.ok, false);
   assert.ok(coldAcceptance.issues.includes('operational-jargon') || coldAcceptance.issues.includes('frustration-ignored'));
+
+  const ignoredRepeatComplaint = validateDirectorOutput({
+    roomBeat: 'The room acts like nothing went wrong.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The room remains focused and the current priorities are stable.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'you keep repeating yourself' });
+
+  assert.equal(ignoredRepeatComplaint.ok, false);
+  assert.ok(ignoredRepeatComplaint.issues.includes('frustration-ignored') || ignoredRepeatComplaint.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
@@ -1008,6 +1076,34 @@ test('social director fallback answers short fitness follow-up and Grok quality 
       const grokText = visibleText(grok.body);
       assert.match(grokText, /\b(fake-sounding|parameter language|less doctrine|more room)\b/i);
       assert.doesNotMatch(grokText, /\b(parameters were clear|within those parameters)\b/i);
+    });
+  });
+});
+
+test('social director fallback recovers repetition complaints and planning pivots', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+        { speakerId: 'aisha', role: 'primary', text: 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.' }
+      ];
+
+      const repeat = await postSocial(baseUrl, 'you keep repeating yourself', { recentTurns });
+      const repeatText = visibleText(repeat.body);
+      assert.match(repeatText, /\b(repeat loop|failed answer|answers the turn)\b/i);
+      assert.doesNotMatch(repeatText, /\b(current priorities|objective is clear|personal fitness routines)\b/i);
+
+      const normal = await postSocial(baseUrl, 'answer normally, what should I do today?', { recentTurns });
+      const normalText = visibleText(normal.body);
+      assert.match(normalText, /\b(Plain version|today|one block|one result)\b/i);
+      assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
+
+      const planning = await postSocial(baseUrl, 'new topic: I need help planning tomorrow', { recentTurns });
+      const planningText = visibleText(planning.body);
+      assert.match(planningText, /\b(Tomorrow|three blocks|first decision|main build|cleanup)\b/i);
+      assert.doesNotMatch(planningText, /\b(muscle|training|protein|workout)\b/i);
     });
   });
 });
@@ -1643,6 +1739,11 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/actual tension/i.test(userText)) return 'The tension is usefulness versus performance. The room gets worse when it sounds polished instead of answering.';
       if (/useful or did it sound fake/i.test(userText)) return 'Partly useful, mostly fake-sounding. Less doctrine, more room.';
       if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then drop the theatre.';
+      if (/repeating yourself/i.test(userText)) return 'Fair. No more repeat loop; plain answer, then we move.';
+      if (/answer normally/i.test(userText)) return 'Today: pick one clean next move, do it plainly, and stop decorating the room.';
+      if (/planning tomorrow/i.test(userText)) return 'Tomorrow needs a first block, a second block, and one owner for the messiest next step.';
+      if (/lunch/i.test(userText)) return 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.';
+      if (/logo direction/i.test(userText)) return 'Silva logo direction: one sharp mark, restrained contrast, black field, small red signal only if it earns the attention.';
       if (/never said black glass/i.test(userText)) return 'Yes: prior record was black glass with a single red pulse; current record is white editorial with no red.';
       if (/black glass/i.test(userText)) return 'Recorded: landing page style is black glass with a single red pulse.';
       if (/white editorial/i.test(userText)) return 'Changed: landing page style is white editorial with no red. Prior record stays black glass with a single red pulse.';
@@ -1706,9 +1807,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.counts.accepted, 8);
-    assert.equal(summary.counts.repaired, 11);
+    assert.equal(summary.counts.repaired, 16);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 19);
+    assert.equal(calls, 24);
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {

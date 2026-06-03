@@ -47,6 +47,7 @@ const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
 const PULSE_WIX_RUNBOOK = path.join(ROOT, 'docs', 'STUDIO_PULSE_WIX_EMBED_RUNBOOK.md');
 const PULSE_PUBLIC_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-public.mjs');
 const PULSE_LOCAL_IFRAME_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-local-iframe.mjs');
+const PULSE_BROWSER_GAUNTLET = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-browser-gauntlet.mjs');
 const AISHA_GEMINI_ADAPTER = path.join(ROOT, 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts');
 
 function readIndex() {
@@ -1683,6 +1684,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   const runbook = fs.readFileSync(PULSE_WIX_RUNBOOK, 'utf8');
   const smoke = fs.readFileSync(PULSE_PUBLIC_SMOKE, 'utf8');
   const localSmoke = fs.readFileSync(PULSE_LOCAL_IFRAME_SMOKE, 'utf8');
+  const browserGauntlet = fs.readFileSync(PULSE_BROWSER_GAUNTLET, 'utf8');
   const combined = `${html}\n${script}\n${css}`;
 
   assert.match(html, /Studio Pulse Showcase/);
@@ -1714,7 +1716,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
-  assert.match(script, /SHOWCASE_VERSION = '1\.6\.4'/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.6\.5'/);
   assert.match(script, /acceptedByPack1/);
   assert.match(script, /qualityAccepted/);
   assert.match(script, /repairedByRuntime/);
@@ -1811,6 +1813,12 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(localSmoke, /local iframe parent messages/);
   assert.match(localSmoke, /\/api\/studio\/pulse-showcase\/turn-stream/);
   assert.doesNotMatch(localSmoke, /EventSource|WebSocket/);
+  assert.match(browserGauntlet, /LOL I WANNA GROW MY MUSCLES/);
+  assert.match(browserGauntlet, /you keep repeating yourself/);
+  assert.match(browserGauntlet, /\/api\/studio\/pulse-showcase\/turn-stream/);
+  assert.match(browserGauntlet, /LEGACY_TURN_RX/);
+  assert.match(browserGauntlet, /overflowX/);
+  assert.doesNotMatch(browserGauntlet, /EventSource|WebSocket/);
 });
 
 test('A.I.S.H.A provider debug previews are gated behind explicit debug flags', () => {

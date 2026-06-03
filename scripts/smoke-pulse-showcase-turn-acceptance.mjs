@@ -5,15 +5,16 @@ const BACKEND_URL = String(
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
-const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.6.4');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.6.5');
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
+const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
 const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one)\b/i;
 const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
-const REJECTED_VISIBLE_RX = /\b(bodyweight exercises|resistance bands|alternate upper and lower body|upper and lower body focus|prioritize protein intake|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|water is critical|critical for performance and recovery|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
+const REJECTED_VISIBLE_RX = /\b(that's a solid goal|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
 
 const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
@@ -28,6 +29,11 @@ const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'everyone, what is the actual tension in this room?', expectsRoomTension: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'Grok, be honest: was that useful or did it sound fake?', expectsQualityCheck: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'I am stressed and this is starting to feel dumb.', expectsFrustrationRecovery: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'you keep repeating yourself', expectsFrustrationRecovery: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'answer normally, what should I do today?', expectsUsefulNextMove: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'new topic: I need help planning tomorrow', rejectsStaleFitness: true, expectsWorkPlanning: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'quick help: what should I eat for lunch?', rejectsStaleFitness: true, expectsFood: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'I need a sharper logo direction for Silva', rejectsStaleFitness: true, expectsDesign: true },
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'My landing page style is black glass with a single red pulse.' },
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'Actually my landing page style is white editorial with no red.' },
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'What changed?', expectsStyleChange: true },
@@ -90,6 +96,8 @@ function sessionIdFor(group = 'main') {
 
 async function streamTurn(prompt, prior = {}, recentTurns = []) {
   const startedAt = Date.now();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(new Error(`turn timed out after ${TURN_TIMEOUT_MS}ms`)), TURN_TIMEOUT_MS);
   const body = {
     sessionId: sessionIdFor(prompt.sessionGroup),
     mode: prompt.mode,
@@ -102,12 +110,19 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
       socialSignals: prior.socialSignals || undefined
     }
   };
-  const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-    body: JSON.stringify(body)
-  });
-  const text = await response.text();
+  let response;
+  let text;
+  try {
+    response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+    text = await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
   assertOk(!LEAK_RX.test(text), 'turn stream leaked prompt/runtime internals or secret-like material');
   assertOk(response.status === 200, `turn-stream failed HTTP ${response.status}: ${text.slice(0, 240)}`);
   assertOk(/text\/event-stream/i.test(response.headers.get('content-type') || ''), 'turn-stream did not return text/event-stream');
@@ -135,7 +150,23 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     assertOk(/\b(fake|useful|not useful|stiff|bland|checklist|dodge|partly|less doctrine|more room)\b/i.test(visible), `quality-check prompt did not judge the prior answer: ${visible}`);
   }
   if (prompt.expectsFrustrationRecovery) {
-    assertOk(/\b(stress|stressed|dumb|frustrat|annoy|bad|reset|slow down|recover|fair|mess|turn|pressure|clean next move)\b/i.test(visible), `frustration prompt was ignored: ${visible}`);
+    assertOk(/\b(stress|stressed|dumb|frustrat|annoy|bad|reset|slow down|recover|fair|mess|turn|pressure|clean next move|repeat|repeating|loop|normally|straight|plain)\b/i.test(visible), `frustration prompt was ignored: ${visible}`);
+  }
+  if (prompt.expectsUsefulNextMove) {
+    assertOk(/\b(today|next move|one clean|start|first|plain|normally|do this|pick|write|move)\b/i.test(visible), `normal-answer prompt did not produce a useful next move: ${visible}`);
+    assertOk(!/\b(parameters|objective is clear|current priorities|operational)\b/i.test(visible), `normal-answer prompt fell back into system language: ${visible}`);
+  }
+  if (prompt.expectsWorkPlanning) {
+    assertOk(/\b(tomorrow|plan|planning|calendar|schedule|morning|first|block|owner|next step)\b/i.test(visible), `planning prompt did not produce planning direction: ${visible}`);
+    assertOk(!FITNESS_ANSWER_RX.test(visible), `planning prompt leaked stale fitness context: ${visible}`);
+  }
+  if (prompt.expectsFood) {
+    assertOk(/\b(lunch|eat|food|meal|rice|eggs|toast|chicken|salad|sandwich|leftover|hungry)\b/i.test(visible), `food prompt did not answer food direction: ${visible}`);
+    assertOk(!/\b(training parameters|after a workout|protein shake|compound movements)\b/i.test(visible), `food prompt leaked stale training boilerplate: ${visible}`);
+  }
+  if (prompt.expectsDesign) {
+    assertOk(/\b(logo|Silva|mark|wordmark|direction|sharp|simple|black|red|contrast|studio|brand|shape|signal)\b/i.test(visible), `design prompt did not answer design direction: ${visible}`);
+    assertOk(!FITNESS_ANSWER_RX.test(visible), `design prompt leaked stale fitness context: ${visible}`);
   }
   if (prompt.expectsStyleChange) {
     assertOk(/\b(black glass|single red pulse|white editorial|no red|changed|prior|previous|record|superseded)\b/i.test(visible), `style continuity prompt missed active/prior visual claims: ${visible}`);
@@ -201,6 +232,7 @@ for (const prompt of PROMPTS) {
   const group = prompt.sessionGroup || 'main';
   const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '' };
   state.recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
+  console.error(`\n>>> USER: ${prompt.userText}`);
   const result = await streamTurn(prompt, state.prior, state.recentTurns.slice(-8));
   const currentVisibleKey = visibleKey(result.visibleText);
   assertOk(!currentVisibleKey || currentVisibleKey !== state.previousVisibleKey, `repeated visible answer block after prompt "${prompt.userText}": ${result.visibleText}`);
