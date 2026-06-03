@@ -678,6 +678,28 @@ test('social director quality validator rejects live generic bodyweight and nutr
 
   assert.equal(nutrition.ok, false);
   assert.ok(nutrition.issues.includes('generic-advice-column'));
+
+  const acceptedLiveNutrition = validateDirectorOutput({
+    roomBeat: 'The room gives dry nutrition boilerplate.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "Claudia's suggestion of a banana is appropriate for a quick pre-training fuel." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'A banana is sufficient for 20 minutes. It provides quick energy without being heavy.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ensure hydration is also addressed. Water is critical for performance and recovery.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I am hungry before training, what should I eat?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'I want to grow muscle but I hate gyms. What do I do this week?' },
+      { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' }
+    ]
+  });
+
+  assert.equal(acceptedLiveNutrition.ok, false);
+  assert.ok(acceptedLiveNutrition.issues.includes('generic-advice-column'));
 });
 
 test('social director quality validator rejects live thin movie and fake-quality answers', () => {
@@ -763,6 +785,38 @@ test('social director quality validator rejects continuity claims answered as bu
 
   assert.equal(liveSpecsDrift.ok, false);
   assert.ok(liveSpecsDrift.issues.includes('operational-jargon'));
+
+  const liveImplementationDrift = validateDirectorOutput({
+    roomBeat: 'The room acknowledges style but slides into implementation posture.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: "Black glass with a single red pulse. It’s a statement, but is it the right one for the user's first impression?" },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'The contrast is stark. We can implement that.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Red is a high-alert color. Is the intention to signal urgency or danger, or is it purely aesthetic?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(liveImplementationDrift.ok, false);
+  assert.ok(liveImplementationDrift.issues.includes('operational-jargon'));
+
+  const liveFrameworkDrift = validateDirectorOutput({
+    roomBeat: 'The room accepts a superseding visual style as production framework.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'White editorial. Understood.' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'White editorial is clean, but it can also feel sterile if not handled with care. We need to ensure the content provides the necessary warmth.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'White editorial is a more standard approach. We can proceed with that framework.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Actually my landing page style is white editorial with no red.' });
+
+  assert.equal(liveFrameworkDrift.ok, false);
+  assert.ok(liveFrameworkDrift.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects weak continuity change summaries', () => {
