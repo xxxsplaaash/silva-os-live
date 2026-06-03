@@ -1163,6 +1163,20 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(ignoredRepeatComplaint.ok, false);
   assert.ok(ignoredRepeatComplaint.issues.includes('frustration-ignored') || ignoredRepeatComplaint.issues.includes('operational-jargon'));
+
+  const burdenShiftRepeatComplaint = validateDirectorOutput({
+    roomBeat: 'The room redirects the complaint back to the user.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The ask is simple: what is the actual problem you need solved? State it clearly, then we address only what is necessary to fix it.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'you keep repeating yourself' });
+
+  assert.equal(burdenShiftRepeatComplaint.ok, false);
+  assert.ok(burdenShiftRepeatComplaint.issues.includes('frustration-ignored'));
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
