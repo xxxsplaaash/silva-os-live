@@ -9,7 +9,9 @@ const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION |
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
+const ALLOW_LOCAL_FALLBACK = process.env.ALLOW_LOCAL_FALLBACK === '1';
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
+const GAUNTLET_TURN_DELAY_MS = Math.max(0, Number(process.env.GAUNTLET_TURN_DELAY_MS || 0) || 0);
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
 const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|session)\b/i;
@@ -88,6 +90,17 @@ function visibleKey(value = '') {
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function visibleLineKeys(value = '') {
+  return String(value || '')
+    .split(/\n+/)
+    .map(visibleKey)
+    .filter(key => key.length >= 42);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function sessionIdFor(group = 'main') {
@@ -222,21 +235,27 @@ const statusText = await statusResponse.text();
 assertOk(!LEAK_RX.test(statusText), 'status leaked prompt/runtime internals or secret-like material');
 assertOk(statusResponse.ok, `status failed HTTP ${statusResponse.status}: ${statusText.slice(0, 240)}`);
 const status = JSON.parse(statusText);
-assertOk(status.activeEngine === 'aisha-runtime-pack1', `unexpected activeEngine ${status.activeEngine}`);
-assertOk(status.aishaEngineConnected === true, 'Pack 1 is not connected');
-assertOk(status.persistence?.connected === true, 'Pack 1 persistence is not connected');
+if (!ALLOW_LOCAL_FALLBACK) {
+  assertOk(status.activeEngine === 'aisha-runtime-pack1', `unexpected activeEngine ${status.activeEngine}`);
+  assertOk(status.aishaEngineConnected === true, 'Pack 1 is not connected');
+  assertOk(status.persistence?.connected === true, 'Pack 1 persistence is not connected');
+}
 
 const results = [];
 const groupState = new Map();
 for (const prompt of PROMPTS) {
   const group = prompt.sessionGroup || 'main';
-  const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set() };
+  const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set(), visibleLineKeys: new Set() };
   state.recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
   console.error(`\n>>> USER: ${prompt.userText}`);
   const result = await streamTurn(prompt, state.prior, state.recentTurns.slice(-8));
   const currentVisibleKey = visibleKey(result.visibleText);
   assertOk(!currentVisibleKey || currentVisibleKey !== state.previousVisibleKey, `repeated visible answer block after prompt "${prompt.userText}": ${result.visibleText}`);
   assertOk(!currentVisibleKey || !state.visibleKeys.has(currentVisibleKey), `visible answer repeated an earlier block after prompt "${prompt.userText}": ${result.visibleText}`);
+  for (const lineKey of visibleLineKeys(result.visibleText)) {
+    assertOk(!state.visibleLineKeys.has(lineKey), `visible answer repeated an earlier speaker line after prompt "${prompt.userText}": ${result.visibleText}`);
+    state.visibleLineKeys.add(lineKey);
+  }
   state.previousVisibleKey = currentVisibleKey;
   if (currentVisibleKey) state.visibleKeys.add(currentVisibleKey);
   console.error([
@@ -273,6 +292,10 @@ for (const prompt of PROMPTS) {
     state.recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });
   }
   groupState.set(group, state);
+  if (GAUNTLET_TURN_DELAY_MS > 0) {
+    console.error(`waiting ${GAUNTLET_TURN_DELAY_MS}ms to respect public rate limits`);
+    await sleep(GAUNTLET_TURN_DELAY_MS);
+  }
 }
 
 const summary = {
@@ -299,7 +322,7 @@ assertOk(!LEAK_RX.test(serialized), 'summary leaked prompt/runtime internals or 
 console.log(serialized);
 
 const acceptedOrRepaired = summary.counts.accepted + summary.counts.repaired;
-if (summary.counts.fallback > 0) {
+if (!ALLOW_LOCAL_FALLBACK && summary.counts.fallback > 0) {
   console.error('One or more turns reported unavailable runtime fallback.');
   process.exit(1);
 }
@@ -307,7 +330,7 @@ if (REQUIRE_MOST_ACCEPTED && summary.counts.accepted < Math.ceil(PROMPTS.length 
   console.error(`Only ${summary.counts.accepted}/${PROMPTS.length} turns were accepted by Pack 1.`);
   process.exit(1);
 }
-if (acceptedOrRepaired < PROMPTS.length) {
+if (!ALLOW_LOCAL_FALLBACK && acceptedOrRepaired < PROMPTS.length) {
   console.error('One or more turns were neither accepted nor safely repaired.');
   process.exit(1);
 }

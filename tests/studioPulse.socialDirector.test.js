@@ -457,6 +457,30 @@ test('social director fallback changes shape after current fitness base recovery
   });
 });
 
+test('social director fallback treats exercise artifacts as fitness context after old user line scrolls out', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
+        { speakerId: 'grok', role: 'closer', text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed; stupidity is optional.' },
+        { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
+        { speakerId: 'vanya', role: 'primary', text: 'Twenty minutes is enough if you stop negotiating with it. Warm up, move clean, leave while you still want to come back.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' },
+        { speakerId: 'grok', role: 'closer', text: 'The constraint is useful. It removes theatrical planning.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHERE DO I START', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /Start at home this week/i);
+      assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
+      assert.match(text, /\b(No more loop|three training days|week one|boring enough to repeat)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback changes shape again after the no-more-loop recovery', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
@@ -473,6 +497,26 @@ test('social director fallback changes shape again after the no-more-loop recove
       assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
       assert.doesNotMatch(text, /No more loop/i);
       assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|run out of excuses)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback closes the third fitness recovery without repeating again', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'vanya', role: 'primary', text: 'Yeah. Strip it down: one workout, one meal, one sleep window.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do push, pull, legs, or the closest safe versions. Log reps.' },
+        { speakerId: 'grok', role: 'closer', text: 'The room has now run out of excuses and poetry. Excellent conditions for starting.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'BRUH...', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /one workout, one meal, one sleep window/i);
+      assert.doesNotMatch(text, /run out of excuses and poetry/i);
+      assert.match(text, /\b(No fourth version|first set|incline push-ups|two reps before failure)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -498,7 +542,27 @@ test('social director fallback treats training-adjacent food as nutrition, not s
   });
 });
 
-test('social director fallback does not let old fitness context hijack open floor', async () => {
+test('social director fallback answers lunch with concrete food direction', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'quick help: what should I eat for lunch?', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' },
+          { speakerId: 'vanya', role: 'primary', text: 'Fair. No more repeat loop.' }
+        ]
+      });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.match(text, /\b(lunch|rice and chicken|eggs and toast|sandwich|leftovers|water)\b/i);
+      assert.doesNotMatch(text, /system warning|assigning ownership|debate/i);
+      assert.doesNotMatch(text, /\b(push-ups|split squats|progressive overload|training week)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback does not let old fitness context hijack watch prompts', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
       const recentTurns = [
@@ -510,9 +574,69 @@ test('social director fallback does not let old fitness context hijack open floo
       const text = visibleText(body);
 
       assert.equal(body.ok, true);
-      assert.equal(body.responseMode, 'open_floor');
       assert.doesNotMatch(text, /\b(full-body|training week|progressive overload|protein|sharp pain|basic pushes|squats|hinges)\b/i);
-      assert.match(text, /\b(Open floor|panel show|room)\b/i);
+      assert.match(text, /\b(Arrival|Spider-Verse|The Menu|quiet pressure|voltage|bite|watch|title|movie|film)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback lets watch intent beat open-floor prefix', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'open floor: what should the room watch next?', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
+          { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' }
+        ]
+      });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /panel show|jazz hands|not the same as volunteering/i);
+      assert.match(text, /\b(Arrival|Spider-Verse|The Menu|quiet pressure|voltage|bite|watch|title|movie|film)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback does not repeat the same watch recommendation block', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
+        { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
+        { speakerId: 'leah', role: 'side', text: 'One strong world, not wallpaper. Pick the one that matches the room temperature.' },
+        { speakerId: 'grok', role: 'closer', text: 'Choose the constraint before the title. Otherwise recommendation becomes astrology with better lighting.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'open floor: what should the room watch next?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
+      assert.doesNotMatch(text, /One strong world, not wallpaper/i);
+      assert.doesNotMatch(text, /constraint before the title/i);
+      assert.match(text, /\b(Heat|Everything Everywhere All at Once|Knives Out|pressure|wonder|comfort)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
+test('social director fallback answers logo direction with concrete brand moves', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'I need a sharper logo direction for Silva', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'answer normally, what should I do today?' },
+          { speakerId: 'claudia', role: 'side', text: 'If the old topic was training, do one short session.' }
+        ]
+      });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.match(text, /\b(Silva|logo|mark|wordmark|black|white|red|shape|spacing|accent|pulse|direction)\b/i);
+      assert.doesNotMatch(text, /\b(bland is usually the room asking permission|impossible to scroll past)\b/i);
+      assert.doesNotMatch(text, /\b(push-ups|workout|protein|training week)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1138,6 +1262,7 @@ test('social director fallback recovers repetition complaints and planning pivot
       const normal = await postSocial(baseUrl, 'answer normally, what should I do today?', { recentTurns });
       const normalText = visibleText(normal.body);
       assert.match(normalText, /\b(Plain version|today|one block|one result)\b/i);
+      assert.doesNotMatch(normalText, /repeated answer is a failed answer/i);
       assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
 
       const planning = await postSocial(baseUrl, 'new topic: I need help planning tomorrow', { recentTurns });
