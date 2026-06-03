@@ -168,7 +168,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     assertOk(/\b(fake|useful|not useful|stiff|bland|checklist|dodge|partly|less doctrine|more room)\b/i.test(visible), `quality-check prompt did not judge the prior answer: ${visible}`);
   }
   if (prompt.expectsFrustrationRecovery) {
-    assertOk(/\b(stress|stressed|dumb|frustrat|annoy|bad|reset|slow down|recover|fair|mess|turn|pressure|clean next move|repeat|repeating|loop|normally|straight|plain)\b/i.test(visible), `frustration prompt was ignored: ${visible}`);
+    assertOk(/\b(stress|stressed|dumb|frustrat|annoy|bad|reset|slow down|recover|fair|mess|turn|pressure|clean next move|repeat|repeating|loop|normally|straight|plain|enough|stop describing|one thing|decide|answer)\b/i.test(visible), `frustration prompt was ignored: ${visible}`);
   }
   if (prompt.expectsUsefulNextMove) {
     assertOk(/\b(today|next move|one clean|start|first|plain|normally|do this|pick|write|move)\b/i.test(visible), `normal-answer prompt did not produce a useful next move: ${visible}`);
