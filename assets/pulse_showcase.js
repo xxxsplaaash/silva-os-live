@@ -525,6 +525,29 @@
     return isPersistenceConnected(data) ? 'postgres' : 'unknown';
   }
 
+  function mergeGlobalStatusFromTurn(data) {
+    var source = data && typeof data === 'object' ? data : {};
+    var prior = state.status && typeof state.status === 'object' ? state.status : {};
+    var priorConnected = prior.aishaEngineConnected === true;
+    var runtimeConnected = source.runtimeConnected === true
+      || source.aishaEngineConnected === true
+      || (source.diagnostics && source.diagnostics.runtimeConnected === true)
+      || priorConnected;
+    var persistenceConnected = isPersistenceConnected(source) || isPersistenceConnected(prior);
+    var priorEngine = compact(prior.activeEngine || '', 80);
+    var nextEngine = compact(source.activeEngine || '', 80);
+    if (priorConnected && nextEngine && nextEngine !== 'aisha-runtime-pack1') nextEngine = priorEngine || 'aisha-runtime-pack1';
+    return {
+      ok: prior.ok === true || source.ok === true,
+      activeEngine: nextEngine || priorEngine || (runtimeConnected ? 'aisha-runtime-pack1' : 'local-room-intelligence'),
+      aishaEngineConnected: runtimeConnected,
+      persistence: {
+        mode: (prior.persistence && prior.persistence.mode) || (source.persistence && source.persistence.mode) || persistenceMode(source) || 'postgres',
+        connected: persistenceConnected
+      }
+    };
+  }
+
   function parentTargetOrigin() {
     try {
       if (!document.referrer) return '';
@@ -943,20 +966,7 @@
   function applyTurnPayload(payload, options) {
     var opts = options || {};
     state.sessionId = payload.sessionId || state.sessionId;
-    state.status = {
-      activeEngine: payload.activeEngine,
-      aishaEngineConnected: payload.aishaEngineConnected,
-      persistence: {
-        mode: state.status && state.status.persistence ? state.status.persistence.mode : 'postgres',
-        connected: !!(payload.diagnostics && payload.diagnostics.persistenceConnected)
-      },
-      acceptedByPack1: payload.acceptedByPack1 === true,
-      qualityAccepted: payload.qualityAccepted === true,
-      repairedByRuntime: payload.repairedByRuntime === true,
-      fallbackCategory: compact(payload.fallbackCategory || (payload.diagnostics && payload.diagnostics.fallbackCategory) || '', 80),
-      qualityFailureCategory: compact(payload.qualityFailureCategory || (payload.diagnostics && payload.diagnostics.qualityFailureCategory) || '', 80),
-      runtimePhase: normalizeRuntimePhase(payload.runtimePhase)
-    };
+    state.status = mergeGlobalStatusFromTurn(payload);
     updateTurnRuntime(payload);
     state.roomMood = compact(payload.roomMood || 'focused', 40) || 'focused';
     state.responseMode = compact(payload.responseMode || 'single', 40) || 'single';
@@ -986,7 +996,7 @@
       return;
     }
     if (event === 'runtime_status') {
-      state.status = data || state.status;
+      state.status = mergeGlobalStatusFromTurn(data || {});
       updateTurnRuntime(data || {});
       renderStatus();
       setProcessingText(data && (data.repairedByRuntime || (data.diagnostics && data.diagnostics.repairedByRuntime))

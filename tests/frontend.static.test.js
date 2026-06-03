@@ -1716,6 +1716,10 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
+  assert.match(script, /function mergeGlobalStatusFromTurn/);
+  assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(payload\)/);
+  assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(data \|\| \{\}\)/);
+  assert.doesNotMatch(script, /state\.status = \{\s*activeEngine: payload\.activeEngine/);
   assert.match(script, /SHOWCASE_VERSION = '1\.6\.6'/);
   assert.match(script, /var priorRecentTurns = recentTurns\(\)/);
   assert.match(script, /turnRequestBody\(text, priorSpeaker, priorRecentTurns\)/);
