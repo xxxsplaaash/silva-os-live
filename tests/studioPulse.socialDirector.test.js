@@ -603,6 +603,76 @@ test('social director quality validator rejects live generic fitness variants an
   assert.ok(movie.issues.includes('allowed-topic-refusal:movie'));
 });
 
+test('social director quality validator rejects short-window generic fitness advice', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room gives ordinary advice.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Twenty minutes requires efficiency. Focus on compound movements that hit multiple muscle groups.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'A circuit of squats, push-ups, and lunges, repeated for time, will maximize your session. Keep rest periods short.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ensure the intensity is high enough to signal adaptation. Volume is less critical than effort in a short window.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'I want to grow muscle but I hate gyms. What do I do this week?' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start simple. You need a repeatable training week.' }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('generic-advice-column'));
+});
+
+test('social director quality validator rejects weak continuity change summaries', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'A.I.S.H.A answers with only the newest record.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'White editorial. No red.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Black glass, single red pulse. Understood.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+      { speakerId: 'aisha', role: 'primary', text: 'White editorial, no red. Noted.' }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('continuity-question-ignored'));
+});
+
+test('social director quality validator rejects false continuity denials', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'A.I.S.H.A misses the prior record.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'No, you did not specify black glass in the record I can see.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'No, I never said black glass. Did I?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('continuity-question-ignored'));
+});
+
 test('social director quality validator rejects generic operational check-in reports', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room reports status.',
