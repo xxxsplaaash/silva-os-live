@@ -1589,6 +1589,69 @@ test('social director quality validator rejects stress turns that dodge into com
   assert.ok(validation.issues.includes('product-frustration-miss:stress-recovery'));
 });
 
+test('social director quality validator rejects stale planning posture in food answers', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room stays stuck on the previous planning topic.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "We are defining tomorrow's objective. Lunch is a secondary concern." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'For lunch, keep it simple. A sandwich or a salad will do.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'quick help: what should I eat for lunch?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'new topic: I need help planning tomorrow' },
+      { speakerId: 'aisha', role: 'primary', text: "Tomorrow's plan requires one concrete objective." }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('food-answer-dodged'));
+});
+
+test('social director quality validator rejects fake design implementation promises', () => {
+  const placement = validateDirectorOutput({
+    roomBeat: 'The room turns a preference into fake production work.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Obsidian with a red accent. Noted.' },
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'I will map the accent placement to key interactive elements.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My dashboard preference is obsidian with one red accent.' });
+
+  assert.equal(placement.ok, false);
+  assert.ok(placement.issues.includes('operational-jargon'));
+  assert.ok(placement.issues.includes('product-self-theater:meta-language'));
+
+  const parameters = validateDirectorOutput({
+    roomBeat: 'The room pretends the dashboard has been changed.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The preference shifted from obsidian with a red accent to pale blue with no red accent. Claudia is adjusting the design parameters.' },
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'The parameters are updated. The pale blue is now the active preference.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+
+  assert.equal(parameters.ok, false);
+  assert.ok(parameters.issues.includes('operational-jargon'));
+  assert.ok(parameters.issues.includes('product-self-theater:meta-language'));
+});
+
 test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
