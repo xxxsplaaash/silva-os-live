@@ -1151,6 +1151,25 @@ test('social director quality validator rejects stale accepted answers for check
 
   assert.equal(staleTension.ok, false);
   assert.ok(staleTension.issues.includes('stale-topic-answer:prior-topic') || staleTension.issues.includes('social-question-ignored'));
+
+  const staleTensionComedy = validateDirectorOutput({
+    roomBeat: 'The room stays stuck on movie selection.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'A comedy sounds like a good reset. Something with a clear, satisfying arc.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'That fits the criteria. It has a defined beginning, middle, and end, and minimal risk of existential dread.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'The primary tension is the avoidance of existential dread, as previously established. A comedy fulfills this parameter.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'everyone, what is the actual tension in this room?',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'open floor: what should the room watch next?' }]
+  });
+
+  assert.equal(staleTensionComedy.ok, false);
+  assert.ok(staleTensionComedy.issues.includes('stale-topic-answer:prior-topic'));
 });
 
 test('social director quality validator rejects stress turns answered with meta process loops', () => {
@@ -1667,6 +1686,25 @@ test('social director quality validator rejects stale planning posture in food a
 
   assert.equal(genericLunch.ok, false);
   assert.ok(genericLunch.issues.includes('product-generic-advice:food'));
+
+  const liveGenericLunch = validateDirectorOutput({
+    roomBeat: 'The room answers lunch like a generic nutrition article.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'A quick protein and carb mix is best. Consider chicken breast with a side of rice, or a lentil soup with whole-grain bread.' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'Or, if you want something lighter, a large salad with grilled fish. Just avoid anything too heavy that will slow you down.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: 'Choose something that fuels the next block of work. Efficiency is the goal.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+
+  assert.equal(liveGenericLunch.ok, false);
+  assert.ok(liveGenericLunch.issues.includes('generic-advice-column'));
+  assert.ok(liveGenericLunch.issues.includes('product-generic-advice:food'));
 });
 
 test('social director quality validator rejects fake design implementation promises', () => {
@@ -1768,6 +1806,29 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(configurationStandard.ok, false);
   assert.ok(configurationStandard.issues.includes('operational-jargon'));
   assert.ok(configurationStandard.issues.includes('product-self-theater:meta-language'));
+
+  const liveConfigurationMiss = validateDirectorOutput({
+    roomBeat: 'The room names only the new value and misses the prior value.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Noted. The preference has been updated.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Understood. I will adjust the configuration to pale blue, no red accents.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+
+  assert.equal(liveConfigurationMiss.ok, false);
+  assert.ok(liveConfigurationMiss.issues.includes('continuity-question-ignored'));
+  assert.ok(liveConfigurationMiss.issues.includes('operational-jargon'));
+  assert.ok(liveConfigurationMiss.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
@@ -1813,11 +1874,35 @@ test('visible response evaluator rejects generic food advice and weak denial con
   });
   assert.ok(inventedTask.some(item => item.family === 'weak-next-move'));
 
+  const vagueNormal = evaluateVisibleResponse({
+    visibleText: 'The actual ask is what to do today. The answer is to focus on the next concrete step, not the feeling of stress.',
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+  assert.ok(vagueNormal.some(item => item.family === 'weak-next-move'));
+
+  const staleRoomState = evaluateVisibleResponse({
+    visibleText: 'A comedy sounds like a good reset. It has a solid script and minimal existential dread.',
+    userMessage: 'everyone, what is the actual tension in this room?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'open floor: what should the room watch next?' }
+    ]
+  });
+  assert.ok(staleRoomState.some(item => item.family === 'stale-context' && item.category === 'room-state'));
+
   const foodIssues = evaluateVisibleResponse({
     visibleText: 'Choose lean protein with complex carbs. A turkey sandwich on whole wheat or a protein bar and apple can hold you over.',
     userMessage: 'quick help: what should I eat for lunch?'
   });
   assert.ok(foodIssues.some(item => item.family === 'generic-advice'));
+
+  const liveFoodIssues = evaluateVisibleResponse({
+    visibleText: 'A quick protein and carb mix is best. Consider chicken breast with a side of rice, or a lentil soup with whole-grain bread. Efficiency is the goal.',
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+  assert.ok(liveFoodIssues.some(item => item.family === 'generic-advice'));
 
   const denial = validateDirectorOutput({
     roomBeat: 'A.I.S.H.A cites only the old record.',
