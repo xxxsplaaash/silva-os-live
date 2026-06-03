@@ -1777,6 +1777,10 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
   assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
+  assert.match(build, /function writeVercelConfig/);
+  assert.match(build, /source: '\/pulse-showcase'/);
+  assert.match(build, /destination: '\/pulse-showcase\.html'/);
+  assert.match(build, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);
   assert.match(vercel, /frame-ancestors 'self' https:\/\/silvastudios\.co\.za https:\/\/www\.silvastudios\.co\.za/);
   assert.match(server, /req\.method === 'OPTIONS'[\s\S]+startsWith\('\/api\/studio\/pulse-showcase\/'\)[\s\S]+return next\(\)/);
   assert.match(runbook, /https:\/\/silva-os-live\.vercel\.app\/pulse-showcase\?embed=1/);

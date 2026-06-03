@@ -40,11 +40,39 @@ function writeRuntimeHtml(relativePath) {
   fs.writeFileSync(path.join(outDir, relativePath), injectApiBase(source));
 }
 
+function writeVercelConfig() {
+  const headers = [
+    {
+      source: '/(.*)',
+      headers: [
+        { key: 'X-Content-Type-Options', value: 'nosniff' },
+        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        {
+          key: 'Content-Security-Policy',
+          value: "frame-ancestors 'self' https://silvastudios.co.za https://www.silvastudios.co.za"
+        }
+      ]
+    }
+  ];
+  const config = {
+    cleanUrls: true,
+    trailingSlash: false,
+    headers,
+    rewrites: [
+      { source: '/pulse-showcase', destination: '/pulse-showcase.html' },
+      { source: '/pulse-showcase/', destination: '/pulse-showcase.html' },
+      { source: '/((?!api/|assets/|public/|probe|sync_probe|studio_pulse_v395|studio_pulse_v400).*)', destination: '/index.html' }
+    ]
+  };
+  fs.writeFileSync(path.join(outDir, 'vercel.json'), `${JSON.stringify(config, null, 2)}\n`);
+}
+
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
 
 writeRuntimeHtml('index.html');
 writeRuntimeHtml('pulse-showcase.html');
+writeVercelConfig();
 copyIfExists('assets');
 copyIfExists('public');
 copyIfExists('studio_pulse_v400.js');
