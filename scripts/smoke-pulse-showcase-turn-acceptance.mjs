@@ -16,12 +16,14 @@ const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const ALLOW_LOCAL_FALLBACK = process.env.ALLOW_LOCAL_FALLBACK === '1';
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const GAUNTLET_TURN_DELAY_MS = Math.max(0, Number(process.env.GAUNTLET_TURN_DELAY_MS || 0) || 0);
+const GAUNTLET_RETRY_LIMIT = Math.max(1, Number(process.env.GAUNTLET_RETRY_LIMIT || 4) || 4);
+const GAUNTLET_RETRY_DELAY_MS = Math.max(1000, Number(process.env.GAUNTLET_RETRY_DELAY_MS || 90000) || 90000);
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
 const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|session|pick three days|repeatable|simple enough to do|objective is to start|yoghurt|yogurt|eggs?|toast|banana|rice and chicken|food lets you move|move without feeling heavy)\b/i;
 const STALE_FITNESS_RX = /\b(muscle|training split|full-body|full body|progressive overload|sets|reps|gym|lift|week one|push-ups|pushups|squats?|planks?|circuit|workout|training week|bodyweight|compound movements|protein shake|post-workout|post workout)\b/i;
 const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
-const REJECTED_VISIBLE_RX = /\b(that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|fuel[s]? the performance|fuel[s]? performance|not here for a nap|human body requires fuel|known variable|planning discussion is paused|what is the immediate need|anyone need a quick fuel-up|check-in on sustenance|before we dive into tomorrow|defining tomorrow'?s objective|lunch is a secondary concern|stress comes from|mistaking polish for progress|actual work not the presentation|actual work not presentation|stuck between wanting to be useful and sounding like it|grok was right,? it sounded fake|this is not complex|stress is noted|proceed with that clarity|name the feeling,? not the function|concrete mood|the ask is simple|actual problem you need solved|state it clearly|only what is necessary to fix it|the objective is the execution|objective is execution|stick to the plan|we have the structure|that'?s the objective|evidence of completion is the only metric|avoid further debate|proceed with that configuration|optimize for that specific interaction|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized|map the accent placement|key interactive elements|adjusting the design parameters|adjust the design parameters|parameters are updated|parameters updated|design parameters)\b/i;
+const REJECTED_VISIBLE_RX = /\b(that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|resistance bands|consistent effort|miracles overnight|alternate upper and lower body|alternate between upper body and lower body|upper and lower body focus|prioritize protein intake|eating enough protein|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|multiple muscle groups|form is correct|adding reps|focus on execution|focused session|time constraint sharpens|technically sound|poor form|fast track to injury|progressive overload|sustainable habit|personal improvement|track your progress to see the changes|track your lifts|measuring progress|just guessing|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|hydrate|water is critical|critical for performance and recovery|fuel[s]? the performance|fuel[s]? performance|not here for a nap|human body requires fuel|known variable|planning discussion is paused|what is the immediate need|anyone need a quick fuel-up|check-in on sustenance|before we dive into tomorrow|defining tomorrow'?s objective|lunch is a secondary concern|stress comes from|mistaking polish for progress|actual work not the presentation|actual work not presentation|stuck between wanting to be useful and sounding like it|grok was right,? it sounded fake|this is not complex|stress is noted|proceed with that clarity|name the feeling,? not the function|concrete mood|the ask is simple|actual problem you need solved|state it clearly|only what is necessary to fix it|focus on one concrete action for today|single most important task|what is the single most important task|the objective is the execution|objective is execution|stick to the plan|we have the structure|that'?s the objective|evidence of completion is the only metric|avoid further debate|proceed with that configuration|optimize for that specific interaction|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized|what'?s the core message|what is the core message|define the visual language|non-negotiables|let'?s hear the prompt|what is the core issue|map the accent placement|key interactive elements|adjusting the design parameters|adjust the design parameters|parameters are updated|parameters updated|design parameters)\b/i;
 
 const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
@@ -136,8 +138,6 @@ function sessionIdFor(group = 'main') {
 
 async function streamTurn(prompt, prior = {}, recentTurns = []) {
   const startedAt = Date.now();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(new Error(`turn timed out after ${TURN_TIMEOUT_MS}ms`)), TURN_TIMEOUT_MS);
   const outboundRecentTurns = recentTurnWindow(recentTurns);
   const outboundRecentText = outboundRecentTurns
     .map(item => String(item?.text || item?.content || ''))
@@ -161,17 +161,25 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     }
   };
   let response;
-  let text;
-  try {
-    response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-    text = await response.text();
-  } finally {
-    clearTimeout(timeout);
+  let text = '';
+  for (let attempt = 1; attempt <= GAUNTLET_RETRY_LIMIT; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(new Error(`turn timed out after ${TURN_TIMEOUT_MS}ms`)), TURN_TIMEOUT_MS);
+    try {
+      response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      text = await response.text();
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (![409, 429, 503].includes(response.status) || attempt >= GAUNTLET_RETRY_LIMIT) break;
+    assertOk(!LEAK_RX.test(text), 'guard response leaked prompt/runtime internals or secret-like material');
+    console.error(`guard returned HTTP ${response.status}; waiting ${GAUNTLET_RETRY_DELAY_MS}ms before retry ${attempt + 1}/${GAUNTLET_RETRY_LIMIT}`);
+    await sleep(GAUNTLET_RETRY_DELAY_MS);
   }
   assertOk(!LEAK_RX.test(text), 'turn stream leaked prompt/runtime internals or secret-like material');
   assertOk(response.status === 200, `turn-stream failed HTTP ${response.status}: ${text.slice(0, 240)}`);

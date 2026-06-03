@@ -1567,6 +1567,25 @@ test('social director quality validator rejects normal-answer dodges that ask fo
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('frustration-ignored'));
   assert.ok(validation.issues.includes('product-weak-next-move:normal-answer'));
+
+  const singleTask = validateDirectorOutput({
+    roomBeat: 'The room asks for the task instead of giving a normal answer.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The ask is to move past the stress and the feeling of repetition. Focus on one concrete action for today. What is the single most important task you can complete right now?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+
+  assert.equal(singleTask.ok, false);
+  assert.ok(singleTask.issues.includes('product-weak-next-move:normal-answer'));
 });
 
 test('social director quality validator rejects stress turns that dodge into command posture', () => {
@@ -1650,6 +1669,24 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(parameters.ok, false);
   assert.ok(parameters.issues.includes('operational-jargon'));
   assert.ok(parameters.issues.includes('product-self-theater:meta-language'));
+});
+
+test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room asks for direction instead of giving direction.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "Silva needs a logo that cuts through. What's the core message we're trying to land visually?" },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'It needs to feel less like a placeholder and more like a statement. Something with edge.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'We need to define the visual language before we iterate on concepts. What are the non-negotiables?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper logo direction for Silva' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('design-answer-punted'));
 });
 
 test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {
