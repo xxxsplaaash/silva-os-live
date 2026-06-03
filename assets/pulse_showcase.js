@@ -26,7 +26,7 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.6.0';
+  var SHOWCASE_VERSION = '1.6.1';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -477,9 +477,9 @@
     var data = source && typeof source === 'object' ? source : {};
     var category = compact(data.fallbackCategory || (data.diagnostics && data.diagnostics.fallbackCategory) || '', 80);
     state.turnRuntime = {
-      acceptedByPack1: data.acceptedByPack1 === true,
+      acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true),
       fallbackCategory: category,
-      runtimePhase: normalizeRuntimePhase(data.runtimePhase)
+      runtimePhase: normalizeRuntimePhase(data.runtimePhase || (data.diagnostics && data.diagnostics.runtimePhase))
     };
   }
 
@@ -549,7 +549,7 @@
     var status = state.status || {};
     return {
       runtimePhase: normalizeRuntimePhase(data.runtimePhase || runtime.runtimePhase),
-      acceptedByPack1: data.acceptedByPack1 === true || runtime.acceptedByPack1 === true,
+      acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true) || runtime.acceptedByPack1 === true,
       fallbackCategory: compact(data.fallbackCategory || runtime.fallbackCategory || '', 80),
       activeEngine: compact(data.activeEngine || status.activeEngine || 'local-room-intelligence', 80),
       persistenceConnected: isPersistenceConnected(data) || isPersistenceConnected(status),
@@ -589,7 +589,8 @@
     document.querySelectorAll('.mode-button').forEach(function (button) {
       button.classList.toggle('active', button.dataset.mode === state.mode);
     });
-    el.roomModeTitle.textContent = MODES[state.mode];
+    el.roomModeTitle.textContent = 'Open the room';
+    if (el.modeChipValue) el.modeChipValue.textContent = MODES[state.mode];
     persistState();
     reportHeight();
     reportStatus();
@@ -613,6 +614,11 @@
     el.turnStateValue.className = 'turn-state-value ' + turnClass;
     el.turnStateValue.textContent = turnText;
     el.turnStateValue.title = turn.fallbackCategory || turnText;
+    if (el.turnChipValue) {
+      el.turnChipValue.className = 'turn-chip-value ' + turnClass;
+      el.turnChipValue.textContent = turnText;
+      el.turnChipValue.title = turn.fallbackCategory || turnText;
+    }
     el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
     var stats = continuityStats();
     el.continuityValue.textContent = stats.total
@@ -621,6 +627,7 @@
     el.sessionValue.textContent = friendlySessionId(state.sessionId);
     if (el.tensionFill) el.tensionFill.style.width = state.tensionScore + '%';
     if (el.continuityFill) el.continuityFill.style.width = (state.socialSignals.continuityPressure || 0) + '%';
+    if (el.modeChipValue) el.modeChipValue.textContent = MODES[state.mode] || 'Social Hierarchy Lab';
   }
 
   function speakerDot(id) {
@@ -665,6 +672,7 @@
   function renderSocialSignals() {
     var signals = state.socialSignals || defaultSocialSignals();
     var socialMemory = normalizeSocialMemory(signals.socialMemory || {}, defaultSocialSignals().socialMemory);
+    if (el.roomMoveValue) el.roomMoveValue.textContent = 'Room move: ' + normalizeRoomMove(signals.roomMove || 'observe');
     if (el.hierarchyList) {
       el.hierarchyList.innerHTML = (signals.hierarchy || []).map(function (item) {
         var id = safeSpeakerId(item.speakerId);
@@ -764,9 +772,9 @@
     if (!state.messages.length) {
       el.feed.innerHTML = [
         '<div class="room-empty">',
-        '<span class="empty-kicker">Studio Pulse room</span>',
-        '<h3>Enter with a claim. The room will test it.</h3>',
-        '<p>Continuity, status pressure, and contradictions surface as the turn lands.</p>',
+        '<span class="empty-kicker">Open the room</span>',
+        '<h3>Say what you need. The room will test it.</h3>',
+        '<p>Room chat is live. Continuity and social pressure will appear after the first turn.</p>',
         '<div class="empty-presence" aria-label="Characters present">',
         SPEAKER_IDS.map(function (id) {
           return '<span>' + speakerDot(id) + escapeHtml(speakerName(id)) + '</span>';
@@ -1093,6 +1101,9 @@
     el.roomModeTitle = $('room-mode-title');
     el.roomMood = $('room-mood');
     el.responseMode = $('response-mode');
+    el.modeChipValue = $('mode-chip-value');
+    el.roomMoveValue = $('room-move-value');
+    el.turnChipValue = $('turn-chip-value');
     el.feed = $('room-feed');
     el.form = $('room-form');
     el.userText = $('user-text');
