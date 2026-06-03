@@ -1083,6 +1083,11 @@ test('visible response evaluator flags audit-level product failures', () => {
     visibleText: 'What is the one thing you need to do next, and what part of the last answer was useful?'
   }).includes('weak-next-move'));
 
+  assert.ok(families({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: 'The problem is not the polish, it is the delay. We stop pretending and start doing.'
+  }).includes('frustration-miss'));
+
   assert.equal(evaluateVisibleResponse({
     userMessage: 'new topic: what movie should we watch tonight?',
     visibleText: 'Leah says Arrival if the room wants quiet pressure; Vanya pushes Spider-Verse if it needs voltage.'
@@ -1562,6 +1567,26 @@ test('social director quality validator rejects normal-answer dodges that ask fo
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('frustration-ignored'));
   assert.ok(validation.issues.includes('product-weak-next-move:normal-answer'));
+});
+
+test('social director quality validator rejects stress turns that dodge into command posture', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room says it is responding to stress, but dodges the feeling.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'firm', text: 'The problem is not the polish, it is the delay. We stop pretending and start doing.' },
+      { speakerId: 'leah', role: 'side', tone: 'direct', text: 'Grok, name one concrete action we can take right now to be useful.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I am stressed and this is starting to feel dumb.'
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('frustration-ignored'));
+  assert.ok(validation.issues.includes('product-frustration-miss:stress-recovery'));
 });
 
 test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {
