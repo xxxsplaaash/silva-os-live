@@ -1453,6 +1453,27 @@ test('social director quality validator rejects false continuity denials', () =>
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('continuity-question-ignored'));
+
+  const currentOnly = validateDirectorOutput({
+    roomBeat: 'A.I.S.H.A cites only the active record and misses the denial.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'The record shows white editorial, no red. That is the current standard.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'No, I never said black glass. Did I?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ]
+  });
+
+  assert.equal(currentOnly.ok, false);
+  assert.ok(currentOnly.issues.includes('continuity-question-ignored'));
+  assert.ok(currentOnly.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects generic operational check-in reports', () => {
@@ -1629,9 +1650,43 @@ test('social director quality validator rejects stale planning posture in food a
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('food-answer-dodged'));
+
+  const genericLunch = validateDirectorOutput({
+    roomBeat: 'The room answers lunch like a generic advice column.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'For lunch, consider a lean protein with complex carbs. A turkey sandwich on whole wheat would be efficient.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'A protein bar and an apple can hold you over. Just keep it simple.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+
+  assert.equal(genericLunch.ok, false);
+  assert.ok(genericLunch.issues.includes('product-generic-advice:food'));
 });
 
 test('social director quality validator rejects fake design implementation promises', () => {
+  const thinLogo = validateDirectorOutput({
+    roomBeat: 'The room talks around the logo direction.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'We need something that cuts through the noise, not just another generic mark. Silva deserves a logo with real edge.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Agreed. Let us define the core elements that convey that sharpness.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: "The direction needs to be clear enough for implementation. What specific visual language communicates edge without becoming abstract?" }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper logo direction for Silva' });
+
+  assert.equal(thinLogo.ok, false);
+  assert.ok(thinLogo.issues.includes('design-answer-punted'));
+  assert.ok(thinLogo.issues.includes('operational-jargon'));
+
   const placement = validateDirectorOutput({
     roomBeat: 'The room turns a preference into fake production work.',
     roomMood: 'focused',
@@ -1687,6 +1742,48 @@ test('social director quality validator rejects logo direction answers that punt
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('design-answer-punted'));
+
+  const softerPunt = validateDirectorOutput({
+    roomBeat: 'The room sounds branded but still punts.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'The logo needs real edge and should cut through the noise.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Define the core elements and what specific visual language communicates edge before moving.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper logo direction for Silva' });
+
+  assert.equal(softerPunt.ok, false);
+  assert.ok(softerPunt.issues.includes('design-answer-punted'));
+});
+
+test('visible response evaluator rejects generic food advice and weak denial continuity', () => {
+  const foodIssues = evaluateVisibleResponse({
+    visibleText: 'Choose lean protein with complex carbs. A turkey sandwich on whole wheat or a protein bar and apple can hold you over.',
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+  assert.ok(foodIssues.some(item => item.family === 'generic-advice'));
+
+  const denial = validateDirectorOutput({
+    roomBeat: 'A.I.S.H.A cites only the old record.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'Yes: prior record was landing page style is black glass with a single red pulse.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'No, I never said black glass. Did I?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ]
+  });
+  assert.equal(denial.ok, false);
+  assert.ok(denial.issues.includes('continuity-question-ignored'));
 });
 
 test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {
