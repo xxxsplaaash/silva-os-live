@@ -737,6 +737,26 @@ test('social director quality validator rejects current live accepted fitness bo
 
   assert.equal(shortWindow.ok, false);
   assert.ok(shortWindow.issues.includes('generic-advice-column'));
+
+  const objectiveDrift = validateDirectorOutput({
+    roomBeat: 'The room loses the concrete muscle context.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is to build a sustainable habit for personal improvement. Track your progress to see the changes.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+    ]
+  });
+
+  assert.equal(objectiveDrift.ok, false);
+  assert.ok(objectiveDrift.issues.includes('topic-ignored:fitness') || objectiveDrift.issues.includes('generic-advice-column'));
 });
 
 test('social director quality validator rejects live thin movie and fake-quality answers', () => {
