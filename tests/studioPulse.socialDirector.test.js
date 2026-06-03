@@ -1746,6 +1746,28 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(systemConfig.ok, false);
   assert.ok(systemConfig.issues.includes('operational-jargon'));
   assert.ok(systemConfig.issues.includes('product-self-theater:meta-language'));
+
+  const configurationStandard = validateDirectorOutput({
+    roomBeat: 'The room turns memory evidence into fake dashboard state.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The preference has been updated. Obsidian with one red accent is no longer the active setting.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Noted. The pale blue, no red accent configuration is now the standard.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+
+  assert.equal(configurationStandard.ok, false);
+  assert.ok(configurationStandard.issues.includes('operational-jargon'));
+  assert.ok(configurationStandard.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
