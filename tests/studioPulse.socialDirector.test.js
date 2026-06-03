@@ -1136,6 +1136,20 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(specificitySermon.ok, false);
   assert.ok(specificitySermon.issues.includes('frustration-ignored'));
 
+  const sterileStress = validateDirectorOutput({
+    roomBeat: 'The room notes stress without recovering.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "The stress is noted. The room's tension is clear: usefulness over polish. Let's proceed with that clarity." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(sterileStress.ok, false);
+  assert.ok(sterileStress.issues.includes('frustration-ignored'));
+
   const ignoredRepeatComplaint = validateDirectorOutput({
     roomBeat: 'The room acts like nothing went wrong.',
     roomMood: 'focused',
@@ -1167,6 +1181,24 @@ test('social director quality validator rejects food prompts that dodge before a
 
   assert.equal(dodgedLunch.ok, false);
   assert.ok(dodgedLunch.issues.includes('food-answer-dodged'));
+});
+
+test('social director quality validator rejects generic planning command loops', () => {
+  const genericPlanning = validateDirectorOutput({
+    roomBeat: 'The room turns planning into a command loop.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "Tomorrow's plan requires one clear objective. Identify the first actionable step." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Break down the objective into the smallest visible task. Execute that first.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'Evidence of completion is the only metric that matters now. Avoid further debate.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(genericPlanning.ok, false);
+  assert.ok(genericPlanning.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
