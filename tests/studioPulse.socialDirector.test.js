@@ -1112,6 +1112,11 @@ test('visible response evaluator flags audit-level product failures', () => {
   }).includes('continuity-miss'));
 
   assert.ok(families({
+    userMessage: 'My dashboard preference is obsidian with one red accent.',
+    visibleText: "Obsidian with a red accent. Noted. Let's ensure the execution matches the clarity of that preference."
+  }).includes('self-theater'));
+
+  assert.ok(families({
     userMessage: 'answer normally, what should I do today?',
     visibleText: 'What is the one thing you need to do next, and what part of the last answer was useful?'
   }).includes('weak-next-move'));
@@ -1993,6 +1998,38 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(liveOperationalStyle.ok, false);
   assert.ok(liveOperationalStyle.issues.includes('operational-jargon'));
   assert.ok(liveOperationalStyle.issues.includes('product-self-theater:meta-language'));
+
+  const liveFunctionalStyle = validateDirectorOutput({
+    roomBeat: 'The room turns a style claim into fake implementation status.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass with a single red pulse. It is a statement, but is it saying the right thing?' },
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The aesthetic is noted. Claudia, confirm the functional requirements are met before we refine the visual.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'All core functionality is locked. The visual layer is next.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(liveFunctionalStyle.ok, false);
+  assert.ok(liveFunctionalStyle.issues.includes('operational-jargon'));
+  assert.ok(liveFunctionalStyle.issues.includes('product-self-theater:meta-language'));
+
+  const liveExecutionPreference = validateDirectorOutput({
+    roomBeat: 'The room turns a memory preference into execution theater.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Obsidian with a red accent. Ensure the execution matches the clarity of that preference.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My dashboard preference is obsidian with one red accent.' });
+
+  assert.equal(liveExecutionPreference.ok, false);
+  assert.ok(liveExecutionPreference.issues.includes('operational-jargon'));
+  assert.ok(liveExecutionPreference.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
