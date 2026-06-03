@@ -702,6 +702,43 @@ test('social director quality validator rejects live generic bodyweight and nutr
   assert.ok(acceptedLiveNutrition.issues.includes('generic-advice-column'));
 });
 
+test('social director quality validator rejects current live accepted fitness boilerplate', () => {
+  const weekPlan = validateDirectorOutput({
+    roomBeat: 'The room answers like a fitness column.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Focus on bodyweight exercises and resistance bands. Three days a week, alternate upper and lower body focus.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'For nutrition, prioritize protein intake with meals. Consider a simple protein shake post-workout if needed.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ensure adequate sleep. Muscle growth occurs during recovery, not during the workout itself.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I want to grow muscle but I hate gyms. What do I do this week?' });
+
+  assert.equal(weekPlan.ok, false);
+  assert.ok(weekPlan.issues.includes('generic-advice-column'));
+
+  const shortWindow = validateDirectorOutput({
+    roomBeat: 'The room gives generic short-window advice.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Twenty minutes means focusing on high-intensity intervals. Bodyweight circuits are efficient.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Structure it as a circuit: 45 seconds work, 15 seconds rest, repeat 3-4 times. Keep rest between circuits minimal.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ensure the exercises are compound movements to maximize muscle engagement in the limited time.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'I want to grow muscle but I hate gyms. What do I do this week?' }]
+  });
+
+  assert.equal(shortWindow.ok, false);
+  assert.ok(shortWindow.issues.includes('generic-advice-column'));
+});
+
 test('social director quality validator rejects live thin movie and fake-quality answers', () => {
   const movie = validateDirectorOutput({
     roomBeat: 'A new topic enters.',
@@ -751,6 +788,20 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('frustration-ignored'));
+
+  const coldAcceptance = validateDirectorOutput({
+    roomBeat: 'The room accepts frustration with a sterile line.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "The feedback is noted. We are here to be useful, not to perform usefulness. Let's focus on clarity and direct answers." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(coldAcceptance.ok, false);
+  assert.ok(coldAcceptance.issues.includes('operational-jargon') || coldAcceptance.issues.includes('frustration-ignored'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
@@ -817,6 +868,22 @@ test('social director quality validator rejects continuity claims answered as bu
 
   assert.equal(liveFrameworkDrift.ok, false);
   assert.ok(liveFrameworkDrift.issues.includes('operational-jargon'));
+
+  const liveStyleGuideDrift = validateDirectorOutput({
+    roomBeat: 'The room turns a superseding style claim into fake work.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: 'White editorial. Understood.' },
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'White editorial offers a cleaner canvas. It allows the content to lead, which is more intentional than a single accent.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "I will update the style guide to reflect 'white editorial' and remove the red pulse element." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Actually my landing page style is white editorial with no red.' });
+
+  assert.equal(liveStyleGuideDrift.ok, false);
+  assert.ok(liveStyleGuideDrift.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects weak continuity change summaries', () => {
