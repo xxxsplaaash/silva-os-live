@@ -1071,6 +1071,11 @@ test('visible response evaluator flags audit-level product failures', () => {
     visibleText: 'We are on track. The objective is to start, not to assess current states. Everyone is moving forward with the new structure. The next steps are clear: one workout, one meal, one sleep window.'
   }).includes('stale-context'));
 
+  assert.ok(!families({
+    userMessage: 'BRUH...',
+    visibleText: 'Yeah. Strip it down: one workout, one meal, one sleep window. Do push, pull, legs, or the closest safe versions. Log reps.'
+  }).includes('stale-context'));
+
   assert.ok(families({
     userMessage: 'you keep repeating yourself',
     visibleText: 'Fair. No more repeat loop; plain answer, then we move.',
