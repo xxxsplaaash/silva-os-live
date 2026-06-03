@@ -644,6 +644,22 @@ test('social director quality validator rejects live generic bodyweight and nutr
   assert.equal(bodyweight.ok, false);
   assert.ok(bodyweight.issues.includes('generic-advice-column'));
 
+  const acceptedLiveBodyweight = validateDirectorOutput({
+    roomBeat: 'Accepted generic home workout answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'No gym, no problem. We can build muscle at home.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'For nutrition, aim for protein with each meal. A simple approach is to have eggs for breakfast or chicken with your lunch.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: "Home workouts require discipline. If you miss a session, don't invent a new plan." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I want to grow muscle but I hate gyms. What do I do this week?' });
+
+  assert.equal(acceptedLiveBodyweight.ok, false);
+  assert.ok(acceptedLiveBodyweight.issues.includes('generic-advice-column'));
+
   const nutrition = validateDirectorOutput({
     roomBeat: 'The room gives generic nutrition guidance.',
     roomMood: 'focused',
@@ -731,6 +747,22 @@ test('social director quality validator rejects continuity claims answered as bu
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('operational-jargon'));
+
+  const liveSpecsDrift = validateDirectorOutput({
+    roomBeat: 'The room turns a visual claim into specs again.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass and a single red pulse. It is stark, almost aggressive.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "We need to ensure the pulse animation is smooth and doesn't impact load times. I will draft the technical specs." },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: "Good. Let's see those specs before we commit to the visual." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(liveSpecsDrift.ok, false);
+  assert.ok(liveSpecsDrift.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects weak continuity change summaries', () => {
