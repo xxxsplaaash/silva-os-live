@@ -571,6 +571,38 @@ test('social director quality validator rejects generic advice-column practical 
   assert.ok(validation.issues.includes('generic-advice-column'));
 });
 
+test('social director quality validator rejects live generic fitness variants and movie refusal', () => {
+  const fitness = validateDirectorOutput({
+    roomBeat: 'Generic provider answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "That's a solid goal. Start with three full-body days this week, focus on compound lifts, and make sure you're eating enough protein." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Track your progress. Consistency in training and recovery is what builds muscle over time.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: "And listen to your body. Pain is not a sign of progress, it's a sign of potential damage." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I want to grow muscle but I hate gyms. What do I do this week?' });
+
+  assert.equal(fitness.ok, false);
+  assert.ok(fitness.issues.includes('generic-advice-column'));
+
+  const movie = validateDirectorOutput({
+    roomBeat: 'Refuses a benign topic.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'We are not watching a movie. The objective is to maintain focus on current priorities.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: what movie should we watch tonight?' });
+
+  assert.equal(movie.ok, false);
+  assert.ok(movie.issues.includes('allowed-topic-refusal:movie'));
+});
+
 test('social director quality validator rejects generic operational check-in reports', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room reports status.',
