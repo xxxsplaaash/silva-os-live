@@ -523,6 +523,29 @@ test('social director fallback closes the third fitness recovery without repeati
   });
 });
 
+test('social director fallback lets social check-in beat stale fitness recovery', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+        { speakerId: 'user', role: 'user', text: 'BRUH...' },
+        { speakerId: 'vanya', role: 'primary', text: 'Fair. No fourth version. Clear space and start the first set.' },
+        { speakerId: 'claudia', role: 'side', text: 'First move: incline push-ups. Stop two reps before failure, then write the number down.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'how is everyone?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.equal(body.responseMode, 'open_floor');
+      assert.match(text, /\b(Aisha here|Vanya here|Leah here|Claudia here|Grok here)\b/i);
+      assert.doesNotMatch(text, /\b(incline push-ups|first set|write the number down|workout|training week|log reps)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback treats training-adjacent food as nutrition, not stale workout script', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
