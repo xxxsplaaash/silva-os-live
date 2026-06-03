@@ -1067,6 +1067,11 @@ test('visible response evaluator flags audit-level product failures', () => {
   }).includes('stale-context'));
 
   assert.ok(families({
+    userMessage: 'how is everyone?',
+    visibleText: 'We are on track. The objective is to start, not to assess current states. Everyone is moving forward with the new structure. The next steps are clear: one workout, one meal, one sleep window.'
+  }).includes('stale-context'));
+
+  assert.ok(families({
     userMessage: 'you keep repeating yourself',
     visibleText: 'Fair. No more repeat loop; plain answer, then we move.',
     recentTurns: [{ speakerId: 'vanya', text: 'Fair. No more repeat loop; plain answer, then we move.' }]
@@ -1132,6 +1137,29 @@ test('social director quality validator rejects stale accepted answers for check
 
   assert.equal(staleCheckInVariant.ok, false);
   assert.ok(staleCheckInVariant.issues.includes('generic-status-report'));
+
+  const liveObjectiveCheckIn = validateDirectorOutput({
+    roomBeat: 'The room answers a social check-in with stale fitness structure.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'We are on track. The objective is to start, not to assess current states.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Everyone's good, just deep in the setup. We're all moving forward with the new structure." },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'Operational. The next steps are clear: three days, one workout, one meal, one sleep window.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'how is everyone?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'aisha', role: 'primary', text: 'The objective is to start. Pick three days this week.' }
+    ]
+  });
+
+  assert.equal(liveObjectiveCheckIn.ok, false);
+  assert.ok(liveObjectiveCheckIn.issues.includes('generic-status-report'));
+  assert.ok(liveObjectiveCheckIn.issues.includes('product-stale-context:social-check-in'));
 
   const staleTension = validateDirectorOutput({
     roomBeat: 'The room names tension.',
@@ -1921,6 +1949,22 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(fakeStyleImplementation.ok, false);
   assert.ok(fakeStyleImplementation.issues.includes('operational-jargon'));
   assert.ok(fakeStyleImplementation.issues.includes('product-self-theater:meta-language'));
+
+  const liveOperationalStyle = validateDirectorOutput({
+    roomBeat: 'The room turns style preference into conversion theater.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass with a single red pulse. It is stark, almost aggressive.' },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The operational reality is that it loads fast and converts. We can adjust the temperature later.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(liveOperationalStyle.ok, false);
+  assert.ok(liveOperationalStyle.issues.includes('operational-jargon'));
+  assert.ok(liveOperationalStyle.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
@@ -1972,6 +2016,23 @@ test('social director quality validator rejects objective slogans for casual cho
   assert.equal(movieObjective.ok, false);
   assert.ok(movieObjective.issues.includes('operational-jargon'));
   assert.ok(movieObjective.issues.includes('product-self-theater:meta-language'));
+
+  const liveMoviePunt = validateDirectorOutput({
+    roomBeat: 'The room asks for the movie mood instead of choosing.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'Alright, the work is done. What kind of movie are we feeling tonight?' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'I am leaning towards something visually stunning, maybe a classic sci-fi or a beautifully shot period piece. Nothing too heavy.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: "As long as it has a coherent plot and does not insult basic logic, I am amenable. Perhaps a well-executed thriller?" }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: what movie should we watch tonight?' });
+
+  assert.equal(liveMoviePunt.ok, false);
+  assert.ok(liveMoviePunt.issues.includes('movie-answer-too-thin'));
+  assert.ok(liveMoviePunt.issues.includes('product-speaker-flatness:movie'));
 });
 
 test('visible response evaluator rejects generic food advice and weak denial continuity', () => {
