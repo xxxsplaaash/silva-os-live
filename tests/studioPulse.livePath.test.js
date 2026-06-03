@@ -510,11 +510,14 @@ test('Studio Pulse showcase status reports public Pack 1 and persistence shape',
         assert.equal(response.status, 200);
         const status = await response.json();
         assert.deepEqual(status.modes, ['social_hierarchy_lab', 'continuity_breaker']);
-        assert.equal(status.maxUserTextLength, 500);
+        assert.equal(status.maxUserTextLength, 1500);
         assert.equal(status.activeEngine, 'aisha-runtime-pack1');
         assert.equal(status.aishaEngineConnected, true);
         assert.equal(status.aishaEngineMode, 'production');
-        assert.deepEqual(status.persistence, { mode: 'postgres', connected: true });
+        assert.deepEqual(status.persistence, { mode: 'postgres', connected: true, active: false });
+        assert.deepEqual(status.modeLabels, { social_hierarchy_lab: 'Room', continuity_breaker: 'Continuity' });
+        assert.equal(status.runtime.connected, true);
+        assert.equal(status.continuity.active, false);
         assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
       });
     } finally {
@@ -881,9 +884,20 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
         const tooLong = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ userText: 'x'.repeat(501) })
+          body: JSON.stringify({ userText: 'x'.repeat(1501) })
         });
         assert.equal(tooLong.status, 413);
+
+        const longAccepted = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'showcase-long-input-session',
+            mode: 'social_hierarchy_lab',
+            userText: `I need the room to take a longer planning paragraph seriously. ${'This sentence keeps the input above the old tweet-sized limit. '.repeat(14)}`
+          })
+        });
+        assert.equal(longAccepted.status, 200);
 
         const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
           method: 'POST',

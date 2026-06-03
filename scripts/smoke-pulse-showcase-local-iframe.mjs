@@ -73,7 +73,7 @@ function finalPayload(body = {}) {
       speakerName: 'A.I.S.H.A',
       role: 'continuity',
       tone: 'direct',
-      text: 'Pack 1 accepted the local iframe proof.',
+      text: 'Room answer accepted for the local iframe proof.',
       visibleState: 'anchoring'
     }],
     silentReactions: [{ speakerId: 'leah', visibleState: 'listening' }],
@@ -172,7 +172,7 @@ function createServer(state) {
         aishaEngineMode: 'production',
         persistence: { mode: 'postgres', connected: true },
         modes: ['social_hierarchy_lab', 'continuity_breaker'],
-        maxUserTextLength: 500
+        maxUserTextLength: 1500
       });
       return;
     }
@@ -262,7 +262,7 @@ async function runBrowserProof(state) {
 
     await frame.fill('#user-text', 'local iframe proof should not leave the iframe');
     await Promise.all([
-      frame.waitForFunction(() => document.body.innerText.includes('Pack 1 accepted'), null, { timeout: 20_000 }),
+      frame.waitForFunction(() => document.body.innerText.includes('Room answer accepted'), null, { timeout: 20_000 }),
       frame.click('#send-turn')
     ]);
 

@@ -28,8 +28,8 @@
 
   <section class="mode-strip" aria-label="Showcase mode">
     <span class="mode-strip-label">Studio Pulse</span>
-    <button class="mode-button active" type="button" data-mode="social_hierarchy_lab">Social Hierarchy Lab</button>
-    <button class="mode-button" type="button" data-mode="continuity_breaker">Continuity Breaker</button>
+    <button class="mode-button active" type="button" data-mode="social_hierarchy_lab">Room</button>
+    <button class="mode-button" type="button" data-mode="continuity_breaker">Continuity</button>
     <button class="reset-button" type="button" id="reset-session">Reset</button>
   </section>
 
@@ -42,7 +42,7 @@
           <p>Start with the real thing. The public room is live; continuity, status, and contradictions surface as the exchange lands.</p>
         </div>
         <div class="room-metrics" aria-label="Room status">
-          <span id="mode-chip-value">Social Hierarchy Lab</span>
+          <span id="mode-chip-value">Room</span>
           <span id="room-mood">Mood: focused</span>
           <span id="response-mode">Mode: single</span>
           <span id="room-move-value">Room move: observe</span>
@@ -60,9 +60,9 @@
         <label class="sr-only" for="user-text">Message</label>
         <div class="composer-label">
           <span>Say what you need</span>
-          <span id="char-count">0/500</span>
+          <span id="char-count">0/1500</span>
         </div>
-        <textarea id="user-text" maxlength="500" rows="4" placeholder="Say what you need. The room will carry the continuity."></textarea>
+        <textarea id="user-text" maxlength="1500" rows="4" placeholder="Say what you need. The room will carry the continuity."></textarea>
         <div class="processing-status" id="processing-status" aria-live="polite">
           <span class="processing-shine">Room is reading the turn.</span>
           <span class="processing-wave" aria-hidden="true"><i></i><i></i><i></i></span>

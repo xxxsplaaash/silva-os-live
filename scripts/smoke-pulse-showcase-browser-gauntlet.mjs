@@ -7,6 +7,7 @@ const FRONTEND_URL = String(
   'https://silva-os-live.vercel.app/pulse-showcase?embed=1&codex=browser-gauntlet'
 ).trim();
 const TURN_TIMEOUT_MS = Math.max(15000, Number(process.env.TURN_TIMEOUT_MS || 60000) || 60000);
+const TURN_DELAY_MS = Math.max(0, Number(process.env.BROWSER_GAUNTLET_TURN_DELAY_MS || 0) || 0);
 const LEGACY_TURN_RX = /\/api\/studio\/pulse(?:$|\?)/;
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|GEMINI_API_KEY|GOOGLE_API_KEY|PRIVATE KEY/i;
 const REJECTED_RX = /\b(objective is clear|not discussing|personal fitness routines|not the objective|focus is required|that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|eating enough protein|consistent effort|miracles overnight|track your lifts|measuring progress|just guessing|hydrate|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|compound movements|multiple muscle groups|focused session|alternate between upper body and lower body|technically sound|poor form|fast track to injury|time constraint sharpens|current priorities|operational parameters|feedback is noted|perform usefulness|style guide|technical specs)\b/i;
@@ -48,6 +49,10 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function latestVisibleText(messages, fromIndex) {
   return messages.slice(fromIndex).map(item => item.text).join('\n');
 }
@@ -75,7 +80,9 @@ async function readPageState(page) {
     const body = document.body;
     return {
       overflowX: Math.max(0, doc.scrollWidth - doc.clientWidth, body.scrollWidth - body.clientWidth),
-      runtimeText: document.querySelector('#turn-state')?.textContent?.trim() || document.body.innerText,
+      runtimeText: document.querySelector('#turn-state-value')?.textContent?.trim()
+        || document.querySelector('#turn-chip-value')?.textContent?.trim()
+        || document.body.innerText,
       bodyText: document.body.innerText
     };
   });
@@ -112,13 +119,14 @@ try {
     if (scenario.mustNotMatch) {
       assert(!scenario.mustNotMatch.test(visible), `turn leaked stale prior-topic behavior for "${scenario.prompt}": ${visible}`);
     }
-    assert(/Room answer accepted|Runtime repaired answer|Fallback carried this turn|Pack 1 connected/i.test(state.runtimeText), `runtime state missing after "${scenario.prompt}"`);
+    assert(/Room answer accepted|Runtime repaired answer|Fallback carried this turn|Pack 1 connected|Local fallback/i.test(state.runtimeText), `runtime state missing after "${scenario.prompt}"`);
     assert(state.overflowX <= 2, `viewport overflow after "${scenario.prompt}": ${state.overflowX}px`);
 
     console.error(`\nUSER: ${scenario.prompt}`);
     for (const message of messages.slice(previousCount)) {
       console.error(`- ${message.speaker || 'Unknown'} [${message.role || 'message'}]: ${message.text}`);
     }
+    if (TURN_DELAY_MS > 0) await sleep(TURN_DELAY_MS);
   }
 
   assert(requests.some(url => url.includes('/api/studio/pulse-showcase/turn-stream')), 'browser did not request /turn-stream');

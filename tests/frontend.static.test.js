@@ -1720,7 +1720,10 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(payload\)/);
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(data \|\| \{\}\)/);
   assert.doesNotMatch(script, /state\.status = \{\s*activeEngine: payload\.activeEngine/);
-  assert.match(script, /SHOWCASE_VERSION = '1\.6\.6'/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.7\.0'/);
+  assert.match(script, /var MAX_USER_TEXT = 1500/);
+  assert.match(html, /maxlength="1500"/);
+  assert.match(html, /0\/1500/);
   assert.match(script, /var priorRecentTurns = recentTurns\(\)/);
   assert.match(script, /turnRequestBody\(text, priorSpeaker, priorRecentTurns\)/);
   assert.match(script, /acceptedByPack1/);
@@ -1737,6 +1740,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /Room answer accepted/);
   assert.match(script, /Runtime repaired answer/);
   assert.match(script, /Fallback carried this turn/);
+  assert.match(script, /Your message is back in the composer/);
+  assert.match(script, /Pack 1 memory:/);
   assert.match(script, /Persistence connected/);
   assert.match(script, /isNearBottom/);
   assert.match(script, /ledger-source-/);

@@ -2,8 +2,8 @@
   'use strict';
 
   var MODES = {
-    social_hierarchy_lab: 'Social Hierarchy Lab',
-    continuity_breaker: 'Continuity Breaker'
+    social_hierarchy_lab: 'Room',
+    continuity_breaker: 'Continuity'
   };
   var CHARACTER_COLORS = {
     aisha: 'var(--aisha)',
@@ -26,7 +26,8 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.6.6';
+  var MAX_USER_TEXT = 1500;
+  var SHOWCASE_VERSION = '1.7.0';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -543,8 +544,12 @@
       aishaEngineConnected: runtimeConnected,
       persistence: {
         mode: (prior.persistence && prior.persistence.mode) || (source.persistence && source.persistence.mode) || persistenceMode(source) || 'postgres',
-        connected: persistenceConnected
-      }
+        connected: persistenceConnected,
+        active: Boolean((source.persistence && source.persistence.active) || (prior.persistence && prior.persistence.active))
+      },
+      continuity: source.continuityProof || source.continuity || prior.continuity || null,
+      lastTurn: source.lastTurn || prior.lastTurn || null,
+      modeLabels: source.modeLabels || prior.modeLabels || MODES
     };
   }
 
@@ -585,6 +590,8 @@
       aishaEngineConnected: status.aishaEngineConnected === true,
       persistenceConnected: isPersistenceConnected(status),
       persistenceMode: persistenceMode(status),
+      continuityActive: status.continuity && status.continuity.active === true,
+      continuityRows: status.continuity ? Number(status.continuity.pack1Rows || 0) || 0 : 0,
       statusKnown: status.ok === true
     };
   }
@@ -654,7 +661,7 @@
     el.engineValue.textContent = friendlyEngineName(status.activeEngine);
     var persistenceState = status.persistence && status.persistence.connected ? 'Persistence connected' : 'pending';
     el.persistenceValue.textContent = status.persistence
-      ? (status.persistence.mode + (persistenceState === 'Persistence connected' ? ' connected' : ' pending'))
+      ? (status.persistence.mode + (persistenceState === 'Persistence connected' ? (status.persistence.active ? ' active' : ' connected') : ' pending'))
       : '--';
     var turn = state.turnRuntime || defaultTurnRuntime();
     var turnConnected = connected || turn.runtimeConnected === true;
@@ -676,13 +683,16 @@
     }
     el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
     var stats = continuityStats();
-    el.continuityValue.textContent = stats.total
-      ? (stats.active + ' active, ' + stats.superseded + ' superseded, ' + stats.disputed + ' disputed')
-      : 'waiting';
+    var proof = status.continuity || {};
+    el.continuityValue.textContent = proof.active
+      ? ('Pack 1 memory: ' + (proof.activeTruths || stats.active || 0) + ' active / ' + (proof.supersededTruths || stats.superseded || 0) + ' superseded')
+      : (stats.total
+        ? (stats.active + ' active, ' + stats.superseded + ' superseded, ' + stats.disputed + ' disputed')
+        : 'Pack 1 memory waiting');
     el.sessionValue.textContent = friendlySessionId(state.sessionId);
     if (el.tensionFill) el.tensionFill.style.width = state.tensionScore + '%';
     if (el.continuityFill) el.continuityFill.style.width = (state.socialSignals.continuityPressure || 0) + '%';
-    if (el.modeChipValue) el.modeChipValue.textContent = MODES[state.mode] || 'Social Hierarchy Lab';
+    if (el.modeChipValue) el.modeChipValue.textContent = MODES[state.mode] || 'Room';
   }
 
   function speakerDot(id) {
@@ -897,7 +907,7 @@
     renderLedger();
     renderSocialSignals();
     renderPresence();
-    el.charCount.textContent = (el.userText.value || '').length + '/500';
+    el.charCount.textContent = (el.userText.value || '').length + '/' + MAX_USER_TEXT;
     reportHeight();
   }
 
@@ -1077,7 +1087,7 @@
   async function submitTurn(event) {
     event.preventDefault();
     if (state.busy) return;
-    var text = compact(el.userText.value, 500);
+    var text = compact(el.userText.value, MAX_USER_TEXT);
     if (!text) return;
 
     var priorSpeaker = state.priorSpeaker;
@@ -1088,7 +1098,7 @@
     state.forceScroll = true;
     el.userText.value = '';
     renderMessages();
-    el.charCount.textContent = '0/500';
+    el.charCount.textContent = '0/' + MAX_USER_TEXT;
     persistState();
 
     try {
@@ -1098,9 +1108,11 @@
         speakerId: 'aisha',
         speakerName: 'A.I.S.H.A',
         role: 'system',
-        text: isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. The local room remains available.'
+        text: isHeldTurnError(err) ? (heldTurnMessage() + ' Your message is back in the composer.') : 'Runtime missed that turn. Your message is back in the composer.'
       });
-      reportError(isHeldTurnError(err) ? 'turn-held' : 'runtime-missed', isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. The local room remains available.');
+      el.userText.value = text;
+      el.charCount.textContent = text.length + '/' + MAX_USER_TEXT;
+      reportError(isHeldTurnError(err) ? 'turn-held' : 'runtime-missed', isHeldTurnError(err) ? heldTurnMessage() : 'Runtime missed that turn. Your message is back in the composer.');
       state.forceScroll = true;
       renderMessages();
     } finally {
@@ -1179,7 +1191,7 @@
     $('reset-session').addEventListener('click', resetSession);
     el.form.addEventListener('submit', submitTurn);
     el.userText.addEventListener('input', function () {
-      el.charCount.textContent = (el.userText.value || '').length + '/500';
+      el.charCount.textContent = (el.userText.value || '').length + '/' + MAX_USER_TEXT;
     });
     window.addEventListener('resize', reportHeight);
     window.addEventListener('message', function (event) {

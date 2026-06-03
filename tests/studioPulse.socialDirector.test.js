@@ -12,6 +12,7 @@ const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter
 const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
 const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
 const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
+const { evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 
 const BANNED_RX = /\b(I hear|I will keep this human|degraded mode|fallback|I need the object|Give me the thing|Say the thing plainly|if that is the object|on that:|I agree with)\b/i;
@@ -1030,6 +1031,57 @@ test('social director quality validator rejects live thin movie and fake-quality
 
   assert.equal(fakeCheck.ok, false);
   assert.ok(fakeCheck.issues.includes('operational-jargon') || fakeCheck.issues.includes('social-question-ignored'));
+
+  const executionCheck = validateDirectorOutput({
+    roomBeat: 'Grok evaluates the prior answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'flat', text: 'It was useful. The room ran out of poetry and started working.' },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The exchange was direct. The objective is execution, not performance.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(executionCheck.ok, false);
+  assert.ok(executionCheck.issues.includes('operational-jargon'));
+});
+
+test('visible response evaluator flags audit-level product failures', () => {
+  const families = (options) => evaluateVisibleResponse(options).map(item => item.family);
+
+  assert.ok(families({
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    visibleText: 'The exchange was direct. The objective is execution, not performance.'
+  }).includes('false-objective'));
+
+  assert.ok(families({
+    userMessage: 'LOL I WANNA GROW MY MUSCLES',
+    visibleText: 'That is a solid goal. Use progressive overload, adequate protein, and consistency is key.'
+  }).includes('generic-advice'));
+
+  assert.ok(families({
+    userMessage: 'new topic: what movie should we watch tonight?',
+    visibleText: 'Keep the workout simple: push-ups, reps, protein, and a full body session.'
+  }).includes('stale-context'));
+
+  assert.ok(families({
+    userMessage: 'you keep repeating yourself',
+    visibleText: 'Fair. No more repeat loop; plain answer, then we move.',
+    recentTurns: [{ speakerId: 'vanya', text: 'Fair. No more repeat loop; plain answer, then we move.' }]
+  }).includes('repetition'));
+
+  assert.ok(families({
+    userMessage: 'What changed?',
+    visibleText: 'The room takes note and keeps moving.',
+    continuity: { active: 1, superseded: 1 }
+  }).includes('continuity-miss'));
+
+  assert.equal(evaluateVisibleResponse({
+    userMessage: 'new topic: what movie should we watch tonight?',
+    visibleText: 'Leah says Arrival if the room wants quiet pressure; Vanya pushes Spider-Verse if it needs voltage.'
+  }).length, 0);
 });
 
 test('social director quality validator rejects stale accepted answers for check-in and room tension', () => {
@@ -1507,6 +1559,18 @@ test('social director fallback acknowledges continuity claims and memory challen
     await withStudioServer(async baseUrl => {
       const first = await postSocial(baseUrl, 'My landing page style is black glass with a single red pulse.');
       assert.match(visibleText(first.body), /\bblack glass with a single red pulse\b/i);
+
+      const update = await postSocial(baseUrl, 'Actually my landing page style is white editorial with no red.', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+          { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+          { speakerId: 'claudia', role: 'side', text: 'Good. If that changes, the old version stays visible instead of being quietly erased.' }
+        ]
+      });
+      const updateText = visibleText(update.body);
+      assert.match(updateText, /\bwhite editorial with no red\b/i);
+      assert.match(updateText, /\bprior record remains landing page style is black glass with a single red pulse\b/i);
+      assert.doesNotMatch(updateText, /\bold version stays visible instead of being quietly erased\b/i);
 
       const recentTurns = [
         { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
@@ -2118,9 +2182,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       activeEngine: 'aisha-runtime-pack1',
       aishaEngineConnected: true,
       aishaEngineMode: 'production',
-      persistence: { mode: 'postgres', connected: true },
+      persistence: { mode: 'postgres', connected: true, active: true },
       modes: ['social_hierarchy_lab', 'continuity_breaker'],
-      maxUserTextLength: 500
+      maxUserTextLength: 1500
     });
   });
   app.post('/api/studio/pulse-showcase/turn-stream', (req, res) => {
