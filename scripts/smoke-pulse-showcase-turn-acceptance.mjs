@@ -159,7 +159,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsCheckIn) {
     assertOk(/\b(room|present|here|everyone|temperature|watching|operational|restless|held)\b/i.test(visible), `check-in prompt did not answer room presence: ${visible}`);
-    assertOk(!/\b(workout|training|incline push-ups|backpack rows|log reps|data is clear|excuses are not|next steps are logged)\b/i.test(visible), `check-in prompt leaked stale practical context: ${visible}`);
+    assertOk(!/\b(workout|training|incline push-ups|backpack rows|log reps|log the count|data is clear|acceptable output|execute the first move|no more discussion|next steps are logged)\b/i.test(visible), `check-in prompt leaked stale practical context: ${visible}`);
   }
   if (prompt.expectsRoomTension) {
     assertOk(/\b(tension|friction|pressure|fake|useful|customer support|polished|room)\b/i.test(visible), `room tension prompt did not answer tension: ${visible}`);

@@ -1052,6 +1052,25 @@ test('social director quality validator rejects stale accepted answers for check
   assert.equal(staleCheckIn.ok, false);
   assert.ok(staleCheckIn.issues.includes('generic-status-report'));
 
+  const staleCheckInVariant = validateDirectorOutput({
+    roomBeat: 'The room checks in.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The path is clear. Execute the first move.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'No more discussion. Just the incline push-ups, then log the count.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'The data will be the only acceptable output now.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'how is everyone?',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'BRUH...' }]
+  });
+
+  assert.equal(staleCheckInVariant.ok, false);
+  assert.ok(staleCheckInVariant.issues.includes('generic-status-report'));
+
   const staleTension = validateDirectorOutput({
     roomBeat: 'The room names tension.',
     roomMood: 'focused',
