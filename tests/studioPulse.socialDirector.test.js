@@ -1378,6 +1378,34 @@ test('social director fallback acknowledges continuity claims and memory challen
   });
 });
 
+test('social director falls back within deadline when A.I.S.H.A generation stalls', async () => {
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'ok but I only have 20 minutes',
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+      ]
+    },
+    callAishaEngine: async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+      return {
+        aishaEngineConnected: true,
+        engineMode: 'production',
+        responses: [{ content: '{}' }],
+        trace: { status: 'succeeded' }
+      };
+    },
+    runtimeOptions: { socialDirectorDeadlineMs: 5, socialDirectorAttemptTimeoutMs: 5 }
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.activeEngine, 'local-social-director');
+  assert.equal(result.payload.validation.fallbackUsed, true);
+  assert.equal(result.payload.validation.failureCategory, 'generation-timeout');
+  assert.match(visibleText(result.payload), /\bTwenty minutes|three rounds|squat|push|pull|core\b/i);
+});
+
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'A status challenge lands.',

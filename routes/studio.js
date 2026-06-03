@@ -98,6 +98,7 @@ const {
 } = require('../lib/imageGeneration/providers/google');
 const HARD_CUT_REBUILD = process.env.STUDIO_PULSE_HARD_CUT !== '0';
 const AISHA_PRODUCTION_GEMINI_TIMEOUT_MS = 15000;
+const SOCIAL_DIRECTOR_DEADLINE_MS = 26000;
 const SOCIAL_DIRECTOR_DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 let lastAishaRuntimeStatus = {
   aishaAttempted: false,
@@ -838,6 +839,8 @@ function resolveSocialDirectorRuntimeOptions(providerConfig = {}) {
   const options = resolveAishaRuntimeCredentialOptions(providerConfig);
   const model = String(process.env.SOCIAL_DIRECTOR_MODEL || SOCIAL_DIRECTOR_DEFAULT_MODEL).trim();
   if (model) options.productionGeminiModel = model;
+  options.socialDirectorDeadlineMs = SOCIAL_DIRECTOR_DEADLINE_MS;
+  options.socialDirectorAttemptTimeoutMs = AISHA_PRODUCTION_GEMINI_TIMEOUT_MS;
   return options;
 }
 
