@@ -1122,6 +1122,20 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(coldAcceptance.ok, false);
   assert.ok(coldAcceptance.issues.includes('operational-jargon') || coldAcceptance.issues.includes('frustration-ignored'));
 
+  const specificitySermon = validateDirectorOutput({
+    roomBeat: 'The room turns stress into a lesson.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The stress comes from avoiding the specific. We need to name the feeling, not the function. What is the concrete mood we are trying to land?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(specificitySermon.ok, false);
+  assert.ok(specificitySermon.issues.includes('frustration-ignored'));
+
   const ignoredRepeatComplaint = validateDirectorOutput({
     roomBeat: 'The room acts like nothing went wrong.',
     roomMood: 'focused',
@@ -1135,6 +1149,24 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(ignoredRepeatComplaint.ok, false);
   assert.ok(ignoredRepeatComplaint.issues.includes('frustration-ignored') || ignoredRepeatComplaint.issues.includes('operational-jargon'));
+});
+
+test('social director quality validator rejects food prompts that dodge before answering', () => {
+  const dodgedLunch = validateDirectorOutput({
+    roomBeat: 'The room pauses the planning discussion.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The planning discussion is paused. What is the immediate need?' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'A quick check-in on sustenance before we dive into tomorrow. Anyone need a quick fuel-up?' },
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'A banana and a handful of nuts is fast. If you have ten minutes, scrambled eggs are efficient.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'quick help: what should I eat for lunch?' });
+
+  assert.equal(dodgedLunch.ok, false);
+  assert.ok(dodgedLunch.issues.includes('food-answer-dodged'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
