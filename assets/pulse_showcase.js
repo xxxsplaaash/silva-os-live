@@ -26,7 +26,7 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.6.5';
+  var SHOWCASE_VERSION = '1.6.6';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -918,12 +918,12 @@
     });
   }
 
-  function turnRequestBody(text, priorSpeaker) {
+  function turnRequestBody(text, priorSpeaker, priorRecentTurns) {
     return {
       sessionId: state.sessionId,
       mode: state.mode,
       userText: text,
-      recentTurns: recentTurns(),
+      recentTurns: Array.isArray(priorRecentTurns) ? priorRecentTurns : recentTurns(),
       roomState: {
         roomMood: state.roomMood,
         responseMode: state.responseMode,
@@ -1071,6 +1071,7 @@
     if (!text) return;
 
     var priorSpeaker = state.priorSpeaker;
+    var priorRecentTurns = recentTurns();
     setBusy(true);
     setProcessingText('Room is reading the turn.');
     state.messages.push({ speakerId: 'user', speakerName: 'You', role: 'user', text: text });
@@ -1081,7 +1082,7 @@
     persistState();
 
     try {
-      await submitTurnPayload(turnRequestBody(text, priorSpeaker));
+      await submitTurnPayload(turnRequestBody(text, priorSpeaker, priorRecentTurns));
     } catch (err) {
       state.messages.push({
         speakerId: 'aisha',

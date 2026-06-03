@@ -1115,6 +1115,15 @@ function safeShowcaseText(value = '', max = 500) {
   return textValue(value).replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+function showcaseTurnTextKey(value = '') {
+  return safeShowcaseText(value, 500)
+    .toLowerCase()
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function sanitizeShowcaseRecentTurns(items = []) {
   return (Array.isArray(items) ? items : [])
     .map(item => {
@@ -1127,6 +1136,19 @@ function sanitizeShowcaseRecentTurns(items = []) {
     })
     .filter(item => item.text || item.speakerId)
     .slice(-8);
+}
+
+function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
+  const turns = sanitizeShowcaseRecentTurns(items);
+  const currentKey = showcaseTurnTextKey(userText);
+  if (!currentKey) return turns;
+  const output = turns.slice();
+  while (output.length) {
+    const last = output[output.length - 1];
+    if (last.speakerId !== 'user' || showcaseTurnTextKey(last.text) !== currentKey) break;
+    output.pop();
+  }
+  return output;
 }
 
 function sanitizeShowcaseIncomingSocialSignals(value = {}) {
@@ -1388,7 +1410,7 @@ function parsePulseShowcaseTurnRequest(body = {}) {
     userText,
     mode,
     sessionId: pulseShowcaseSessionId(body?.sessionId),
-    recentTurns: sanitizeShowcaseRecentTurns(body?.recentTurns || body?.history || []),
+    recentTurns: removeCurrentUserTurnFromRecentTurns(body?.recentTurns || body?.history || [], userText),
     roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode)
   };
 }

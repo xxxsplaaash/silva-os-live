@@ -735,6 +735,25 @@ test('social director quality validator rejects current live accepted fitness bo
   assert.equal(liveApiFirstTurn.ok, false);
   assert.ok(liveApiFirstTurn.issues.includes('generic-advice-column'));
 
+  const duplicateHistoryVariant = validateDirectorOutput({
+    roomBeat: 'The API gauntlet saw another generic first-turn fitness answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "Muscles, huh? Let's get you started." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Track your lifts. Even small increases matter.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: "Don't overcomplicate it initially. Just show up and do the work." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'LOL I WANNA GROW MY MUSCLES',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }]
+  });
+
+  assert.equal(duplicateHistoryVariant.ok, false);
+  assert.ok(duplicateHistoryVariant.issues.includes('generic-advice-column'));
+
   const weekPlan = validateDirectorOutput({
     roomBeat: 'The room answers like a fitness column.',
     roomMood: 'focused',

@@ -952,6 +952,91 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
   });
 });
 
+test('Studio Pulse showcase strips duplicated current user turn from recent history', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            const prompt = request.projectContext?.socialDirectorV1?.generatorPrompt || '';
+            const currentMatches = prompt.match(/LOL I WANNA GROW MY MUSCLES/g) || [];
+            assert.equal(currentMatches.length, 1);
+            assert.match(prompt, /previous useful turn/i);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'A practical ask lands without duplicate current-turn history.',
+                  roomMood: 'focused',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+                    { speakerId: 'claudia', role: 'side', tone: 'dry practical', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+                    { speakerId: 'grok', role: 'closer', tone: 'dry diagnostic', text: 'Sharp joint pain means swap the move, not prove a point.' }
+                  ],
+                  silentReactions: [],
+                  stateUpdates: { notes: ['Beginner muscle-building guidance.'] }
+                })
+              }],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.86
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'showcase-dedupe-current-turn',
+            mode: 'social_hierarchy_lab',
+            userText: 'LOL I WANNA GROW MY MUSCLES',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'previous useful turn' },
+              { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const data = await response.json();
+        assert.equal(data.ok, true);
+        assert.equal(data.acceptedByPack1, true);
+        assert.equal(data.qualityAccepted, true);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase turn-stream emits safe SSE events and final payload', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
