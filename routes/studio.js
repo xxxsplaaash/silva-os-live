@@ -1250,6 +1250,9 @@ function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({}
   return {
     ...publicPulseShowcaseStatus(status),
     acceptedByPack1: false,
+    qualityAccepted: false,
+    repairedByRuntime: false,
+    qualityFailureCategory: '',
     fallbackCategory: '',
     runtimePhase: 'preflight'
   };
@@ -1271,6 +1274,9 @@ function publicPulseShowcaseFinalStatus(payload = {}) {
     modes: [...PULSE_SHOWCASE_MODES],
     maxUserTextLength: PULSE_SHOWCASE_MAX_USER_TEXT,
     acceptedByPack1: payload.acceptedByPack1 === true,
+    qualityAccepted: payload.qualityAccepted === true || payload.diagnostics?.qualityAccepted === true,
+    repairedByRuntime: payload.repairedByRuntime === true || payload.diagnostics?.repairedByRuntime === true,
+    qualityFailureCategory: normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || payload.diagnostics?.qualityFailureCategory || ''),
     fallbackCategory: normalizePulseShowcaseFallbackCategory(payload.fallbackCategory || payload.diagnostics?.fallbackCategory || ''),
     runtimePhase: 'final'
   };
@@ -1422,6 +1428,9 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const fallbackCategory = fallbackUsed
     ? normalizePulseShowcaseFallbackCategory(debug.failureCategory || payload.validation?.failureCategory || payload.validation?.source || 'local-fallback')
     : '';
+  const qualityAccepted = payload.qualityAccepted === true && fallbackUsed !== true;
+  const repairedByRuntime = payload.repairedByRuntime === true || debug.repaired === true;
+  const qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
   const runtimeStatusConnected = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
   const runtimeConnected = aishaEngineConnected || (runtimeStatusConnected && fallbackCategory !== 'invalid-key');
   const diagnostics = {
@@ -1429,10 +1438,14 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     traceStatus,
     persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true,
     runtimeConnected,
-    fallbackCategory
+    fallbackCategory,
+    qualityAccepted,
+    repairedByRuntime,
+    qualityFailureCategory
   };
   const acceptedByPack1 = activeEngine === 'aisha-runtime-pack1'
     && aishaEngineConnected === true
+    && qualityAccepted === true
     && fallbackUsed !== true
     && traceStatus !== 'failed';
   recordPulseShowcaseRuntimeStatusFromTurn({ payload, debug, activeEngine, aishaEngineConnected: runtimeConnected, diagnostics });
@@ -1463,6 +1476,9 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       continuityLedger,
       socialSignals,
       acceptedByPack1,
+      qualityAccepted,
+      repairedByRuntime,
+      qualityFailureCategory,
       fallbackCategory,
       runtimePhase: 'final',
       diagnostics

@@ -268,6 +268,126 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
   });
 });
 
+test('room director prompt treats benign practical asks as valid room topics', () => {
+  const input = buildRoomDirectorInput({
+    message: 'LOL I WANNA GROW MY MUSCLES',
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /Allowed benign practical asks include fitness/);
+  assert.match(prompt, /Never refuse a benign practical ask/);
+  assert.match(prompt, /muscle\/fitness asks/);
+  assert.match(prompt, /We are not discussing personal fitness routines/);
+  assert.match(prompt, /three simple training days/);
+});
+
+test('social director quality validator rejects the fitness refusal loop', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Aisha holds the objective line.',
+    roomMood: 'focused',
+    responseMode: 'aisha_takeover',
+    speakers: [
+      {
+        speakerId: 'aisha',
+        role: 'primary',
+        tone: 'firm',
+        text: 'The objective is clear. We are not discussing personal fitness routines.'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('allowed-topic-refusal:fitness'));
+  assert.ok(validation.issues.includes('false-objective-claim'));
+  assert.ok(validation.issues.includes('topic-ignored:fitness'));
+  assert.ok(validation.issues.includes('takeover-for-ordinary-topic:fitness'));
+});
+
+test('social director quality validator rejects repeated assistant refusals across recent turns', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Aisha repeats the same refusal.',
+    roomMood: 'focused',
+    responseMode: 'aisha_takeover',
+    speakers: [
+      {
+        speakerId: 'aisha',
+        role: 'primary',
+        tone: 'firm',
+        text: 'The objective is clear. We are not discussing personal fitness routines.'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'WHERE DO I START' },
+      { speakerId: 'aisha', role: 'primary', text: 'The objective is clear. We are not discussing personal fitness routines.' }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('recent-repeat-risk'));
+  assert.ok(validation.issues.includes('allowed-topic-refusal:fitness'));
+});
+
+test('social director quality validator accepts useful short fitness guidance in room voice', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The practical fitness ask gets grounded instead of refused.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'vanya',
+        role: 'primary',
+        tone: 'warm reset',
+        text: 'Start simple: build a repeatable training week before you chase heroic intensity.'
+      },
+      {
+        speakerId: 'claudia',
+        role: 'side',
+        tone: 'practical',
+        text: 'Three full-body sessions, basic lifts, enough protein, and sleep. Track the work.'
+      },
+      {
+        speakerId: 'grok',
+        role: 'closer',
+        tone: 'dry diagnostic',
+        text: 'Progressive overload is the signal. Sharp pain is not.'
+      }
+    ],
+    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+    stateUpdates: { notes: ['Beginner muscle-building guidance.'] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(validation.ok, true);
+  assert.equal(validation.issues.length, 0);
+});
+
+test('social director fallback answers the failed muscle-building transcript instead of refusing', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'aisha', role: 'primary', text: 'The objective is clear. We are not discussing personal fitness routines.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHERE DO I START', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.equal(body.activeEngine, 'local-social-director');
+      assert.equal(body.responseMode, 'small_exchange');
+      assert.doesNotMatch(text, /\b(objective is clear|not discussing|focus is required|personal fitness routines)\b/i);
+      assert.match(text, /\b(full-body|protein|sleep|progressive overload|training week|muscle)\b/i);
+      assert.ok(body.messageEvents.some(item => item.speakerId === 'claudia'));
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'A status challenge lands.',
@@ -658,7 +778,7 @@ test('live A.I.S.H.A parse/schema/validator failures fall back with safe categor
         silentReactions: [],
         stateUpdates: { notes: [] }
       }),
-      category: 'validator-rejected'
+      category: 'quality-rejected'
     }
   ];
 
@@ -838,9 +958,11 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       maxUserTextLength: 500
     });
   });
-  app.post('/api/studio/pulse-showcase/turn-stream', (_req, res) => {
+  app.post('/api/studio/pulse-showcase/turn-stream', (req, res) => {
     calls += 1;
-    const accepted = calls <= 3;
+    const accepted = calls <= 4;
+    const userText = String(req.body?.userText || '');
+    const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const payload = {
       ok: true,
       sessionId: 'script-test-session',
@@ -849,11 +971,23 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       aishaEngineConnected: true,
       roomMood: 'focused',
       responseMode: 'single',
-      messageEvents: [{ speakerId: 'vanya', speakerName: 'Vanya', role: 'primary', tone: 'steady', text: 'The room keeps the turn bounded.', visibleState: 'Reading' }],
+      messageEvents: [{
+        speakerId: 'vanya',
+        speakerName: 'Vanya',
+        role: 'primary',
+        tone: 'steady',
+        text: isFitness
+          ? 'Start with three full-body training days, enough protein, sleep, and slow progressive overload.'
+          : 'The room keeps the turn bounded.',
+        visibleState: 'Reading'
+      }],
       silentReactions: [],
       continuityLedger: [],
       socialSignals: { tension: 18, continuityPressure: 0, hierarchy: [], alliances: [], interruptions: [], roomMove: 'observe', statusEvents: [], socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: [], interruptionPressure: 0 } },
       acceptedByPack1: accepted,
+      qualityAccepted: accepted,
+      repairedByRuntime: false,
+      qualityFailureCategory: accepted ? '' : 'validator-rejected',
       fallbackCategory: accepted ? '' : 'validator-rejected',
       runtimePhase: 'final',
       diagnostics: {
@@ -861,6 +995,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
         runtimeConnected: true,
         traceStatus: 'succeeded',
         persistenceConnected: true,
+        qualityAccepted: accepted,
+        repairedByRuntime: false,
+        qualityFailureCategory: accepted ? '' : 'validator-rejected',
         fallbackCategory: accepted ? '' : 'validator-rejected'
       }
     };
@@ -879,10 +1016,10 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     });
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
-    assert.equal(summary.counts.accepted, 3);
-    assert.equal(summary.counts.repaired, 2);
+    assert.equal(summary.counts.accepted, 4);
+    assert.equal(summary.counts.repaired, 4);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 5);
+    assert.equal(calls, 8);
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
     await new Promise(resolve => server.close(resolve));

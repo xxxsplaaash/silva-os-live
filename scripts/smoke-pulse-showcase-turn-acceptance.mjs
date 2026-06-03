@@ -5,12 +5,17 @@ const BACKEND_URL = String(
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
-const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED !== '0';
+const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|test-room-provider-key|GEMINI_API_KEY|GOOGLE_API_KEY/i;
+const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
+const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|sets|reps|gym|lift)\b/i;
 
 const PROMPTS = [
+  { mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
+  { mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
+  { mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },
+  { mode: 'social_hierarchy_lab', userText: 'BRUH...', expectsFitness: true },
   { mode: 'social_hierarchy_lab', userText: 'how is everyone?' },
-  { mode: 'social_hierarchy_lab', userText: 'i need help with building muscles' },
   { mode: 'continuity_breaker', userText: 'Leah, challenge Grok, then let A.I.S.H.A anchor the contradiction ledger.' },
   { mode: 'continuity_breaker', userText: 'Actually my dashboard preference is pale blue with no red accents.' },
   { mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?' }
@@ -40,18 +45,21 @@ function parseSseEvents(text = '') {
 }
 
 function classify(final = {}) {
-  if (final.acceptedByPack1 === true && final.activeEngine === 'aisha-runtime-pack1') return 'accepted';
+  if (final.acceptedByPack1 === true && final.activeEngine === 'aisha-runtime-pack1') {
+    return final.repairedByRuntime === true || final.diagnostics?.repairedByRuntime === true ? 'repaired' : 'accepted';
+  }
   const runtimeConnected = final.aishaEngineConnected === true || final.diagnostics?.runtimeConnected === true;
   if (runtimeConnected && final.fallbackCategory) return 'repaired';
   if (runtimeConnected) return 'connected-unaccepted';
   return 'fallback';
 }
 
-async function streamTurn(prompt, prior = {}) {
+async function streamTurn(prompt, prior = {}, recentTurns = []) {
   const body = {
     sessionId: SESSION_ID,
     mode: prompt.mode,
     userText: prompt.userText,
+    recentTurns,
     roomState: {
       roomMood: prior.roomMood || 'focused',
       responseMode: prior.responseMode || 'single',
@@ -73,6 +81,13 @@ async function streamTurn(prompt, prior = {}) {
   assertOk(events.some(item => item.event === 'final'), 'stream missing final');
   const final = events.find(item => item.event === 'final')?.data || {};
   assertOk(final.ok === true, 'final payload was not ok');
+  const visible = (Array.isArray(final.messageEvents) ? final.messageEvents : [])
+    .map(item => String(item.text || ''))
+    .join('\n');
+  if (prompt.expectsFitness) {
+    assertOk(!FITNESS_REFUSAL_RX.test(visible), `fitness transcript refused the user intent: ${visible}`);
+    assertOk(FITNESS_ANSWER_RX.test(visible), `fitness transcript did not answer the muscle-building context: ${visible}`);
+  }
   const fallbackCategory = String(final.fallbackCategory || final.diagnostics?.fallbackCategory || '');
   return {
     prompt: prompt.userText,
@@ -82,6 +97,9 @@ async function streamTurn(prompt, prior = {}) {
     aishaEngineConnected: final.aishaEngineConnected === true,
     runtimeConnected: final.aishaEngineConnected === true || final.diagnostics?.runtimeConnected === true,
     acceptedByPack1: final.acceptedByPack1 === true,
+    qualityAccepted: final.qualityAccepted === true || final.diagnostics?.qualityAccepted === true,
+    repairedByRuntime: final.repairedByRuntime === true || final.diagnostics?.repairedByRuntime === true,
+    qualityFailureCategory: String(final.qualityFailureCategory || final.diagnostics?.qualityFailureCategory || ''),
     fallbackCategory,
     traceStatus: String(final.diagnostics?.traceStatus || ''),
     persistenceConnected: final.diagnostics?.persistenceConnected === true,
@@ -89,7 +107,8 @@ async function streamTurn(prompt, prior = {}) {
     ledgerCount: Array.isArray(final.continuityLedger) ? final.continuityLedger.length : 0,
     roomMood: String(final.roomMood || ''),
     responseMode: String(final.responseMode || ''),
-    socialSignals: final.socialSignals || {}
+    socialSignals: final.socialSignals || {},
+    messageEvents: Array.isArray(final.messageEvents) ? final.messageEvents : []
   };
 }
 
@@ -106,8 +125,10 @@ assertOk(status.persistence?.connected === true, 'Pack 1 persistence is not conn
 
 const results = [];
 let prior = {};
+const recentTurns = [];
 for (const prompt of PROMPTS) {
-  const result = await streamTurn(prompt, prior);
+  recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
+  const result = await streamTurn(prompt, prior, recentTurns.slice(-8));
   results.push({
     prompt: result.prompt,
     mode: result.mode,
@@ -116,6 +137,9 @@ for (const prompt of PROMPTS) {
     aishaEngineConnected: result.aishaEngineConnected,
     runtimeConnected: result.runtimeConnected,
     acceptedByPack1: result.acceptedByPack1,
+    qualityAccepted: result.qualityAccepted,
+    repairedByRuntime: result.repairedByRuntime,
+    qualityFailureCategory: result.qualityFailureCategory,
     fallbackCategory: result.fallbackCategory,
     traceStatus: result.traceStatus,
     persistenceConnected: result.persistenceConnected,
@@ -128,6 +152,9 @@ for (const prompt of PROMPTS) {
     priorSpeaker: '',
     socialSignals: result.socialSignals
   };
+  for (const event of result.messageEvents) {
+    recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });
+  }
 }
 
 const summary = {

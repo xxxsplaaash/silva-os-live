@@ -1266,6 +1266,140 @@ test('Studio Pulse showcase turn-stream reports safe fallback acceptance state',
   });
 });
 
+test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming acceptance', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      let callCount = 0;
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            callCount += 1;
+            const badOutput = {
+              roomBeat: 'Aisha holds the objective line.',
+              roomMood: 'focused',
+              responseMode: 'aisha_takeover',
+              speakers: [
+                {
+                  speakerId: 'aisha',
+                  role: 'primary',
+                  tone: 'firm',
+                  text: 'The objective is clear. We are not discussing personal fitness routines.'
+                }
+              ],
+              silentReactions: [],
+              stateUpdates: { notes: [] }
+            };
+            const repairedOutput = {
+              roomBeat: 'The room corrects the bad refusal and answers the fitness ask.',
+              roomMood: 'focused',
+              responseMode: 'small_exchange',
+              speakers: [
+                {
+                  speakerId: 'vanya',
+                  role: 'primary',
+                  tone: 'warm reset',
+                  text: 'Start simple. Build a repeatable training week before you chase heroic intensity.'
+                },
+                {
+                  speakerId: 'claudia',
+                  role: 'side',
+                  tone: 'practical',
+                  text: 'Three full-body sessions, basic lifts, enough protein, and sleep. Track the work.'
+                },
+                {
+                  speakerId: 'grok',
+                  role: 'closer',
+                  tone: 'dry diagnostic',
+                  text: 'Progressive overload is the signal. Sharp pain is not.'
+                }
+              ],
+              silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+              stateUpdates: { notes: ['Beginner muscle-building guidance.'] },
+              socialCues: {
+                roomMove: 'redirect',
+                tensionDelta: -2,
+                continuityDelta: 0,
+                speakerCues: [
+                  { speakerId: 'vanya', stance: 'dominant', statusDelta: 3 },
+                  { speakerId: 'claudia', allianceWith: 'vanya', stance: 'allied', statusDelta: 4 },
+                  { speakerId: 'grok', stance: 'curious', statusDelta: 2 }
+                ]
+              }
+            };
+            return {
+              ok: true,
+              responses: [{ speakerId: 'aisha', content: JSON.stringify(callCount === 1 ? badOutput : repairedOutput) }],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.86
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-fitness-quality-repair',
+            mode: 'social_hierarchy_lab',
+            userText: 'LOL I WANNA GROW MY MUSCLES'
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const runtimeStatusEvents = events.filter(item => item.event === 'runtime_status');
+        const finalRuntime = runtimeStatusEvents[runtimeStatusEvents.length - 1].data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(callCount, 2);
+        assert.equal(final.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(final.acceptedByPack1, true);
+        assert.equal(final.qualityAccepted, true);
+        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.qualityFailureCategory, '');
+        assert.equal(final.diagnostics.qualityAccepted, true);
+        assert.equal(final.diagnostics.repairedByRuntime, true);
+        assert.equal(final.diagnostics.persistenceConnected, true);
+        assert.equal(finalRuntime.acceptedByPack1, true);
+        assert.equal(finalRuntime.qualityAccepted, true);
+        assert.equal(finalRuntime.repairedByRuntime, true);
+        assert.doesNotMatch(text, /\b(objective is clear|not discussing|focus is required|personal fitness routines)\b/i);
+        assert.match(text, /\b(full-body|protein|sleep|progressive overload|training week|muscle)\b/i);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|personal fitness routines/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase distinguishes connected Pack 1 turn rejection from unavailable runtime', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

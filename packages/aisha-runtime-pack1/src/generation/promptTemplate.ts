@@ -130,9 +130,11 @@ function buildStudioPulseContextBlock(input: GeneratorInput): string | null {
   if (!ctx) return null;
 
   const lines: string[] = [];
+  const projectContext = asRecord(ctx.projectContext);
+  const socialDirector = asRecord(projectContext?.["socialDirectorV1"]);
 
   const activeSpeakerId = asString(ctx["activeSpeakerId"]);
-  if (activeSpeakerId) {
+  if (activeSpeakerId && !socialDirector) {
     lines.push(`Planned speaker: ${activeSpeakerId}`);
   }
   
@@ -161,13 +163,13 @@ function buildStudioPulseContextBlock(input: GeneratorInput): string | null {
     if (activeState) lines.push(`Planned speaker state: ${activeState}`);
   }
   
-  const projectContext = asRecord(ctx.projectContext);
-  const socialDirector = asRecord(projectContext?.["socialDirectorV1"]);
   if (socialDirector) {
     lines.push("SOCIAL DIRECTOR STRUCTURED MODE:");
     lines.push("Decide what is happening socially in the Studio Pulse green room.");
     lines.push("Return the full room-beat JSON object requested by the user message.");
     lines.push("Do not collapse the room into a single planned-speaker dialogue line.");
+    lines.push("A.I.S.H.A may anchor the beat, but she is not automatically the only speaker.");
+    lines.push("Benign practical topics are allowed room topics. Do not refuse fitness, work, planning, design, food, casual check-ins, or room banter.");
     lines.push("Characters may answer casual social prompts without needing an artifact, bug, brief, logo, or campaign.");
     const flags = asRecord(socialDirector["flags"]);
     if (flags) {

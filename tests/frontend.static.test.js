@@ -1715,6 +1715,9 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
   assert.match(script, /acceptedByPack1/);
+  assert.match(script, /qualityAccepted/);
+  assert.match(script, /repairedByRuntime/);
+  assert.match(script, /qualityFailureCategory/);
   assert.match(script, /fallbackCategory/);
   assert.match(script, /runtimePhase/);
   assert.match(script, /HELD_TURN_MESSAGE/);
@@ -1722,8 +1725,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /HELD_TURN_STATUSES/);
   assert.match(script, /isHeldTurnError/);
   assert.match(script, /pulseError/);
-  assert.match(script, /Pack 1 accepted/);
-  assert.match(script, /Runtime repaired turn/);
+  assert.match(script, /Room answer accepted/);
+  assert.match(script, /Runtime repaired answer/);
   assert.match(script, /Fallback carried this turn/);
   assert.match(script, /Persistence connected/);
   assert.match(script, /isNearBottom/);

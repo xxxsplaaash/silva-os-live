@@ -26,7 +26,7 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.6.2';
+  var SHOWCASE_VERSION = '1.6.3';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -179,8 +179,11 @@
   function defaultTurnRuntime() {
     return {
       acceptedByPack1: false,
+      qualityAccepted: false,
+      repairedByRuntime: false,
       runtimeConnected: false,
       fallbackCategory: '',
+      qualityFailureCategory: '',
       runtimePhase: 'preflight'
     };
   }
@@ -483,8 +486,11 @@
       || (state.status && state.status.aishaEngineConnected === true);
     state.turnRuntime = {
       acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true),
+      qualityAccepted: data.qualityAccepted === true || (data.diagnostics && data.diagnostics.qualityAccepted === true),
+      repairedByRuntime: data.repairedByRuntime === true || (data.diagnostics && data.diagnostics.repairedByRuntime === true),
       runtimeConnected: runtimeConnected,
       fallbackCategory: category,
+      qualityFailureCategory: compact(data.qualityFailureCategory || (data.diagnostics && data.diagnostics.qualityFailureCategory) || '', 80),
       runtimePhase: normalizeRuntimePhase(data.runtimePhase || (data.diagnostics && data.diagnostics.runtimePhase))
     };
   }
@@ -494,8 +500,9 @@
     var category = safeToken(turn.fallbackCategory, '');
     if (!runtimeConnected) return 'Local fallback';
     if (/^(validator-rejected|schema-invalid|json-parse-failed|raw-prompt-stuffing|banned-phrase)/.test(category)) {
-      return 'Runtime repaired turn';
+      return 'Runtime repaired answer';
     }
+    if (/^(quality-rejected|allowed-topic-refusal|topic-ignored|recent-repeat-risk|false-objective-claim|takeover-for-ordinary-topic)/.test(category)) return 'Runtime repaired answer';
     return 'Fallback carried this turn';
   }
 
@@ -566,8 +573,11 @@
     return {
       runtimePhase: normalizeRuntimePhase(data.runtimePhase || runtime.runtimePhase),
       acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true) || runtime.acceptedByPack1 === true,
+      qualityAccepted: data.qualityAccepted === true || (data.diagnostics && data.diagnostics.qualityAccepted === true) || runtime.qualityAccepted === true,
+      repairedByRuntime: data.repairedByRuntime === true || (data.diagnostics && data.diagnostics.repairedByRuntime === true) || runtime.repairedByRuntime === true,
       runtimeConnected: data.runtimeConnected === true || data.aishaEngineConnected === true || (data.diagnostics && data.diagnostics.runtimeConnected === true) || runtime.runtimeConnected === true || status.aishaEngineConnected === true,
       fallbackCategory: compact(data.fallbackCategory || runtime.fallbackCategory || '', 80),
+      qualityFailureCategory: compact(data.qualityFailureCategory || (data.diagnostics && data.diagnostics.qualityFailureCategory) || runtime.qualityFailureCategory || '', 80),
       activeEngine: compact(data.activeEngine || status.activeEngine || 'local-room-intelligence', 80),
       persistenceConnected: isPersistenceConnected(data) || isPersistenceConnected(status),
       roomMood: compact(data.roomMood || state.roomMood || 'focused', 40),
@@ -625,17 +635,21 @@
       : '--';
     var turn = state.turnRuntime || defaultTurnRuntime();
     var turnConnected = connected || turn.runtimeConnected === true;
-    var turnClass = turn.acceptedByPack1 ? 'accepted' : (turn.fallbackCategory ? (turnConnected ? 'repaired' : 'fallback') : 'waiting');
-    var turnText = turn.acceptedByPack1
-      ? 'Pack 1 accepted'
-      : turnFallbackLabel(turn, turnConnected);
+    var turnClass = turn.repairedByRuntime
+      ? 'repaired'
+      : (turn.acceptedByPack1 && turn.qualityAccepted ? 'accepted' : (turn.fallbackCategory ? (turnConnected ? 'repaired' : 'fallback') : 'waiting'));
+    var turnText = turn.repairedByRuntime
+      ? 'Runtime repaired answer'
+      : (turn.acceptedByPack1 && turn.qualityAccepted
+      ? 'Room answer accepted'
+      : turnFallbackLabel(turn, turnConnected));
     el.turnStateValue.className = 'turn-state-value ' + turnClass;
     el.turnStateValue.textContent = turnText;
-    el.turnStateValue.title = turn.fallbackCategory || turnText;
+    el.turnStateValue.title = turn.qualityFailureCategory || turn.fallbackCategory || turnText;
     if (el.turnChipValue) {
       el.turnChipValue.className = 'turn-chip-value ' + turnClass;
       el.turnChipValue.textContent = turnText;
-      el.turnChipValue.title = turn.fallbackCategory || turnText;
+      el.turnChipValue.title = turn.qualityFailureCategory || turn.fallbackCategory || turnText;
     }
     el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
     var stats = continuityStats();
@@ -937,7 +951,10 @@
         connected: !!(payload.diagnostics && payload.diagnostics.persistenceConnected)
       },
       acceptedByPack1: payload.acceptedByPack1 === true,
+      qualityAccepted: payload.qualityAccepted === true,
+      repairedByRuntime: payload.repairedByRuntime === true,
       fallbackCategory: compact(payload.fallbackCategory || (payload.diagnostics && payload.diagnostics.fallbackCategory) || '', 80),
+      qualityFailureCategory: compact(payload.qualityFailureCategory || (payload.diagnostics && payload.diagnostics.qualityFailureCategory) || '', 80),
       runtimePhase: normalizeRuntimePhase(payload.runtimePhase)
     };
     updateTurnRuntime(payload);
@@ -972,9 +989,11 @@
       state.status = data || state.status;
       updateTurnRuntime(data || {});
       renderStatus();
-      setProcessingText(data && data.acceptedByPack1
-        ? 'Pack 1 accepted. Room is composing the exchange.'
-        : (state.turnRuntime.runtimeConnected ? 'Runtime is repairing the turn shape.' : 'Runtime is holding a stable fallback path.'));
+      setProcessingText(data && (data.repairedByRuntime || (data.diagnostics && data.diagnostics.repairedByRuntime))
+        ? 'Runtime repaired the room answer.'
+        : (data && data.acceptedByPack1 && (data.qualityAccepted || (data.diagnostics && data.diagnostics.qualityAccepted))
+          ? 'Room answer accepted. The exchange is landing.'
+          : (state.turnRuntime.runtimeConnected ? 'Runtime is repairing the turn shape.' : 'Runtime is holding a stable fallback path.')));
       reportTurnState(data || {});
       return;
     }
