@@ -1260,6 +1260,22 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(fakeSoundingStress.ok, false);
   assert.ok(fakeSoundingStress.issues.includes('frustration-ignored'));
 
+  const liveSelfCritiqueLoop = validateDirectorOutput({
+    roomBeat: 'The room performs usefulness instead of helping.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The room is stuck in a loop of self-critique. Grok, you admitted the dodge. Leah, you called out the structure.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'We are here to be useful, not to perform the process of being useful. Let us reset into one concrete action.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(liveSelfCritiqueLoop.ok, false);
+  assert.ok(liveSelfCritiqueLoop.issues.includes('operational-jargon'));
+  assert.ok(liveSelfCritiqueLoop.issues.includes('product-self-theater:meta-language'));
+
   const ignoredRepeatComplaint = validateDirectorOutput({
     roomBeat: 'The room acts like nothing went wrong.',
     roomMood: 'focused',
@@ -1311,6 +1327,24 @@ test('social director quality validator rejects stress turns answered with meta 
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
+  const objectiveEnergy = validateDirectorOutput({
+    roomBeat: 'The room turns lunch into an objective slogan.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'flat', text: 'The objective is energy, not a full meal.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'A banana and yogurt will keep the session moving.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I am hungry before training, what should I eat?'
+  });
+
+  assert.equal(objectiveEnergy.ok, false);
+  assert.ok(objectiveEnergy.issues.includes('operational-jargon'));
+  assert.ok(objectiveEnergy.issues.includes('product-self-theater:meta-language'));
+
   const dodgedLunch = validateDirectorOutput({
     roomBeat: 'The room pauses the planning discussion.',
     roomMood: 'focused',
@@ -1870,6 +1904,23 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(updatedSystem.ok, false);
   assert.ok(updatedSystem.issues.includes('operational-jargon'));
   assert.ok(updatedSystem.issues.includes('product-self-theater:meta-language'));
+
+  const fakeStyleImplementation = validateDirectorOutput({
+    roomBeat: 'The room turns a style preference into fake production work.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass with a single red pulse. It is stark, almost aggressive.' },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The aesthetic is confirmed. It communicates a clear, singular focus.' },
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'Understood. We will ensure the build supports that visual intensity without performance lag.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(fakeStyleImplementation.ok, false);
+  assert.ok(fakeStyleImplementation.issues.includes('operational-jargon'));
+  assert.ok(fakeStyleImplementation.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {
@@ -1903,6 +1954,24 @@ test('social director quality validator rejects logo direction answers that punt
 
   assert.equal(softerPunt.ok, false);
   assert.ok(softerPunt.issues.includes('design-answer-punted'));
+});
+
+test('social director quality validator rejects objective slogans for casual choices', () => {
+  const movieObjective = validateDirectorOutput({
+    roomBeat: 'The room turns a movie choice into process language.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'The objective is entertainment with enough bite to keep the room awake.' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'Pick Arrival if you want tension without noise.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: what movie should we watch tonight?' });
+
+  assert.equal(movieObjective.ok, false);
+  assert.ok(movieObjective.issues.includes('operational-jargon'));
+  assert.ok(movieObjective.issues.includes('product-self-theater:meta-language'));
 });
 
 test('visible response evaluator rejects generic food advice and weak denial continuity', () => {
