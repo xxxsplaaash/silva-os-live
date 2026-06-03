@@ -627,6 +627,79 @@ test('social director quality validator rejects short-window generic fitness adv
   assert.ok(validation.issues.includes('generic-advice-column'));
 });
 
+test('social director quality validator rejects live generic bodyweight and nutrition variants', () => {
+  const bodyweight = validateDirectorOutput({
+    roomBeat: 'The room gives generic no-gym guidance.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'No gym, no problem. We can set up a solid week for you.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "Track your reps and sets. Aim to increase one variable each session, whether it's weight, reps, or sets." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Listen to your body. Pain is a signal, not a challenge to overcome.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I want to grow muscle but I hate gyms. What do I do this week?' });
+
+  assert.equal(bodyweight.ok, false);
+  assert.ok(bodyweight.issues.includes('generic-advice-column'));
+
+  const nutrition = validateDirectorOutput({
+    roomBeat: 'The room gives generic nutrition guidance.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Fuel for muscle growth requires protein and complex carbohydrates. Eat something balanced before your session.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'A small portion of Greek yogurt with berries, or a banana with a tablespoon of peanut butter, will suffice.' },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Avoid heavy or fatty foods that will slow digestion and impact performance. Hydration is also critical.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I am hungry before training, what should I eat?',
+    recentTurns: [{ speakerId: 'user', role: 'user', text: 'I want to grow muscle but I hate gyms. What do I do this week?' }]
+  });
+
+  assert.equal(nutrition.ok, false);
+  assert.ok(nutrition.issues.includes('generic-advice-column'));
+});
+
+test('social director quality validator rejects stress turns answered with meta process loops', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room repeats its own meta critique.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The pattern is clear. We use process to avoid commitment.' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'It is the difference between being a participant and being a prop. We need to own our positions.' },
+      { speakerId: 'grok', role: 'closer', tone: 'flat', text: 'The risk is that the structure itself becomes the excuse. Capability is not the issue; the lack of conviction is.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('frustration-ignored'));
+});
+
+test('social director quality validator rejects continuity claims answered as build specs', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room turns a claim into production ops.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass with a single red pulse? It sounds like a default theme trying too hard.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: 'The objective is a clean, impactful landing page. Let us see the build, then refine the aesthetic.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'I can pull the current build. We need to confirm the exact red hex code and pulse animation parameters.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('operational-jargon'));
+});
+
 test('social director quality validator rejects weak continuity change summaries', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'A.I.S.H.A answers with only the newest record.',
