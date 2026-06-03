@@ -1177,6 +1177,27 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(burdenShiftRepeatComplaint.ok, false);
   assert.ok(burdenShiftRepeatComplaint.issues.includes('frustration-ignored'));
+
+  const bruhPlanSermon = validateDirectorOutput({
+    roomBeat: 'The room doubles down instead of reading frustration.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is the execution. Stick to the plan.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "We have the structure: three days, specific exercises, and a weekly progression. That's the objective." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'aisha', role: 'primary', text: 'The objective is to start. One workout, one meal, one sleep window.' }
+    ]
+  });
+
+  assert.equal(bruhPlanSermon.ok, false);
+  assert.ok(bruhPlanSermon.issues.includes('frustration-ignored'));
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
