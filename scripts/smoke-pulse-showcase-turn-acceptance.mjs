@@ -13,15 +13,25 @@ const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary
 const FITNESS_REFUSAL_RX = /\b(objective is clear|not discussing|focus is required|personal fitness routines|not the objective)\b/i;
 const FITNESS_ANSWER_RX = /\b(muscle|training|train|full-body|full body|protein|sleep|recovery|progressive overload|progression|sets|reps|gym|lift|week one)\b/i;
 const CHANGE_ANSWER_RX = /\b(pale blue|obsidian|red accent|superseded|prior record|changed)\b/i;
+const REJECTED_VISIBLE_RX = /\b(bodyweight exercises|resistance bands|alternate upper and lower body|upper and lower body focus|prioritize protein intake|protein shake|post-workout|post workout|adequate sleep|muscle growth occurs during recovery|high-intensity intervals|high intensity intervals|bodyweight circuits|45 seconds work|15 seconds rest|repeat 3-4 times|repeat 3 4 times|compound movements|compound lifts|progressive overload|banana is sufficient|quick pre-training fuel|quick pre training fuel|ensure hydration|water is critical|critical for performance and recovery|feedback is noted|perform usefulness|style guide|update the style guide|remove the red pulse element|we can implement that|standard approach|proceed with that framework|technical specs|draft the specs|current build|exact red hex code|load times|optimized)\b/i;
 
 const PROMPTS = [
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'ok but I only have 20 minutes', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'BRUH...', expectsFitness: true },
   { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'how is everyone?' },
-  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'i am hungry and want to train later, what should i eat?' },
-  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?', rejectsStaleFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'I am hungry before training, what should I eat?', expectsFitness: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'new topic: what movie should we watch tonight?', rejectsStaleFitness: true, expectsMovie: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?', rejectsStaleFitness: true, expectsMovie: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'everyone, what is the actual tension in this room?', expectsRoomTension: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'Grok, be honest: was that useful or did it sound fake?', expectsQualityCheck: true },
+  { sessionGroup: 'conversation', mode: 'social_hierarchy_lab', userText: 'I am stressed and this is starting to feel dumb.', expectsFrustrationRecovery: true },
+  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'My landing page style is black glass with a single red pulse.' },
+  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'Actually my landing page style is white editorial with no red.' },
+  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'What changed?', expectsStyleChange: true },
+  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'No, I never said black glass. Did I?', expectsStyleChange: true },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'My dashboard preference is obsidian with one red accent.' },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'Actually my dashboard preference is pale blue with no red accents.' },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'What changed?', expectsChange: true }
@@ -107,12 +117,28 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   const final = events.find(item => item.event === 'final')?.data || {};
   assertOk(final.ok === true, 'final payload was not ok');
   const visible = visibleText(final);
+  assertOk(!REJECTED_VISIBLE_RX.test(visible), `visible answer still contains rejected boilerplate: ${visible}`);
   if (prompt.expectsFitness) {
     assertOk(!FITNESS_REFUSAL_RX.test(visible), `fitness transcript refused the user intent: ${visible}`);
     assertOk(FITNESS_ANSWER_RX.test(visible), `fitness transcript did not answer the muscle-building context: ${visible}`);
   }
   if (prompt.rejectsStaleFitness) {
     assertOk(!FITNESS_ANSWER_RX.test(visible), `topic pivot leaked stale fitness context: ${visible}`);
+  }
+  if (prompt.expectsMovie) {
+    assertOk(/\b(Arrival|Spider-Verse|Spider Verse|The Menu|comfort|tension|spectacle|thriller|comedy|horror|action|drama|animation|quiet pressure|voltage|bite|title|movie|film)\b/i.test(visible), `movie/open-floor prompt did not produce a useful watch direction: ${visible}`);
+  }
+  if (prompt.expectsRoomTension) {
+    assertOk(/\b(tension|friction|pressure|fake|useful|customer support|polished|room)\b/i.test(visible), `room tension prompt did not answer tension: ${visible}`);
+  }
+  if (prompt.expectsQualityCheck) {
+    assertOk(/\b(fake|useful|not useful|stiff|bland|checklist|dodge|partly|less doctrine|more room)\b/i.test(visible), `quality-check prompt did not judge the prior answer: ${visible}`);
+  }
+  if (prompt.expectsFrustrationRecovery) {
+    assertOk(/\b(stress|stressed|dumb|frustrat|annoy|bad|reset|slow down|recover|fair|mess|turn|pressure|clean next move)\b/i.test(visible), `frustration prompt was ignored: ${visible}`);
+  }
+  if (prompt.expectsStyleChange) {
+    assertOk(/\b(black glass|single red pulse|white editorial|no red|changed|prior|previous|record|superseded)\b/i.test(visible), `style continuity prompt missed active/prior visual claims: ${visible}`);
   }
   if (prompt.expectsChange) {
     assertOk(CHANGE_ANSWER_RX.test(visible), `continuity change prompt did not cite changed ledger evidence: ${visible}`);

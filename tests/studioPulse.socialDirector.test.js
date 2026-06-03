@@ -1607,20 +1607,28 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
   });
   app.post('/api/studio/pulse-showcase/turn-stream', (req, res) => {
     calls += 1;
-    const accepted = calls <= 4;
+    const accepted = calls <= 8;
     const userText = String(req.body?.userText || '');
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const text = (() => {
-      if (/wanna grow/i.test(userText)) return 'Start with three full-body training days, enough protein, sleep, and slow progressive overload.';
-      if (/where do i start/i.test(userText)) return 'Begin with three training days this week and track the lifts before adding volume.';
+      if (/wanna grow/i.test(userText)) return 'Start this week: incline push-ups, backpack rows, split squats, and planks. Log reps; add one clean rep next time.';
+      if (/20 minutes/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes theatre.';
+      if (/where do i start/i.test(userText)) return 'Begin with one short training day today. Pick three moves, write reps down, and repeat before changing the plan.';
       if (/what is the objective/i.test(userText)) return 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.';
       if (/bruh/i.test(userText)) return 'No more loop. Keep week one boring enough to repeat, then add one small progression.';
       if (/how is everyone/i.test(userText)) return 'The room is present, slightly restless, and still tracking the thread.';
-      if (/hungry/i.test(userText)) return 'Eat something steady: protein, carbs, water, and enough time before training.';
+      if (/hungry/i.test(userText)) return 'Before training, eat light enough to move: yogurt, eggs and toast, or rice and chicken if you have time.';
+      if (/open floor/i.test(userText)) return 'Open floor: watch the next visible decision, then pick Heat if the room wants pressure or Spider-Verse if it needs voltage.';
+      if (/movie|watch next|watch tonight/i.test(userText)) return 'Watch Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if the room wants bite.';
+      if (/actual tension/i.test(userText)) return 'The tension is usefulness versus performance. The room gets worse when it sounds polished instead of answering.';
+      if (/useful or did it sound fake/i.test(userText)) return 'Partly useful, mostly fake-sounding. Less doctrine, more room.';
+      if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then drop the theatre.';
+      if (/never said black glass/i.test(userText)) return 'Yes: prior record was black glass with a single red pulse; current record is white editorial with no red.';
+      if (/black glass/i.test(userText)) return 'Recorded: landing page style is black glass with a single red pulse.';
+      if (/white editorial/i.test(userText)) return 'Changed: landing page style is white editorial with no red. Prior record stays black glass with a single red pulse.';
       if (/obsidian/i.test(userText)) return 'Recorded dashboard preference: obsidian with one red accent.';
       if (/pale blue/i.test(userText)) return 'Updated dashboard preference: pale blue with no red accents.';
       if (/what changed/i.test(userText)) return 'Changed: active preference is pale blue with no red accents. Prior record: obsidian with one red accent.';
-      if (/open floor/i.test(userText)) return 'Open floor, but not chaos. The room should watch the next visible decision.';
       return isFitness
         ? 'Start with training, food, and recovery matched to the week.'
         : 'The room keeps the turn bounded.';
@@ -1677,10 +1685,10 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     });
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
-    assert.equal(summary.counts.accepted, 4);
-    assert.equal(summary.counts.repaired, 6);
+    assert.equal(summary.counts.accepted, 8);
+    assert.equal(summary.counts.repaired, 11);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 10);
+    assert.equal(calls, 19);
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
