@@ -4,15 +4,17 @@ const http = require('node:http');
 const express = require('express');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
 const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
-const { validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
+const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
 
 const BANNED_RX = /\b(I hear|I will keep this human|degraded mode|fallback|I need the object|Give me the thing|Say the thing plainly|if that is the object|on that:|I agree with)\b/i;
-const RAW_INTERNAL_RX = /\b(exchangeContextV06|selectedSpeakers|addendumConstraint|relationshipSummaries|repairNeeded|trust:\s*\d|irritation:\s*\d|gravity|pulseReason|aishaDiagnostics|projectContext|activeSpeakerId)\b/i;
+const RAW_INTERNAL_RX = /\b(exchangeContextV06|selectedSpeakers|addendumConstraint|relationshipSummaries|repairNeeded|trust:\s*\d|irritation:\s*\d|gravity:\s*\d|pulseReason|aishaDiagnostics|projectContext|activeSpeakerId)\b/i;
 
 async function withStudioServer(fn) {
   const app = express();
@@ -303,6 +305,27 @@ test('social director normalizes bounded social cues and ignores invalid speaker
   });
 });
 
+test('visible social language is not rejected as internal scalar diagnostics', () => {
+  assert.equal(rawInternalLeakFound('There is warmth in the room, but Grok does not trust the premise.'), '');
+  assert.equal(rawInternalLeakFound('This needs gravity without turning into theater.'), '');
+  assert.equal(rawInternalLeakFound('trust: 4'), 'trust');
+  assert.equal(rawInternalLeakFound('gravity: 2'), 'gravity');
+
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room checks tone without becoming a task router.',
+    roomMood: 'warm',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'measured', text: 'There is warmth in the room, but nobody gets to drift past the actual claim.' }
+    ],
+    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Can this be warmer?' });
+
+  assert.equal(validation.ok, true);
+  assert.equal(validation.rawInternalLeak, false);
+});
+
 test('showcase social signal projector maps social cues without creating truth', () => {
   const signals = projectShowcaseSocialSignals({
     mode: 'continuity_breaker',
@@ -415,6 +438,20 @@ test('room director prompt receives compact relationship context only as advisor
   assert.match(prompt, /grok/);
   assert.doesNotMatch(prompt, /ghost|fake-move/);
   assert.match(prompt, /never treat it as factual memory or a continuity ledger/);
+});
+
+test('room director repair prompt names valid schema and enum constraints', () => {
+  const input = buildRoomDirectorInput({
+    message: 'i need help with building muscles',
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input, { issues: ['invalid-json', 'speaker-too-long:grok', 'banned-phrase:I hear'] });
+
+  assert.match(prompt, /REPAIR REQUIRED/);
+  assert.match(prompt, /Return one complete JSON object/);
+  assert.match(prompt, /valid speakerId, role, roomMood, responseMode, visibleState, socialCues/);
+  assert.match(prompt, /practical asks like fitness/);
+  assert.match(prompt, /Every speaker must have concrete visible dialogue/);
 });
 
 test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async () => {
@@ -677,6 +714,116 @@ test('social director smoke script supports --limit and summary counts', async (
     assert.equal(parsed.summary.liveAcceptedCount, 0);
     assert.equal(parsed.summary.fallbackUsedCount, 2);
     assert.equal(parsed.summary.quotaExceededCount, 2);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test('provider readiness proof script reports safe credential signals only', async () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-provider-proof-'));
+  fs.mkdirSync(path.join(tempRoot, 'lib/imageGeneration'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, 'lib/imageGeneration/providerVault.js'), `
+    function geminiVaultKeyEntries() {
+      return [{ label: 'Studio Pulse vault', provider: 'gemini', apiKey: 'fake-local-provider-secret' }];
+    }
+    module.exports = { geminiVaultKeyEntries };
+  `);
+
+  const app = express();
+  app.get('/api/studio/pulse/aisha-status', (_req, res) => {
+    res.json({
+      ok: true,
+      aishaEngineEnabled: true,
+      aishaAttempted: true,
+      aishaEngineConnected: true,
+      aishaEngineMode: 'production',
+      activeEngine: 'aisha-runtime-pack1',
+      aishaPersistenceMode: 'postgres',
+      aishaPersistenceBackend: 'postgres',
+      aishaPersistenceConnected: true,
+      runtimeCredentialProvided: true,
+      runtimeCredentialSource: 'Server env'
+    });
+  });
+  const server = http.createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const result = await runNodeScript(['scripts/smoke-aisha-provider-readiness-safe.mjs'], {
+      BACKEND_URL: `http://127.0.0.1:${port}`,
+      LOCAL_PROVIDER_ROOT: tempRoot
+    });
+    assert.equal(result.code, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /studioPulseGeminiVaultKeyPresent/);
+    assert.match(result.stdout, /cloudRunCredentialSignalPresent/);
+    assert.doesNotMatch(result.stdout + result.stderr, /fake-local-provider-secret|GEMINI_API_KEY|GOOGLE_API_KEY/);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('turn acceptance smoke script summarizes accepted and repaired turns safely', async () => {
+  const app = express();
+  app.use(express.json({ limit: '2mb' }));
+  let calls = 0;
+  app.get('/api/studio/pulse-showcase/status', (_req, res) => {
+    res.json({
+      ok: true,
+      activeEngine: 'aisha-runtime-pack1',
+      aishaEngineConnected: true,
+      aishaEngineMode: 'production',
+      persistence: { mode: 'postgres', connected: true },
+      modes: ['social_hierarchy_lab', 'continuity_breaker'],
+      maxUserTextLength: 500
+    });
+  });
+  app.post('/api/studio/pulse-showcase/turn-stream', (_req, res) => {
+    calls += 1;
+    const accepted = calls <= 3;
+    const payload = {
+      ok: true,
+      sessionId: 'script-test-session',
+      mode: 'social_hierarchy_lab',
+      activeEngine: accepted ? 'aisha-runtime-pack1' : 'local-social-director',
+      aishaEngineConnected: true,
+      roomMood: 'focused',
+      responseMode: 'single',
+      messageEvents: [{ speakerId: 'vanya', speakerName: 'Vanya', role: 'primary', tone: 'steady', text: 'The room keeps the turn bounded.', visibleState: 'Reading' }],
+      silentReactions: [],
+      continuityLedger: [],
+      socialSignals: { tension: 18, continuityPressure: 0, hierarchy: [], alliances: [], interruptions: [], roomMove: 'observe', statusEvents: [], socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: [], interruptionPressure: 0 } },
+      acceptedByPack1: accepted,
+      fallbackCategory: accepted ? '' : 'validator-rejected',
+      runtimePhase: 'final',
+      diagnostics: {
+        fallbackUsed: !accepted,
+        runtimeConnected: true,
+        traceStatus: 'succeeded',
+        persistenceConnected: true,
+        fallbackCategory: accepted ? '' : 'validator-rejected'
+      }
+    };
+    res.setHeader('content-type', 'text/event-stream; charset=utf-8');
+    res.write(`event: runtime_status\ndata: ${JSON.stringify({ ok: true, activeEngine: 'aisha-runtime-pack1', aishaEngineConnected: true, runtimePhase: 'preflight' })}\n\n`);
+    res.write(`event: final\ndata: ${JSON.stringify(payload)}\n\n`);
+    res.end();
+  });
+  const server = http.createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    const result = await runNodeScript(['scripts/smoke-pulse-showcase-turn-acceptance.mjs'], {
+      BACKEND_URL: `http://127.0.0.1:${port}`,
+      SESSION_ID: 'script-test-session'
+    });
+    assert.equal(result.code, 0, result.stderr || result.stdout);
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.counts.accepted, 3);
+    assert.equal(summary.counts.repaired, 2);
+    assert.equal(summary.counts.fallback, 0);
+    assert.equal(calls, 5);
+    assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
     await new Promise(resolve => server.close(resolve));
   }

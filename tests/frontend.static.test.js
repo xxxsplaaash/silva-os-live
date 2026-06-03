@@ -1723,7 +1723,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /isHeldTurnError/);
   assert.match(script, /pulseError/);
   assert.match(script, /Pack 1 accepted/);
-  assert.match(script, /Local fallback carried turn/);
+  assert.match(script, /Runtime repaired turn/);
+  assert.match(script, /Fallback carried this turn/);
   assert.match(script, /Persistence connected/);
   assert.match(script, /isNearBottom/);
   assert.match(script, /ledger-source-/);

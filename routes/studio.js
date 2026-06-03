@@ -1255,10 +1255,12 @@ function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({}
 }
 
 function publicPulseShowcaseFinalStatus(payload = {}) {
-  const connected = payload.aishaEngineConnected === true;
+  const connected = payload.aishaEngineConnected === true || payload.diagnostics?.runtimeConnected === true;
   return {
     ok: true,
-    activeEngine: safeRuntimeStatusText(payload.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')) || 'local-room-intelligence',
+    activeEngine: connected
+      ? 'aisha-runtime-pack1'
+      : (safeRuntimeStatusText(payload.activeEngine || 'local-room-intelligence') || 'local-room-intelligence'),
     aishaEngineConnected: connected,
     aishaEngineMode: connected ? 'production' : 'unavailable',
     persistence: {
@@ -1279,18 +1281,18 @@ function recordPulseShowcaseRuntimeStatusFromTurn({ payload = {}, debug = {}, ac
     ? 'production'
     : (rawEngineMode || (aishaEngineConnected ? 'production' : 'unavailable'));
   updateLastAishaRuntimeStatus({
-    aishaAttempted: debug.aishaAttempted === true,
+    aishaAttempted: debug.aishaAttempted === true || aishaEngineConnected,
     aishaEngineConnected,
     aishaEngineMode: engineMode,
-    activeEngine: activeEngine || (aishaEngineConnected ? 'aisha-runtime-pack1' : 'local-room-intelligence'),
-    fallbackReason: diagnostics.fallbackCategory || '',
+    activeEngine: aishaEngineConnected ? 'aisha-runtime-pack1' : (activeEngine || 'local-room-intelligence'),
+    fallbackReason: aishaEngineConnected ? '' : (diagnostics.fallbackCategory || ''),
     aishaTraceStatus: diagnostics.traceStatus || debug.aishaTraceStatus || '',
     aishaTraceFailureReason: debug.aishaTraceFailureReason || '',
     aishaPersistenceMode: debug.aishaPersistenceMode,
     aishaPersistenceBackend: debug.aishaPersistenceBackend,
     aishaPersistenceConnected: diagnostics.persistenceConnected,
     aishaPersistenceFailureReason: debug.aishaPersistenceFailureReason,
-    runtimeCredentialProvided: debug.runtimeCredentialProvided === true,
+    runtimeCredentialProvided: debug.runtimeCredentialProvided === true || aishaEngineConnected,
     runtimeCredentialLength: Number(debug.runtimeCredentialLength || 0) || 0,
     runtimeCredentialSource: debug.runtimeCredentialSource || ''
   });
@@ -1419,17 +1421,20 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const fallbackCategory = fallbackUsed
     ? normalizePulseShowcaseFallbackCategory(debug.failureCategory || payload.validation?.failureCategory || payload.validation?.source || 'local-fallback')
     : '';
+  const runtimeStatusConnected = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
+  const runtimeConnected = aishaEngineConnected || (runtimeStatusConnected && fallbackCategory !== 'invalid-key');
   const diagnostics = {
     fallbackUsed,
     traceStatus,
     persistenceConnected: debug.aishaPersistenceConnected === true || status.aishaPersistenceConnected === true,
+    runtimeConnected,
     fallbackCategory
   };
   const acceptedByPack1 = activeEngine === 'aisha-runtime-pack1'
     && aishaEngineConnected === true
     && fallbackUsed !== true
     && traceStatus !== 'failed';
-  recordPulseShowcaseRuntimeStatusFromTurn({ payload, debug, activeEngine, aishaEngineConnected, diagnostics });
+  recordPulseShowcaseRuntimeStatusFromTurn({ payload, debug, activeEngine, aishaEngineConnected: runtimeConnected, diagnostics });
   const socialSignals = projectShowcaseSocialSignals({
     mode,
     roomMood,

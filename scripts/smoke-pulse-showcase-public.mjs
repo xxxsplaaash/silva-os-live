@@ -233,7 +233,12 @@ async function checkBrowserStreamingTurn() {
       page.waitForResponse((response) => response.url().includes('/api/studio/pulse-showcase/turn-stream') && response.status() === 200, { timeout: 45000 }),
       page.click('#send-turn')
     ]);
-    await page.waitForFunction(() => document.body.innerText.includes('Pack 1 accepted') || document.body.innerText.includes('Local fallback carried turn'), null, { timeout: 45000 });
+    await page.waitForFunction(() => {
+      const text = document.body.innerText || '';
+      return text.includes('Pack 1 accepted')
+        || text.includes('Runtime repaired turn')
+        || text.includes('Fallback carried this turn');
+    }, null, { timeout: 45000 });
     const result = await page.evaluate(() => ({
       hasLedger: Boolean(document.querySelector('#ledger-list')),
       hasDynamics: Boolean(document.querySelector('#dynamics-list')),

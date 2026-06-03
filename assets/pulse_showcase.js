@@ -26,7 +26,7 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.6.1';
+  var SHOWCASE_VERSION = '1.6.2';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -179,6 +179,7 @@
   function defaultTurnRuntime() {
     return {
       acceptedByPack1: false,
+      runtimeConnected: false,
       fallbackCategory: '',
       runtimePhase: 'preflight'
     };
@@ -476,11 +477,26 @@
   function updateTurnRuntime(source) {
     var data = source && typeof source === 'object' ? source : {};
     var category = compact(data.fallbackCategory || (data.diagnostics && data.diagnostics.fallbackCategory) || '', 80);
+    var runtimeConnected = data.runtimeConnected === true
+      || data.aishaEngineConnected === true
+      || (data.diagnostics && data.diagnostics.runtimeConnected === true)
+      || (state.status && state.status.aishaEngineConnected === true);
     state.turnRuntime = {
       acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true),
+      runtimeConnected: runtimeConnected,
       fallbackCategory: category,
       runtimePhase: normalizeRuntimePhase(data.runtimePhase || (data.diagnostics && data.diagnostics.runtimePhase))
     };
+  }
+
+  function turnFallbackLabel(turn, runtimeConnected) {
+    if (!turn || !turn.fallbackCategory) return 'waiting';
+    var category = safeToken(turn.fallbackCategory, '');
+    if (!runtimeConnected) return 'Local fallback';
+    if (/^(validator-rejected|schema-invalid|json-parse-failed|raw-prompt-stuffing|banned-phrase)/.test(category)) {
+      return 'Runtime repaired turn';
+    }
+    return 'Fallback carried this turn';
   }
 
   function heldTurnMessage() {
@@ -550,6 +566,7 @@
     return {
       runtimePhase: normalizeRuntimePhase(data.runtimePhase || runtime.runtimePhase),
       acceptedByPack1: data.acceptedByPack1 === true || (data.diagnostics && data.diagnostics.acceptedByPack1 === true) || runtime.acceptedByPack1 === true,
+      runtimeConnected: data.runtimeConnected === true || data.aishaEngineConnected === true || (data.diagnostics && data.diagnostics.runtimeConnected === true) || runtime.runtimeConnected === true || status.aishaEngineConnected === true,
       fallbackCategory: compact(data.fallbackCategory || runtime.fallbackCategory || '', 80),
       activeEngine: compact(data.activeEngine || status.activeEngine || 'local-room-intelligence', 80),
       persistenceConnected: isPersistenceConnected(data) || isPersistenceConnected(status),
@@ -607,10 +624,11 @@
       ? (status.persistence.mode + (persistenceState === 'Persistence connected' ? ' connected' : ' pending'))
       : '--';
     var turn = state.turnRuntime || defaultTurnRuntime();
-    var turnClass = turn.acceptedByPack1 ? 'accepted' : (turn.fallbackCategory ? 'fallback' : 'waiting');
+    var turnConnected = connected || turn.runtimeConnected === true;
+    var turnClass = turn.acceptedByPack1 ? 'accepted' : (turn.fallbackCategory ? (turnConnected ? 'repaired' : 'fallback') : 'waiting');
     var turnText = turn.acceptedByPack1
       ? 'Pack 1 accepted'
-      : (turn.fallbackCategory ? 'Local fallback carried turn' : 'waiting');
+      : turnFallbackLabel(turn, turnConnected);
     el.turnStateValue.className = 'turn-state-value ' + turnClass;
     el.turnStateValue.textContent = turnText;
     el.turnStateValue.title = turn.fallbackCategory || turnText;
@@ -954,7 +972,9 @@
       state.status = data || state.status;
       updateTurnRuntime(data || {});
       renderStatus();
-      setProcessingText(data && data.acceptedByPack1 ? 'Pack 1 accepted. Room is composing the exchange.' : 'Runtime is holding a stable path.');
+      setProcessingText(data && data.acceptedByPack1
+        ? 'Pack 1 accepted. Room is composing the exchange.'
+        : (state.turnRuntime.runtimeConnected ? 'Runtime is repairing the turn shape.' : 'Runtime is holding a stable fallback path.'));
       reportTurnState(data || {});
       return;
     }

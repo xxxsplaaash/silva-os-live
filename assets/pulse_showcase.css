@@ -718,6 +718,10 @@ body.has-room-messages .room-feed {
   color: var(--amber);
 }
 
+.turn-state-value.repaired {
+  color: var(--soft);
+}
+
 .room-metrics .turn-chip-value {
   text-transform: none;
 }
@@ -732,6 +736,12 @@ body.has-room-messages .room-feed {
   color: var(--amber);
   border-color: rgba(215, 168, 75, .26);
   background: rgba(215, 168, 75, .08);
+}
+
+.room-metrics .turn-chip-value.repaired {
+  color: var(--soft);
+  border-color: rgba(221, 225, 232, .22);
+  background: rgba(221, 225, 232, .07);
 }
 
 .signal-meter {

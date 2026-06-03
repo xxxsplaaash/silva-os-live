@@ -1266,6 +1266,189 @@ test('Studio Pulse showcase turn-stream reports safe fallback acceptance state',
   });
 });
 
+test('Studio Pulse showcase distinguishes connected Pack 1 turn rejection from unavailable runtime', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{ speakerId: 'aisha', content: 'not valid room json' }],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.82
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-connected-rejected-turn',
+            mode: 'social_hierarchy_lab',
+            userText: 'i need help with building muscles'
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const runtimeStatusEvents = events.filter(item => item.event === 'runtime_status');
+        const finalRuntime = runtimeStatusEvents[runtimeStatusEvents.length - 1].data;
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.aishaEngineConnected, true);
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.fallbackCategory, 'json-parse-failed');
+        assert.equal(final.diagnostics.fallbackUsed, true);
+        assert.equal(final.diagnostics.runtimeConnected, true);
+        assert.equal(final.diagnostics.persistenceConnected, true);
+        assert.equal(finalRuntime.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(finalRuntime.aishaEngineConnected, true);
+        assert.equal(finalRuntime.acceptedByPack1, false);
+        assert.equal(finalRuntime.fallbackCategory, 'json-parse-failed');
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|not valid room json/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase keeps connected runtime status when one turn is carried after no-content response', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            if (request.localRoomState?.statusCheck) {
+              return {
+                ok: true,
+                responses: [{ speakerId: 'aisha', content: 'status ok' }],
+                trace: {
+                  status: 'succeeded',
+                  aishaDiagnostics: {
+                    aishaPersistenceMode: 'postgres',
+                    aishaPersistenceBackend: 'postgres',
+                    aishaPersistenceConnected: true
+                  }
+                },
+                diagnostics: {
+                  responseTraceStatus: 'succeeded',
+                  runtimeCredentialProvided: true,
+                  runtimeCredentialSource: 'Mock Gemini',
+                  runtimeCredentialLength: 'test-room-provider-key'.length,
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                },
+                engineMode: 'production',
+                aishaEngineConnected: true
+              };
+            }
+            return {
+              ok: false,
+              responses: [],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'failed',
+                failureReason: 'model returned no usable room response',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'failed',
+                responseTraceFailureReason: 'model returned no usable room response',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'unavailable',
+              aishaEngineConnected: false,
+              fallbackReason: 'no-content'
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const status = await fetch(`${baseUrl}/api/studio/pulse-showcase/status?refresh=1`);
+        assert.equal(status.status, 200);
+        const statusBody = await status.json();
+        assert.equal(statusBody.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(statusBody.aishaEngineConnected, true);
+
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-connected-no-content-turn',
+            mode: 'social_hierarchy_lab',
+            userText: 'how is everyone?'
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const runtimeStatusEvents = events.filter(item => item.event === 'runtime_status');
+        const finalRuntime = runtimeStatusEvents[runtimeStatusEvents.length - 1].data;
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.aishaEngineConnected, false);
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.fallbackCategory, 'aisha-unavailable');
+        assert.equal(final.diagnostics.runtimeConnected, true);
+        assert.equal(finalRuntime.activeEngine, 'aisha-runtime-pack1');
+        assert.equal(finalRuntime.aishaEngineConnected, true);
+        assert.equal(finalRuntime.acceptedByPack1, false);
+        assert.equal(finalRuntime.fallbackCategory, 'aisha-unavailable');
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|model returned no usable/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
