@@ -26,7 +26,8 @@
   var SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
-  var SHOWCASE_VERSION = '1.5.0';
+  var SHOWCASE_VERSION = '1.6.0';
+  window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
     'https://silvastudios.co.za',
@@ -599,23 +600,25 @@
     var connected = status.aishaEngineConnected === true;
     el.runtimeDot.className = 'runtime-dot ' + (connected ? 'connected' : 'offline');
     el.runtimeLabel.textContent = connected ? 'Pack 1 connected' : 'Local fallback';
-    el.engineValue.textContent = status.activeEngine || '--';
+    el.engineValue.textContent = friendlyEngineName(status.activeEngine);
+    var persistenceState = status.persistence && status.persistence.connected ? 'Persistence connected' : 'pending';
     el.persistenceValue.textContent = status.persistence
-      ? (status.persistence.mode + ' · ' + (status.persistence.connected ? 'Persistence connected' : 'pending'))
+      ? (status.persistence.mode + (persistenceState === 'Persistence connected' ? ' connected' : ' pending'))
       : '--';
     var turn = state.turnRuntime || defaultTurnRuntime();
     var turnClass = turn.acceptedByPack1 ? 'accepted' : (turn.fallbackCategory ? 'fallback' : 'waiting');
     var turnText = turn.acceptedByPack1
       ? 'Pack 1 accepted'
-      : (turn.fallbackCategory ? ('Local fallback carried turn: ' + turn.fallbackCategory) : 'waiting');
+      : (turn.fallbackCategory ? 'Local fallback carried turn' : 'waiting');
     el.turnStateValue.className = 'turn-state-value ' + turnClass;
     el.turnStateValue.textContent = turnText;
+    el.turnStateValue.title = turn.fallbackCategory || turnText;
     el.roomSignalValue.textContent = state.roomMood + ' / ' + state.responseMode;
     var stats = continuityStats();
     el.continuityValue.textContent = stats.total
       ? (stats.active + ' active, ' + stats.superseded + ' superseded, ' + stats.disputed + ' disputed')
       : 'waiting';
-    el.sessionValue.textContent = state.sessionId.slice(0, 32);
+    el.sessionValue.textContent = friendlySessionId(state.sessionId);
     if (el.tensionFill) el.tensionFill.style.width = state.tensionScore + '%';
     if (el.continuityFill) el.continuityFill.style.width = (state.socialSignals.continuityPressure || 0) + '%';
   }
@@ -626,6 +629,37 @@
 
   function speakerName(id) {
     return CHARACTER_NAMES[id] || id;
+  }
+
+  function speakerAccent(id) {
+    return CHARACTER_COLORS[id] || 'var(--soft)';
+  }
+
+  function friendlyEngineName(value) {
+    var engine = compact(value || '', 80);
+    if (engine === 'aisha-runtime-pack1') return 'Pack 1 runtime';
+    if (engine === 'local-room-intelligence') return 'Local room';
+    return engine || '--';
+  }
+
+  function friendlySessionId(value) {
+    var id = String(value || '').replace(/^pulse-showcase-/, '');
+    return id.length > 13 ? id.slice(-13) : id || '--';
+  }
+
+  function setProcessingText(value) {
+    if (!el.processingStatus) return;
+    var text = compact(value || 'Room is reading the turn.', 120);
+    var shine = el.processingStatus.querySelector('.processing-shine');
+    if (shine) {
+      shine.textContent = text;
+    } else {
+      el.processingStatus.textContent = text;
+    }
+  }
+
+  function syncVisualState() {
+    document.body.classList.toggle('has-room-messages', state.messages.length > 0);
   }
 
   function renderSocialSignals() {
@@ -725,16 +759,30 @@
   }
 
   function renderMessages() {
+    syncVisualState();
     var shouldStick = state.forceScroll || isNearBottom(el.feed);
     if (!state.messages.length) {
-      el.feed.innerHTML = '<div class="empty-state">The room is waiting for the first turn.</div>';
+      el.feed.innerHTML = [
+        '<div class="room-empty">',
+        '<span class="empty-kicker">Studio Pulse room</span>',
+        '<h3>Enter with a claim. The room will test it.</h3>',
+        '<p>Continuity, status pressure, and contradictions surface as the turn lands.</p>',
+        '<div class="empty-presence" aria-label="Characters present">',
+        SPEAKER_IDS.map(function (id) {
+          return '<span>' + speakerDot(id) + escapeHtml(speakerName(id)) + '</span>';
+        }).join(''),
+        '</div>',
+        '</div>'
+      ].join('');
       state.forceScroll = false;
       return;
     }
     el.feed.innerHTML = state.messages.map(function (message) {
       var id = message.speakerId || 'user';
+      var className = id === 'user' ? 'user' : 'character';
+      var speakerToken = safeToken(id, 'unknown');
       return [
-        '<article class="message ' + (id === 'user' ? 'user' : 'character') + '">',
+        '<article class="message ' + className + ' speaker-' + speakerToken + '" style="--speaker-color:' + speakerAccent(id) + '">',
         '<div class="message-head">',
         '<div class="speaker">' + speakerDot(id) + '<span>' + escapeHtml(message.speakerName || CHARACTER_NAMES[id] || id) + '</span></div>',
         '<div class="message-role">' + escapeHtml(message.role || '') + '</div>',
@@ -891,24 +939,26 @@
   function handleStreamEvent(event, data, streamState) {
     streamState.touched = true;
     if (event === 'turn_start') {
-      if (el.processingStatus) el.processingStatus.textContent = 'Turn accepted by the room.';
+      setProcessingText('Turn entered. Runtime is checking continuity.');
       return;
     }
     if (event === 'runtime_status') {
       state.status = data || state.status;
       updateTurnRuntime(data || {});
       renderStatus();
+      setProcessingText(data && data.acceptedByPack1 ? 'Pack 1 accepted. Room is composing the exchange.' : 'Runtime is holding a stable path.');
       reportTurnState(data || {});
       return;
     }
     if (event === 'processing') {
-      if (el.processingStatus) el.processingStatus.textContent = compact(data.visibleState || data.stage || 'Room is processing the turn.', 120);
+      setProcessingText(data.visibleState || data.stage || 'Room is reading the turn.');
       return;
     }
     if (event === 'social_signals') {
       updateSocialSignals(data || {});
       renderStatus();
       renderSocialSignals();
+      setProcessingText('Social pressure mapped. Waiting for the voices.');
       return;
     }
     if (event === 'message') {
@@ -918,6 +968,7 @@
       state.forceScroll = true;
       renderMessages();
       renderPresence([data], []);
+      setProcessingText('A voice landed. Reconciling the room state.');
       reportHeight();
       return;
     }
@@ -930,6 +981,7 @@
       updateLedgerFromPayload({ continuityLedger: data.continuityLedger || [] });
       renderLedger();
       renderStatus();
+      setProcessingText('Continuity ledger updated.');
       reportHeight();
       return;
     }
@@ -956,7 +1008,7 @@
       return;
     } catch (err) {
       if (isHeldTurnError(err)) throw err;
-      if (el.processingStatus) el.processingStatus.textContent = 'Stream unavailable. Using stable turn path.';
+      setProcessingText('Stream unavailable. Using stable turn path.');
       var payload = await apiJson('/api/studio/pulse-showcase/turn', {
         method: 'POST',
         body: JSON.stringify(body)
@@ -973,7 +1025,7 @@
 
     var priorSpeaker = state.priorSpeaker;
     setBusy(true);
-    if (el.processingStatus) el.processingStatus.textContent = 'Room is processing the turn.';
+    setProcessingText('Room is reading the turn.');
     state.messages.push({ speakerId: 'user', speakerName: 'You', role: 'user', text: text });
     state.forceScroll = true;
     el.userText.value = '';
@@ -995,7 +1047,7 @@
       renderMessages();
     } finally {
       setBusy(false);
-      if (el.processingStatus) el.processingStatus.textContent = 'Room is processing the turn.';
+      setProcessingText('Room is reading the turn.');
       el.userText.focus();
       reportHeight();
     }

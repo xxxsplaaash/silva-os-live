@@ -10,13 +10,14 @@
 <link rel="stylesheet" href="/assets/pulse_showcase.css">
 </head>
 <body>
+<div class="pulse-backdrop" aria-hidden="true"></div>
 <main class="pulse-shell" data-mode="social_hierarchy_lab">
   <header class="pulse-topbar">
     <div class="pulse-brand">
       <span class="pulse-mark" aria-hidden="true"></span>
       <div>
         <h1>Studio Pulse</h1>
-        <p>Public runtime showcase</p>
+        <p>Runtime room</p>
       </div>
     </div>
     <div class="pulse-runtime" aria-live="polite">
@@ -35,7 +36,7 @@
     <section class="room-panel" aria-label="Room feed">
       <div class="room-head">
         <div>
-          <span class="eyebrow">Room</span>
+          <span class="eyebrow">Live room</span>
           <h2 id="room-mode-title">Social Hierarchy Lab</h2>
         </div>
         <div class="room-metrics">
@@ -46,10 +47,16 @@
       <div class="room-feed" id="room-feed" aria-live="polite"></div>
       <form class="room-input" id="room-form">
         <label class="sr-only" for="user-text">Message</label>
-        <textarea id="user-text" maxlength="500" rows="2" placeholder="Enter the room"></textarea>
-        <div class="processing-status" id="processing-status" aria-live="polite">Room is processing the turn.</div>
-        <div class="input-actions">
+        <div class="composer-label">
+          <span>Speak into the room</span>
           <span id="char-count">0/500</span>
+        </div>
+        <textarea id="user-text" maxlength="500" rows="2" placeholder="Drop a claim, challenge, or contradiction..."></textarea>
+        <div class="processing-status" id="processing-status" aria-live="polite">
+          <span class="processing-shine">Room is reading the turn.</span>
+          <span class="processing-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
+        <div class="input-actions">
           <button type="submit" id="send-turn">Send</button>
         </div>
       </form>
