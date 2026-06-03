@@ -1165,6 +1165,20 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(polishStress.ok, false);
   assert.ok(polishStress.issues.includes('frustration-ignored'));
 
+  const fakeSoundingStress = validateDirectorOutput({
+    roomBeat: 'The room keeps analyzing itself instead of helping.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'This is not complex. The room is stuck between wanting to be useful and sounding like it. Grok was right, it sounded fake.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(fakeSoundingStress.ok, false);
+  assert.ok(fakeSoundingStress.issues.includes('frustration-ignored'));
+
   const ignoredRepeatComplaint = validateDirectorOutput({
     roomBeat: 'The room acts like nothing went wrong.',
     roomMood: 'focused',
