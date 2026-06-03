@@ -9,7 +9,7 @@ const BACKEND_URL = String(
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
-const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.7.0');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.7.1');
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
@@ -104,6 +104,28 @@ function visibleLineKeys(value = '') {
     .filter(key => key.length >= 42);
 }
 
+function isContinuityClaimTurn(item = {}) {
+  if (!/^user$/i.test(String(item?.speakerId || item?.role || ''))) return false;
+  const text = String(item?.text || item?.content || '');
+  return /\b(preference|style|color|dashboard|landing page|brand)\b/i.test(text)
+    && /\b(is|=)\b/i.test(text);
+}
+
+function recentTurnWindow(turns = []) {
+  const selected = [];
+  const seen = new Set();
+  const add = item => {
+    if (!item) return;
+    const key = `${item.speakerId || ''}|${item.role || ''}|${item.text || item.content || ''}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    selected.push(item);
+  };
+  turns.filter(isContinuityClaimTurn).slice(-6).forEach(add);
+  turns.slice(-16).forEach(add);
+  return selected.slice(-18);
+}
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -120,7 +142,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     sessionId: sessionIdFor(prompt.sessionGroup),
     mode: prompt.mode,
     userText: prompt.userText,
-    recentTurns,
+    recentTurns: recentTurnWindow(recentTurns),
     roomState: {
       roomMood: prior.roomMood || 'focused',
       responseMode: prior.responseMode || 'single',

@@ -1078,6 +1078,11 @@ test('visible response evaluator flags audit-level product failures', () => {
     continuity: { active: 1, superseded: 1 }
   }).includes('continuity-miss'));
 
+  assert.ok(families({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: 'What is the one thing you need to do next, and what part of the last answer was useful?'
+  }).includes('weak-next-move'));
+
   assert.equal(evaluateVisibleResponse({
     userMessage: 'new topic: what movie should we watch tonight?',
     visibleText: 'Leah says Arrival if the room wants quiet pressure; Vanya pushes Spider-Verse if it needs voltage.'
@@ -1532,6 +1537,31 @@ test('social director fallback recovers repetition complaints and planning pivot
       assert.doesNotMatch(planningText, /\b(muscle|training|protein|workout)\b/i);
     });
   });
+});
+
+test('social director quality validator rejects normal-answer dodges that ask for another ask', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room asks for more clarity instead of answering normally.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm reset', text: 'What is the one thing you need to do next, and what part of the last answer was useful?' },
+      { speakerId: 'aisha', role: 'side', tone: 'precise', text: 'The room needs a clear ask to move forward. State the actual problem.' },
+      { speakerId: 'grok', role: 'side', tone: 'dry', text: 'The current exchange is not yielding a clear path. Identify the core requirement.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' },
+      { speakerId: 'aisha', role: 'primary', text: 'The loop is clear. What is the actual ask?' }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('frustration-ignored'));
+  assert.ok(validation.issues.includes('product-weak-next-move:normal-answer'));
 });
 
 test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {

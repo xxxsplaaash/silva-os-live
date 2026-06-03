@@ -27,7 +27,7 @@
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
   var MAX_USER_TEXT = 1500;
-  var SHOWCASE_VERSION = '1.7.0';
+  var SHOWCASE_VERSION = '1.7.1';
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -941,8 +941,26 @@
     }
   }
 
+  function isContinuityClaimMessage(message) {
+    if (!message || !/^user$/i.test(String(message.speakerId || message.role || ''))) return false;
+    var text = compact(message.text || '', 1500);
+    return /\b(preference|style|color|dashboard|landing page|brand)\b/i.test(text)
+      && /\b(is|=)\b/i.test(text);
+  }
+
   function recentTurns() {
-    return state.messages.slice(-8).map(function (message) {
+    var selected = [];
+    var seen = {};
+    function add(message) {
+      if (!message) return;
+      var key = [message.speakerId || '', message.role || '', message.text || ''].join('|');
+      if (seen[key]) return;
+      seen[key] = true;
+      selected.push(message);
+    }
+    state.messages.filter(isContinuityClaimMessage).slice(-6).forEach(add);
+    state.messages.slice(-16).forEach(add);
+    return selected.slice(-18).map(function (message) {
       return {
         speakerId: message.speakerId,
         role: message.role || 'message',
