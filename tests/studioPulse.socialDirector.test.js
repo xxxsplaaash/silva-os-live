@@ -471,6 +471,7 @@ test('social director fallback treats training-adjacent food as nutrition, not s
       assert.equal(body.responseMode, 'small_exchange');
       assert.match(text, /\b(protein|carbs|water|digest|before training)\b/i);
       assert.doesNotMatch(text, /\b(three full-body sessions|progressive overload|basic pushes|squats or hinges)\b/i);
+      assert.doesNotMatch(text, /\b(recorded change|claim first|anchor the difference)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -516,6 +517,60 @@ test('social director quality validator rejects stale fitness answer after open-
   assert.ok(validation.issues.includes('stale-topic-answer:fitness'));
 });
 
+test('social director quality validator rejects stale fitness answer after movie pivot', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Old training context follows the new watch prompt.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'We have covered the training parameters. For tonight, what film are we considering?' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Something with a good story after a workout.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'new topic: what movie should we watch tonight?',
+    recentTurns: [{ speakerId: 'user', text: 'I am hungry before training, what should I eat?' }]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('stale-topic-answer:fitness'));
+});
+
+test('social director quality validator rejects parameter-soup and dodged quality checks', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Grok hides behind structure.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'The parameters were clear. The suggestions were within those parameters.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('operational-jargon'));
+  assert.ok(validation.issues.includes('social-question-ignored'));
+});
+
+test('social director quality validator rejects generic advice-column practical answers', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Generic advice lands without room voice.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Consistency is key. Focus on compound movements.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Ensure adequate protein intake and prioritize sleep.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I want to grow muscle but I hate gyms. What do I do this week?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('generic-advice-column'));
+});
+
 test('social director quality validator rejects generic operational check-in reports', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room reports status.',
@@ -532,6 +587,91 @@ test('social director quality validator rejects generic operational check-in rep
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('generic-status-report'));
+});
+
+test('social director fallback drops stale fitness context for movie and room-tension pivots', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'I am hungry before training, what should I eat?' },
+        { speakerId: 'aisha', role: 'primary', text: 'For training, focus on lean protein and complex carbohydrates.' }
+      ];
+      const movie = await postSocial(baseUrl, 'new topic: what movie should we watch tonight?', { recentTurns });
+      const movieText = visibleText(movie.body);
+      assert.equal(movie.body.ok, true);
+      assert.doesNotMatch(movieText, /\b(training|workout|protein|after a workout|training parameters)\b/i);
+      assert.match(movieText, /\b(Arrival|Spider-Verse|The Menu|comfort|tension|spectacle)\b/i);
+
+      const tension = await postSocial(baseUrl, 'everyone, what is the actual tension in this room?', { recentTurns });
+      const tensionText = visibleText(tension.body);
+      assert.equal(tension.body.ok, true);
+      assert.doesNotMatch(tensionText, /\b(movie|film|specific suggestions|content selection)\b/i);
+      assert.match(tensionText, /\b(tension|customer support|taste|pressure|fake)\b/i);
+    });
+  });
+});
+
+test('social director fallback answers short fitness follow-up and Grok quality check with taste', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'I want to grow muscle but I hate gyms. What do I do this week?' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start simple. You need a repeatable training week.' }
+      ];
+      const shortSession = await postSocial(baseUrl, 'ok but I only have 20 minutes', { recentTurns });
+      const shortText = visibleText(shortSession.body);
+      assert.match(shortText, /\b(Twenty minutes|three rounds|forty seconds|squat|push|pull)\b/i);
+      assert.doesNotMatch(shortText, /\b(consistency is key|adequate protein|timing is key)\b/i);
+
+      const grok = await postSocial(baseUrl, 'Grok, be honest: was that useful or did it sound fake?', { recentTurns });
+      const grokText = visibleText(grok.body);
+      assert.match(grokText, /\b(fake-sounding|parameter language|less doctrine|more room)\b/i);
+      assert.doesNotMatch(grokText, /\b(parameters were clear|within those parameters)\b/i);
+    });
+  });
+});
+
+test('social director fallback can summarize visible-session continuity when Pack 1 summary is thin', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+        { speakerId: 'aisha', role: 'primary', text: 'Black glass, single red pulse. Understood.' },
+        { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+        { speakerId: 'aisha', role: 'primary', text: 'White editorial, no red. Noted.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'What changed?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.match(text, /\bwhite editorial with no red\b/i);
+      assert.match(text, /\bblack glass with a single red pulse\b/i);
+      assert.doesNotMatch(text, /\bdo not have a recorded change\b/i);
+    });
+  });
+});
+
+test('social director fallback acknowledges continuity claims and memory challenges without generic banter', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const first = await postSocial(baseUrl, 'My landing page style is black glass with a single red pulse.');
+      assert.match(visibleText(first.body), /\bblack glass with a single red pulse\b/i);
+
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+        { speakerId: 'aisha', role: 'primary', text: 'landing page style is white editorial with no red. Noted.' },
+        { speakerId: 'user', role: 'user', text: 'What changed?' },
+        { speakerId: 'aisha', role: 'primary', text: 'Changed: landing page style is white editorial with no red. Prior record: landing page style is black glass with a single red pulse.' },
+        { speakerId: 'claudia', role: 'side', text: 'So the room keeps both: the current preference and the superseded one. That is the point of the ledger.' }
+      ];
+      const challenge = await postSocial(baseUrl, 'No, I never said black glass. Did I?', { recentTurns });
+      const text = visibleText(challenge.body);
+      assert.match(text, /\bblack glass with a single red pulse\b/i);
+      assert.match(text, /\bwhite editorial with no red\b/i);
+      assert.doesNotMatch(text, /\bcurrent record is So the room keeps both\b/i);
+      assert.doesNotMatch(text, /\bnobody has to perform a job title|pretending silence means absence\b/i);
+    });
+  });
 });
 
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
