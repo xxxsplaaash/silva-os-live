@@ -266,6 +266,35 @@ test('visible response quality rejects thin next-action non-answers', () => {
   assert.ok(issueKeys(issues).includes('weak-next-move:normal-answer'));
 });
 
+test('visible response quality rejects impossible practical timing math', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'ok but I only have 20 minutes',
+    visibleText: [
+      'Twenty minutes. Three compound moves, one per ten minutes.',
+      'Squats, push-ups, and a plank. Hold each for as long as you can maintain good form.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('practical-contradiction:workout-timing'));
+});
+
+test('visible response quality rejects stale superseded visual attributes on style correction', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Actually my landing page style is white editorial with no red.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' }
+    ],
+    visibleText: [
+      'White editorial. Ensure the pulse, now a status indicator, is clearly visible against the white background.',
+      'White editorial. It is a cleaner canvas.',
+      'Understood. The core structure is in place.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-conflict:superseded-attribute-leak'));
+  assert.ok(issueKeys(issues).includes('self-theater:meta-language'));
+});
+
 test('visible response quality accepts specific preference recall from memory', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',

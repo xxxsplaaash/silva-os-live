@@ -1172,6 +1172,19 @@ test('visible response evaluator flags audit-level product failures', () => {
   }).includes('weak-next-move'));
 
   assert.ok(families({
+    userMessage: 'ok but I only have 20 minutes',
+    visibleText: 'Twenty minutes. Three compound moves, one per ten minutes.'
+  }).includes('practical-contradiction'));
+
+  assert.ok(families({
+    userMessage: 'Actually my landing page style is white editorial with no red.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' }
+    ],
+    visibleText: 'White editorial. Ensure the pulse, now a status indicator, is clearly visible against the white background.'
+  }).includes('continuity-conflict'));
+
+  assert.ok(families({
     userMessage: 'I am stressed and this is starting to feel dumb.',
     visibleText: 'The problem is not the polish, it is the delay. We stop pretending and start doing.'
   }).includes('frustration-miss'));
