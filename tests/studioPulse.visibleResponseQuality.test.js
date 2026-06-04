@@ -755,6 +755,16 @@ test('visible response quality rejects stress answers that dodge into tension an
   });
 
   assert.ok(issueKeys(signalIssues).includes('frustration-miss:stress-recovery'));
+
+  const burdenShiftIssues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: [
+      "It feels dumb because we're circling the same point without landing it. Let's name the actual problem, not the dodge around it.",
+      'The problem is the gap between wanting to be direct and performing it. One clean constraint: state the core claim, then the next move.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(burdenShiftIssues).includes('frustration-miss:stress-recovery'));
 });
 
 test('visible response quality rejects stress answers that hide behind objective slogans', () => {

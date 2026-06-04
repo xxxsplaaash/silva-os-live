@@ -2248,6 +2248,22 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.ok(liveSignalStress.issues.includes('frustration-ignored'));
   assert.ok(liveSignalStress.issues.includes('product-frustration-miss:stress-recovery'));
 
+  const liveBurdenShiftStress = validateDirectorOutput({
+    roomBeat: 'The room shifts effort back to the user after stress.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "It feels dumb because we're circling the same point without landing it. Let's name the actual problem, not the dodge around it." },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The problem is the gap between wanting to be direct and performing it. One clean constraint: state the core claim, then the next move.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(liveBurdenShiftStress.ok, false);
+  assert.ok(liveBurdenShiftStress.issues.includes('frustration-ignored'));
+  assert.ok(liveBurdenShiftStress.issues.includes('product-frustration-miss:stress-recovery'));
+
   const liveSelfCritiqueLoop = validateDirectorOutput({
     roomBeat: 'The room performs usefulness instead of helping.',
     roomMood: 'focused',
