@@ -1375,6 +1375,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: 'A.I.S.H.A is an artificial intelligence system designed to facilitate multi-agent conversational coordination.'
     },
     {
+      label: 'generic assistant A.I.S.H.A',
+      issue: 'voice-lock:wikipedia-aisha:aisha',
+      speaker: 'aisha',
+      text: 'I am an AI assistant that helps coordinate conversations and provide accurate information.'
+    },
+    {
       label: 'hostile Leah',
       issue: 'voice-lock:hostile-leah:leah',
       speaker: 'leah',
@@ -1815,6 +1821,20 @@ test('social director quality validator rejects live thin movie and fake-quality
 
   assert.equal(binaryDodge.ok, false);
   assert.ok(binaryDodge.issues.includes('product-speaker-flatness:thin-quality-judgment'));
+
+  const tasteDodge = validateDirectorOutput({
+    roomBeat: 'Grok evaluates the prior answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'flat', text: 'It was direct. Whether that translates to useful is a matter of taste, not mechanics.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(tasteDodge.ok, false);
+  assert.ok(tasteDodge.issues.includes('product-speaker-flatness:thin-quality-judgment'));
 
   const executionCheck = validateDirectorOutput({
     roomBeat: 'Grok evaluates the prior answer.',
