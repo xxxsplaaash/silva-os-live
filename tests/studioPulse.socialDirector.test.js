@@ -889,6 +889,42 @@ test('social director fallback treats referenced exercise cards as fitness conte
   assertCleanVisible(fallback);
 });
 
+test('social director fallback changes short-session shape after referenced 20-minute plan', () => {
+  const body = {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'vanya', role: 'primary', text: 'Twenty minutes is enough if you stop negotiating with it. Warm up, move clean, leave while you still want to come back.' },
+      { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off. Log one number so next week has a target.' }
+    ]
+  };
+  const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
+  const text = fallbackVisibleText(fallback);
+
+  assert.match(text, /\btwo minutes warm\b/i);
+  assert.match(text, /\bchair squat\b/i);
+  assert.doesNotMatch(text, /\bTwenty minutes is enough if you stop negotiating\b/i);
+  assert.doesNotMatch(text, /\bDo three rounds: squat or hinge, push, pull, core\b/i);
+  assertCleanVisible(fallback);
+});
+
+test('social director fallback changes short-session shape after generated focused-session plan', () => {
+  const body = {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'vanya', role: 'primary', text: 'Twenty minutes is a good target for a focused session. Keep the intensity high and the rest periods short.' },
+      { speakerId: 'claudia', role: 'side', text: 'Structure it as a circuit: 45 seconds on, 15 seconds rest for each exercise. Repeat the circuit three times.' }
+    ]
+  };
+  const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
+  const text = fallbackVisibleText(fallback);
+
+  assert.match(text, /\btwo minutes warm\b/i);
+  assert.match(text, /\bchair squat\b/i);
+  assert.doesNotMatch(text, /\bfocused session\b/i);
+  assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);
+  assertCleanVisible(fallback);
+});
+
 test('social director fallback changes shape again after the no-more-loop recovery', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
@@ -4191,6 +4227,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const text = (() => {
       if (/wanna grow/i.test(userText)) return 'Start this week: incline push-ups, backpack rows, split squats, and planks. Log reps; add one clean rep next time.';
+      if (/20 minute/i.test(userText) && /\b(Twenty minutes of training|one small circuit|clock honest)\b/i.test(recentText)) return 'Same twenty minutes, new shape: two minutes warm, sixteen minutes work, two minutes notes. Chair squat, incline push-up, backpack row, dead bug.';
       if (/20 minute/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes a planning session.';
       if (/where do i start/i.test(userText)) return 'Begin with one short training day today. Pick three moves, write reps down, and repeat before changing the plan.';
       if (/what is the objective/i.test(userText)) return 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.';
@@ -4229,6 +4266,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/stressed/i.test(userText)) return 'Claudia lowers the noise: one decision now, another only after the first is done.';
       if (/planning tomorrow/i.test(userText)) return 'Claudia gives tomorrow edges: first block, second block, messy owner.';
       if (/hungry|lunch|\beat\b|eating/i.test(userText)) return 'Claudia keeps it practical: light enough to move, concrete enough to stop guessing.';
+      if (/20 minute/i.test(userText) && /\b(Twenty minutes of training|one small circuit|clock honest)\b/i.test(recentText)) return 'Claudia changes the shape: four rounds if the timer allows, then beat one number next time.';
       if (/20 minute/i.test(userText)) return 'Claudia keeps the clock honest: one small circuit, no extra menu, no fake productivity.';
       if (/where do i start/i.test(userText)) return 'Claudia makes the first step visible: choose three moves before adding equipment, apps, or drama.';
       if (/what is the objective/i.test(userText)) return 'Claudia narrows it to the actual target: show up, track the work, recover, repeat.';
@@ -4321,9 +4359,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.counts.accepted, 8);
-    assert.equal(summary.counts.repaired, 18);
+    assert.equal(summary.counts.repaired, 19);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 26);
+    assert.equal(calls, 27);
     assert.equal(referencesSeen.length, 1);
     assert.match(referencesSeen[0].text, /actual tension|direct answers|ceremony|fracture|answer the ask|useful/i);
     assert.ok(summary.results.some(item => item.prompt === 'Grok, be honest: was that useful or did it sound fake?' && item.referenceCount === 1));
