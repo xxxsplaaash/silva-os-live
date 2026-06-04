@@ -528,6 +528,86 @@ test('showcase fallback obeys impulse caps on short practical follow-ups', async
   assertCleanVisible(body);
 });
 
+test('showcase fallback obeys impulse caps on referenced practical follow-ups', async () => {
+  let capturedRequest = null;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'turn that into a 20 minute version',
+      roomState: { roomMood: 'focused' },
+      references: [{
+        speakerId: 'claudia',
+        speakerName: 'Claudia',
+        role: 'side',
+        text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+      }],
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+      ]
+    },
+    callAishaEngine: async request => {
+      capturedRequest = request;
+      return mockAishaJson({
+        roomBeat: 'The provider tries to turn a referenced practical ask into a chorus.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Twenty minutes is a solid block for focused work.' },
+          { speakerId: 'leah', role: 'side', tone: 'sharp', text: 'No wasted motion or time spent admiring the form.' },
+          { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'Structure it as a circuit: 45 seconds on, 15 seconds rest.' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      });
+    }
+  });
+
+  const body = result.payload;
+  const plan = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan;
+  assert.equal(plan.category, 'practical');
+  assert.equal(plan.maxSpeakers, 2);
+  assert.equal(plan.enforceSelectedSpeakers, true);
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.equal(body.validation.fallbackUsed, true);
+  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
+  assert.ok(body.messageEvents.length <= 2);
+  assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
+  assertCleanVisible(body);
+});
+
+test('showcase impulse plan rejects selected speakers in the wrong order', async () => {
+  let capturedRequest = null;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'LOL I WANNA GROW MY MUSCLES',
+      roomState: { roomMood: 'focused' }
+    },
+    callAishaEngine: async request => {
+      capturedRequest = request;
+      return mockAishaJson({
+        roomBeat: 'The provider uses the planned speakers but reverses the social order.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Keep it simple enough that you actually do it after the hype wears off.' },
+          { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'Start with three rounds: squat, hinge, push, pull, core.' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      });
+    }
+  });
+
+  const body = result.payload;
+  const plan = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan;
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.equal(body.validation.fallbackUsed, true);
+  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-wrong-order:claudia>vanya'));
+  assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['claudia', 'vanya']);
+  assertCleanVisible(body);
+});
+
 test('showcase impulse planner treats punctuated terse follow-ups as practical with recent context', () => {
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
@@ -542,6 +622,22 @@ test('showcase impulse planner treats punctuated terse follow-ups as practical w
     assert.equal(input.impulsePlan.enforceSelectedSpeakers, true, question);
     assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya'], question);
   }
+});
+
+test('showcase impulse planner treats referenced practical cards as cap-enforced context', () => {
+  const input = buildRoomDirectorInput({
+    question: 'turn that into a 20 minute version',
+    references: [{
+      speakerId: 'claudia',
+      text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.'
+    }],
+    recentTurns: []
+  });
+
+  assert.equal(input.impulsePlan.category, 'practical');
+  assert.equal(input.impulsePlan.maxSpeakers, 2);
+  assert.equal(input.impulsePlan.enforceSelectedSpeakers, true);
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
 });
 
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
