@@ -534,6 +534,18 @@ test('visible response quality rejects objective-first recovery from live bruh t
   assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
 });
 
+test('visible response quality rejects softened objective-to-start recovery from live bruh turn', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    visibleText: [
+      "It sounds like we're stuck in a loop. Let's try a different angle to get unstuck.",
+      'The objective is to start. Pick one workout, one meal, and one sleep window.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
 test('visible response quality rejects generic action-flick movie answers', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'new topic: what movie should we watch tonight?',

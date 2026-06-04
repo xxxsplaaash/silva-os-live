@@ -1961,6 +1961,27 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(bruhObjectiveFirst.ok, false);
   assert.ok(bruhObjectiveFirst.issues.includes('frustration-ignored'));
   assert.ok(bruhObjectiveFirst.issues.includes('product-false-objective:command-posture'));
+
+  const bruhObjectiveStart = validateDirectorOutput({
+    roomBeat: 'A live bruh turn keeps the softer objective slogan.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "It sounds like we're stuck in a loop. Let's try a different angle to get unstuck." },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The objective is to start. Pick one workout, one meal, and one sleep window.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+    ]
+  });
+
+  assert.equal(bruhObjectiveStart.ok, false);
+  assert.ok(bruhObjectiveStart.issues.includes('frustration-ignored'));
+  assert.ok(bruhObjectiveStart.issues.includes('product-false-objective:command-posture'));
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
