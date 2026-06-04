@@ -988,9 +988,8 @@ test('Studio Pulse showcase strips duplicated current user turn from recent hist
                   roomMood: 'focused',
                   responseMode: 'small_exchange',
                   speakers: [
-                    { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
-                    { speakerId: 'claudia', role: 'side', tone: 'dry practical', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
-                    { speakerId: 'grok', role: 'closer', tone: 'dry diagnostic', text: 'Sharp joint pain means swap the move, not prove a point.' }
+                    { speakerId: 'claudia', role: 'primary', tone: 'dry practical', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+                    { speakerId: 'vanya', role: 'side', tone: 'warm practical', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
                   ],
                   silentReactions: [],
                   stateUpdates: { notes: ['Beginner muscle-building guidance.'] }
@@ -1405,34 +1404,27 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
               responseMode: 'small_exchange',
               speakers: [
                 {
-                  speakerId: 'vanya',
-                  role: 'primary',
-                  tone: 'warm reset',
-                  text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
-                },
-                {
                   speakerId: 'claudia',
-                  role: 'side',
+                  role: 'primary',
                   tone: 'practical',
                   text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.'
                 },
                 {
-                  speakerId: 'grok',
-                  role: 'closer',
-                  tone: 'dry diagnostic',
-                  text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'
+                  speakerId: 'vanya',
+                  role: 'side',
+                  tone: 'warm reset',
+                  text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
                 }
               ],
-              silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+              silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }, { speakerId: 'grok', visibleState: 'Tracking' }],
               stateUpdates: { notes: ['Beginner muscle-building guidance.'] },
               socialCues: {
                 roomMove: 'redirect',
                 tensionDelta: -2,
                 continuityDelta: 0,
                 speakerCues: [
-                  { speakerId: 'vanya', stance: 'dominant', statusDelta: 3 },
-                  { speakerId: 'claudia', allianceWith: 'vanya', stance: 'allied', statusDelta: 4 },
-                  { speakerId: 'grok', stance: 'curious', statusDelta: 2 }
+                  { speakerId: 'claudia', stance: 'dominant', statusDelta: 4 },
+                  { speakerId: 'vanya', allianceWith: 'claudia', stance: 'allied', statusDelta: 3 }
                 ]
               }
             };
@@ -1804,7 +1796,7 @@ test('Studio Pulse showcase repairs thin accepted old preference recall using Pa
                 roomMood: 'focused',
                 responseMode: 'single',
                 speakers: [
-                  { speakerId: 'aisha', role: 'primary', tone: 'precise continuity', text: 'Obsidian with one red accent.', visibleState: 'Anchoring' }
+                  { speakerId: 'aisha', role: 'primary', tone: 'precise continuity', text: 'The prior record was obsidian with one red accent. It has been superseded.', visibleState: 'Anchoring' }
                 ],
                 silentReactions: [],
                 socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 6, speakerCues: [] },

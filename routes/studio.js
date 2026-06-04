@@ -1256,12 +1256,23 @@ function recordPulseShowcaseVisibleHistory(sessionId = '', userText = '', messag
   });
 }
 
-function showcaseContinuityQualityContext(continuityProof = {}) {
+function showcaseContinuityQualityContext(continuityProof = {}, continuityLedger = []) {
   const source = continuityProof && typeof continuityProof === 'object' ? continuityProof : {};
+  const rows = Array.isArray(continuityLedger) ? continuityLedger : [];
   return {
     active: Number(source.activeTruths || 0) || 0,
     superseded: Number(source.supersededTruths || 0) || 0,
-    disputed: Number(source.disputedTruths || 0) || 0
+    disputed: Number(source.disputedTruths || 0) || 0,
+    activeTexts: rows
+      .filter(item => item?.status === 'active')
+      .map(item => safeShowcaseText(item.text || '', 240))
+      .filter(Boolean)
+      .slice(0, 4),
+    supersededTexts: rows
+      .filter(item => item?.status === 'superseded' || item?.status === 'disputed')
+      .map(item => safeShowcaseText(item.text || '', 240))
+      .filter(Boolean)
+      .slice(0, 4)
   };
 }
 
@@ -1295,7 +1306,8 @@ function forceContinuityFallbackIfNeeded({
   roomMood = '',
   messageEvents = [],
   silentReactions = [],
-  continuityProof = {}
+  continuityProof = {},
+  continuityLedger = []
 } = {}) {
   const continuityRecentTurns = dedupeShowcaseRecentTurns([...recentTurns, ...visibleRecentTurns]);
   const check = validateShowcaseVisiblePayload({
@@ -1305,7 +1317,7 @@ function forceContinuityFallbackIfNeeded({
     silentReactions,
     userText,
     recentTurns: continuityRecentTurns,
-    continuity: showcaseContinuityQualityContext(continuityProof)
+    continuity: showcaseContinuityQualityContext(continuityProof, continuityLedger)
   });
   const continuityIssue = (check.issues || []).find(item =>
     /^product-continuity-(conflict|miss)/.test(String(item || ''))
@@ -1322,7 +1334,7 @@ function forceContinuityFallbackIfNeeded({
   const fallbackCheck = validateDirectorOutput(fallbackOutput, {
     userMessage: userText,
     recentTurns: continuityRecentTurns,
-    continuity: showcaseContinuityQualityContext(continuityProof)
+    continuity: showcaseContinuityQualityContext(continuityProof, continuityLedger)
   });
   if (!fallbackCheck.ok) return null;
   return {
@@ -1676,7 +1688,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     || (payload.aishaConnected === true && fallbackCategory === 'quality-rejected');
   let qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
   const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
-  const continuityQuality = showcaseContinuityQualityContext(continuityProof);
+  const continuityQuality = showcaseContinuityQualityContext(continuityProof, continuityLedger);
   const publicQuality = validateDirectorOutput({
     roomBeat: payload.roomBeat || '',
     roomMood,
@@ -1736,7 +1748,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     roomMood,
     messageEvents,
     silentReactions,
-    continuityProof
+    continuityProof,
+    continuityLedger
   });
   if (forcedContinuityRepair) {
     const fallbackSafe = forcedContinuityRepair.output || {};

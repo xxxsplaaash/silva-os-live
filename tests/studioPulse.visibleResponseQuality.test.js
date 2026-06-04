@@ -242,6 +242,21 @@ test('visible response quality rejects old preference recall answers that omit t
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects live prior-only old preference recall using ledger text', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    visibleText: 'The prior record was obsidian with one red accent. It has been superseded.',
+    continuity: {
+      active: 1,
+      superseded: 1,
+      activeTexts: ['dashboard preference is pale blue with no red accents'],
+      supersededTexts: ['dashboard preference is obsidian with one red accent']
+    }
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
+});
+
 test('visible response quality rejects sterile roll-call monitoring voice', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'how is everyone?',

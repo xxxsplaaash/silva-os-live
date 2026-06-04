@@ -291,6 +291,102 @@ test('room director prompt treats benign practical asks as valid room topics', (
   assert.match(prompt, /muscle\/fitness asks/);
   assert.match(prompt, /We are not discussing personal fitness routines/);
   assert.match(prompt, /three simple training days/);
+  assert.equal(input.impulsePlan.category, 'practical');
+  assert.equal(input.impulsePlan.maxSpeakers, 2);
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
+  assert.ok(input.impulsePlan.intentionalSilence.some(item => item.speakerId === 'aisha' && /holding authority/i.test(item.reason)));
+  assert.match(prompt, /impulsePlan/);
+  assert.match(prompt, /max speakers is 2/);
+  assert.match(prompt, /silence is presence with a reason/);
+});
+
+test('showcase impulse planner enforces caps and selected speakers before generation', async () => {
+  let capturedRequest = null;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'LOL I WANNA GROW MY MUSCLES',
+      roomState: { roomMood: 'focused' }
+    },
+    callAishaEngine: async request => {
+      capturedRequest = request;
+      return mockAishaJson({
+        roomBeat: 'The practical ask is being handled without a chorus.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'The objective is clear: we are now discussing personal fitness routines.' },
+          { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'Start with three short sessions: squat, push, pull, and write down the count.' },
+          { speakerId: 'vanya', role: 'side', tone: 'warm', text: 'Keep it simple enough that you actually do it after the hype wears off.' },
+          { speakerId: 'leah', role: 'side', tone: 'sharp', text: 'Do not make the outfit the workout.' },
+          { speakerId: 'grok', role: 'side', tone: 'dry', text: 'The premise is meat attempting project management, regrettably.' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      });
+    }
+  });
+
+  const body = result.payload;
+  assert.ok(capturedRequest);
+  const plan = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan;
+  assert.equal(plan.schemaVersion, 'studio-pulse.showcase-impulse-plan.v0.1');
+  assert.equal(plan.category, 'practical');
+  assert.equal(plan.maxSpeakers, 2);
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.ok(plan.selectedSpeakers.every(item => item.socialObjective && item.lengthGuidance));
+  assert.ok(plan.intentionalSilence.some(item => item.speakerId === 'grok' && /premise fault/i.test(item.reason)));
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.equal(body.validation.fallbackUsed, true);
+  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
+  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-unplanned-speaker:aisha'));
+  assert.ok(body.messageEvents.length <= 2);
+  assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
+  assert.ok(Array.isArray(body.silentReactions));
+});
+
+test('showcase impulse planner routes design-brief scenarios with bounded speaker intent', () => {
+  const fixtures = [
+    {
+      prompt: 'Can you help me parse this Python PDF script?',
+      category: 'practical',
+      maxSpeakers: 2,
+      speakerOrder: ['grok', 'claudia']
+    },
+    {
+      prompt: 'I am grieving today. Please do not give advice.',
+      category: 'emotional',
+      maxSpeakers: 2,
+      speakerOrder: ['vanya', 'aisha']
+    },
+    {
+      prompt: 'How do I make carbonara tonight?',
+      category: 'practical',
+      maxSpeakers: 2,
+      speakerOrder: ['claudia', 'vanya']
+    },
+    {
+      prompt: 'New topic: pick something on Netflix.',
+      category: 'practical',
+      maxSpeakers: 2,
+      speakerOrder: ['leah', 'vanya']
+    },
+    {
+      prompt: 'We disagree about the social media launch caption.',
+      category: 'practical',
+      maxSpeakers: 2,
+      speakerOrder: ['leah', 'grok']
+    }
+  ];
+
+  for (const fixture of fixtures) {
+    const input = buildRoomDirectorInput({ question: fixture.prompt });
+    assert.equal(input.impulsePlan.category, fixture.category, fixture.prompt);
+    assert.equal(input.impulsePlan.maxSpeakers, fixture.maxSpeakers, fixture.prompt);
+    assert.deepEqual(input.impulsePlan.speakerOrder, fixture.speakerOrder, fixture.prompt);
+    assert.equal(input.impulsePlan.selectedSpeakers.length, fixture.speakerOrder.length, fixture.prompt);
+    assert.ok(input.impulsePlan.selectedSpeakers.every(item => item.socialObjective && item.lengthGuidance), fixture.prompt);
+    assert.ok(input.impulsePlan.intentionalSilence.length >= 2, fixture.prompt);
+  }
 });
 
 test('social director quality validator rejects the fitness refusal loop', () => {
