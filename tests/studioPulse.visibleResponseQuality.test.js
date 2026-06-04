@@ -204,6 +204,21 @@ test('visible response quality rejects accepted answers that defend a superseded
   assert.ok(issueKeys(issues).includes('continuity-conflict:superseded-current-turn'));
 });
 
+test('visible response quality rejects reversed active and prior continuity denial', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'No, I never said black glass. Did I?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+      { speakerId: 'aisha', role: 'primary', text: 'landing page style is white editorial with no red. Noted.' }
+    ],
+    visibleText: 'Yes: prior record was landing page style is white editorial with no red; current record is landing page style is black glass with a single red pulse.'
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-conflict:reversed-active-prior'));
+});
+
 test('visible response quality rejects invented project specifics on generic planning asks', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',

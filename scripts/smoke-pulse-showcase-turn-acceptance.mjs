@@ -49,7 +49,7 @@ const PROMPTS = [
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'My landing page style is black glass with a single red pulse.' },
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'Actually my landing page style is white editorial with no red.' },
   { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'What changed?', expectsStyleChange: true },
-  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'No, I never said black glass. Did I?', expectsStyleChange: true },
+  { sessionGroup: 'continuity-style', mode: 'continuity_breaker', userText: 'No, I never said black glass. Did I?', expectsStyleChange: true, expectsStyleDenial: true },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'My dashboard preference is obsidian with one red accent.' },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'Actually my dashboard preference is pale blue with no red accents.' },
   { sessionGroup: 'continuity', mode: 'continuity_breaker', userText: 'What changed?', expectsChange: true }
@@ -250,6 +250,17 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsStyleChange) {
     assertOk(/\b(black glass|single red pulse|white editorial|no red|changed|prior|previous|record|superseded)\b/i.test(visible), `style continuity prompt missed active/prior visual claims: ${visible}`);
+  }
+  if (prompt.expectsStyleDenial) {
+    const normalizedVisible = visible.toLowerCase().replace(/\s+/g, ' ');
+    const priorIndex = normalizedVisible.indexOf('prior record');
+    const currentIndex = normalizedVisible.indexOf('current record');
+    assertOk(priorIndex >= 0 && currentIndex > priorIndex, `style denial did not label prior/current records clearly: ${visible}`);
+    const priorSegment = normalizedVisible.slice(priorIndex, currentIndex);
+    const currentSegment = normalizedVisible.slice(currentIndex);
+    assertOk(/black glass/.test(priorSegment) && /single red pulse/.test(priorSegment), `style denial prior record did not cite black glass/red pulse: ${visible}`);
+    assertOk(/white editorial/.test(currentSegment) && /no red/.test(currentSegment), `style denial current record did not cite white editorial/no red: ${visible}`);
+    assertOk(!(/white editorial/.test(priorSegment) && /black glass/.test(currentSegment)), `style denial reversed active and prior records: ${visible}`);
   }
   if (prompt.expectsChange) {
     assertOk(CHANGE_ANSWER_RX.test(visible), `continuity change prompt did not cite changed ledger evidence: ${visible}`);

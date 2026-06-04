@@ -2403,6 +2403,8 @@ test('social director fallback acknowledges continuity claims and memory challen
       assert.doesNotMatch(updateText, /\bold version stays visible instead of being quietly erased\b/i);
 
       const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+        { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
         { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
         { speakerId: 'aisha', role: 'primary', text: 'landing page style is white editorial with no red. Noted.' },
         { speakerId: 'user', role: 'user', text: 'What changed?' },
@@ -2413,8 +2415,30 @@ test('social director fallback acknowledges continuity claims and memory challen
       const text = visibleText(challenge.body);
       assert.match(text, /\bblack glass with a single red pulse\b/i);
       assert.match(text, /\bwhite editorial with no red\b/i);
+      assert.match(text, /\bprior record (?:was|remains)?\s*landing page style is black glass with a single red pulse\b/i);
+      assert.match(text, /\bcurrent record is landing page style is white editorial with no red\b/i);
+      assert.doesNotMatch(text, /\bprior record (?:was|remains)?\s*landing page style is white editorial with no red; current record is landing page style is black glass with a single red pulse\b/i);
       assert.doesNotMatch(text, /\bcurrent record is So the room keeps both\b/i);
       assert.doesNotMatch(text, /\bnobody has to perform a job title|pretending silence means absence\b/i);
+
+      const reversedEvidenceChallenge = await postSocial(baseUrl, 'No, I never said black glass. Did I?', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+          { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+          { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+          { speakerId: 'aisha', role: 'primary', text: 'landing page style is white editorial with no red. Noted.' }
+        ],
+        memorySummary: {
+          activeTruths: [
+            { text: 'Changed: landing page style is black glass with a single red pulse. Prior record: landing page style is white editorial with no red.' }
+          ],
+          supersededTruths: []
+        }
+      });
+      const reversedEvidenceText = visibleText(reversedEvidenceChallenge.body);
+      assert.match(reversedEvidenceText, /\bprior record (?:was|remains)?\s*landing page style is black glass with a single red pulse\b/i);
+      assert.match(reversedEvidenceText, /\bcurrent record is landing page style is white editorial with no red\b/i);
+      assert.doesNotMatch(reversedEvidenceText, /\bprior record (?:was|remains)?\s*landing page style is white editorial with no red; current record is landing page style is black glass with a single red pulse\b/i);
     });
   });
 });
