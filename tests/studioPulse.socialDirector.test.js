@@ -1158,6 +1158,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: 'Here comes my sarcastic joke: this plan is so bad it needs a helmet.'
     },
     {
+      label: 'announced comedic timing',
+      issue: 'voice-lock:announced-humor:grok',
+      speaker: 'grok',
+      text: 'As a joke, this plan has the structural dignity of wet cardboard.'
+    },
+    {
       label: 'therapy voice',
       issue: 'voice-lock:therapy-voice:vanya',
       speaker: 'vanya',
@@ -1558,9 +1564,10 @@ test('social director quality validator rejects current live accepted fitness bo
   const objectiveDrift = validateDirectorOutput({
     roomBeat: 'The room loses the concrete muscle context.',
     roomMood: 'focused',
-    responseMode: 'single',
+    responseMode: 'small_exchange',
     speakers: [
-      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is to build a sustainable habit for personal improvement. Track your progress to see the changes.' }
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is to establish a sustainable routine. Start with three sessions this week, focusing on the listed movements and tracking your progress.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "It's about building a habit that fits your life, not forcing a change. The goal is showing up and moving, then building from there." }
     ],
     silentReactions: [],
     stateUpdates: { notes: [] }

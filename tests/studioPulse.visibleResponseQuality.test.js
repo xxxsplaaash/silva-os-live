@@ -400,6 +400,18 @@ test('visible response quality rejects chosen-exercises boilerplate from live ga
   assert.ok(issues.some(item => item.family === 'generic-advice'));
 });
 
+test('visible response quality rejects sustainable-routine objective drift from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    visibleText: [
+      'The objective is to establish a sustainable routine. Start with three sessions this week, focusing on the listed movements and tracking your progress.',
+      "It's about building a habit that fits your life, not forcing a change. The goal is showing up and moving, then building from there."
+    ].join('\n')
+  });
+
+  assert.ok(issues.some(item => item.family === 'generic-advice'));
+});
+
 test('visible response quality rejects live support-bot fitness encouragement', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'LOL I WANNA GROW MY MUSCLES',
