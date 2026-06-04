@@ -171,6 +171,26 @@ test('visible response quality rejects continuity answers that ask what changed 
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects preference recall answers that ignore ledger evidence', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What dashboard preference did I give the room?',
+    visibleText: 'I do not have a recorded dashboard preference yet. Tell me the preference and I will track it.',
+    continuity: { active: 1, superseded: 0 }
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
+});
+
+test('visible response quality accepts specific preference recall from memory', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What dashboard preference did I give the room?',
+    visibleText: 'You prefer obsidian dashboards with one red accent.',
+    continuity: { active: 1, superseded: 0 }
+  });
+
+  assert.equal(issueKeys(issues).includes('continuity-miss:ledger-answer'), false);
+});
+
 test('visible response quality rejects accepted answers that defend a superseded preference', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Actually my dashboard preference is pale blue with no red accents.',
@@ -182,4 +202,17 @@ test('visible response quality rejects accepted answers that defend a superseded
   });
 
   assert.ok(issueKeys(issues).includes('continuity-conflict:superseded-current-turn'));
+});
+
+test('visible response quality rejects invented project specifics on generic planning asks', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      'Let us outline tomorrow. What are the critical items that need to be addressed first?',
+      'I have the project timelines. We need to allocate resources for the Q3 deliverables and confirm the client meeting slots.',
+      'And what is the human temperature on those meetings?'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
 });

@@ -1466,6 +1466,24 @@ test('social director quality validator rejects generic planning command loops',
   assert.ok(genericPlanning.issues.includes('operational-jargon'));
 });
 
+test('social director quality validator rejects invented planning details not supplied by the user', () => {
+  const inventedPlanning = validateDirectorOutput({
+    roomBeat: 'The room invents project machinery for a generic planning ask.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Let us outline tomorrow. What are the critical items that need to be addressed first?' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'I have the project timelines. We need to allocate resources for the Q3 deliverables and confirm the client meeting slots.' },
+      { speakerId: 'vanya', role: 'closer', tone: 'flat', text: 'And what is the human temperature on those meetings?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(inventedPlanning.ok, false);
+  assert.ok(inventedPlanning.issues.includes('product-invented-detail:project-planning'));
+});
+
 test('social director quality validator rejects continuity claims answered as build specs', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room turns a claim into production ops.',
