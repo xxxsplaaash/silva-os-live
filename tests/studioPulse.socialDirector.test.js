@@ -1515,6 +1515,22 @@ test('social director quality validator rejects continuity claims answered as bu
   assert.equal(liveTechnicalRequirementsDrift.ok, false);
   assert.ok(liveTechnicalRequirementsDrift.issues.includes('operational-jargon'));
 
+  const liveParametersImplementationDrift = validateDirectorOutput({
+    roomBeat: 'The room turns a superseding style claim into implementation parameters.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: "My landing page style is white editorial with no red. That's the final word on it." },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'Understood. White editorial, no red.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Noted. The parameters are clear for implementation.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Actually my landing page style is white editorial with no red.' });
+
+  assert.equal(liveParametersImplementationDrift.ok, false);
+  assert.ok(liveParametersImplementationDrift.issues.includes('operational-jargon'));
+
   const liveImplementationDrift = validateDirectorOutput({
     roomBeat: 'The room acknowledges style but slides into implementation posture.',
     roomMood: 'focused',
@@ -1562,6 +1578,22 @@ test('social director quality validator rejects continuity claims answered as bu
 
   assert.equal(liveStyleGuideDrift.ok, false);
   assert.ok(liveStyleGuideDrift.issues.includes('operational-jargon'));
+
+  const liveDesignBriefDrift = validateDirectorOutput({
+    roomBeat: 'The room turns a style update into fake brief maintenance.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'White editorial. That is a clean slate.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'I will update the design brief to reflect the white editorial direction and remove the red pulse specification.' },
+      { speakerId: 'aisha', role: 'closer', tone: 'flat', text: 'Good. Precision is key for editorial.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Actually my landing page style is white editorial with no red.' });
+
+  assert.equal(liveDesignBriefDrift.ok, false);
+  assert.ok(liveDesignBriefDrift.issues.includes('operational-jargon'));
 });
 
 test('social director quality validator rejects weak continuity change summaries', () => {
