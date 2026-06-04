@@ -213,6 +213,46 @@ test('default Pulse path does not import authored legacy fallback at module load
   assert.match(source, /if\s*\(HARD_CUT_REBUILD\)\s*\{\s*throw new Error\(['"]legacy-studio-fallback-disabled['"]\)/);
 });
 
+test('pulse showcase reactions update session social signals without Pack 1 memory rows', () => {
+  assert.equal(typeof studioRouter.__buildPulseShowcaseReactionPayloadForTests, 'function');
+  const result = studioRouter.__buildPulseShowcaseReactionPayloadForTests({
+    sessionId: 'reaction-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-vanya-1',
+    speakerId: 'vanya',
+    reaction: 'more_like',
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { useful: 1 },
+          total: 1,
+          speakerAffinity: { vanya: 2 }
+        },
+        socialMemory: {
+          statusMomentum: [{ speakerId: 'grok', value: 18 }],
+          pairPressure: [],
+          recentRoomMoves: ['observe'],
+          interruptionPressure: 0
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.ok, true);
+  assert.equal(result.payload.reaction, 'more_like');
+  assert.equal(result.payload.reactionSummary.counts.more_like, 1);
+  assert.equal(result.payload.reactionSummary.counts.useful, 1);
+  assert.equal(result.payload.reactionSummary.total, 2);
+  assert.equal(result.payload.reactionSummary.lastSpeakerId, 'vanya');
+  assert.equal(result.payload.socialSignals.reactionSummary.lastMessageId, 'msg-vanya-1');
+  assert.ok(result.payload.socialSignals.socialMemory, 'social memory pacing remains session-local');
+  assert.equal(result.payload.continuityLedger, undefined);
+  assert.equal(result.payload.memorySummary, undefined);
+});
+
 test('Studio Pulse text provider can resolve the server-side Gemini vault', () => {
   const source = read('routes/studio.js');
   assert.match(source, /geminiVaultKeyEntries/);
@@ -549,6 +589,7 @@ test('Studio Pulse showcase guard allows trusted origins and no-origin smoke cal
       ['/api/studio/pulse-showcase/status', 'https://silva-os-live.vercel.app', 'GET'],
       ['/api/studio/pulse-showcase/turn', 'https://silvastudios.co.za', 'POST'],
       ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST'],
+      ['/api/studio/pulse-showcase/reaction', 'https://silva-os-live.vercel.app', 'POST'],
       ['/api/studio/pulse-showcase/turn-stream', 'http://127.0.0.1:3225', 'POST']
     ];
 

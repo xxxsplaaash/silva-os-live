@@ -1358,7 +1358,113 @@ function sanitizeShowcaseIncomingSocialSignals(value = {}) {
       })
       .filter(Boolean)
       .slice(0, 5),
-    socialMemory: sanitizeShowcaseIncomingSocialMemory(source.socialMemory || {})
+    socialMemory: sanitizeShowcaseIncomingSocialMemory(source.socialMemory || {}),
+    reactionSummary: sanitizePulseShowcaseReactionSummary(source.reactionSummary || {})
+  };
+}
+
+const PULSE_SHOWCASE_REACTION_TYPES = Object.freeze(['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like']);
+
+function normalizePulseShowcaseReaction(value = '') {
+  const reaction = String(value || '').trim().toLowerCase().replace(/[^a-z_]+/g, '_').replace(/^_+|_+$/g, '');
+  return PULSE_SHOWCASE_REACTION_TYPES.includes(reaction) ? reaction : '';
+}
+
+function sanitizePulseShowcaseReactionSummary(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const counts = {};
+  PULSE_SHOWCASE_REACTION_TYPES.forEach(type => {
+    counts[type] = Math.max(0, Math.min(50, Math.round(Number(source.counts?.[type] || source[type] || 0) || 0)));
+  });
+  const speakerAffinity = {};
+  const rawAffinity = source.speakerAffinity && typeof source.speakerAffinity === 'object' ? source.speakerAffinity : {};
+  PULSE_SHOWCASE_SPEAKERS.forEach(speakerId => {
+    const valueNumber = Math.max(-30, Math.min(30, Math.round(Number(rawAffinity[speakerId] || 0) || 0)));
+    if (valueNumber) speakerAffinity[speakerId] = valueNumber;
+  });
+  return {
+    counts,
+    total: Math.max(0, Math.min(200, Math.round(Number(source.total || Object.values(counts).reduce((sum, item) => sum + item, 0)) || 0))),
+    lastReaction: normalizePulseShowcaseReaction(source.lastReaction || ''),
+    lastSpeakerId: PULSE_SHOWCASE_SPEAKERS.includes(String(source.lastSpeakerId || '').trim().toLowerCase())
+      ? String(source.lastSpeakerId).trim().toLowerCase()
+      : '',
+    lastMessageId: safeShowcaseText(source.lastMessageId || '', 96),
+    speakerAffinity
+  };
+}
+
+function pulseShowcaseReactionEffect(reaction = '') {
+  return {
+    sharp: { tension: 2, roomMove: 'challenge', status: 2 },
+    funny: { tension: -2, roomMove: 'cool', status: 1 },
+    useful: { continuity: 2, roomMove: 'anchor', status: 2 },
+    too_much: { tension: 5, roomMove: 'cool', status: -3 },
+    more_like: { tension: 1, roomMove: 'redirect', status: 2 },
+    less_like: { tension: 3, roomMove: 'redirect', status: -2 }
+  }[reaction] || { tension: 0, continuity: 0, roomMove: 'observe', status: 0 };
+}
+
+function buildPulseShowcaseReactionPayload(body = {}) {
+  const sessionId = pulseShowcaseSessionId(body.sessionId || '');
+  const reaction = normalizePulseShowcaseReaction(body.reaction || body.type || '');
+  if (!reaction) {
+    return { error: { statusCode: 400, payload: { ok: false, error: 'unsupported-reaction' } } };
+  }
+  const mode = normalizePulseShowcaseMode(body.mode);
+  const speakerId = PULSE_SHOWCASE_SPEAKERS.includes(String(body.speakerId || '').trim().toLowerCase())
+    ? String(body.speakerId).trim().toLowerCase()
+    : '';
+  const messageId = safeShowcaseText(body.messageId || '', 96);
+  const roomState = sanitizeShowcaseRoomState(body.roomState || {}, mode);
+  const priorSummary = sanitizePulseShowcaseReactionSummary(roomState.socialSignals?.reactionSummary || {});
+  const counts = { ...priorSummary.counts, [reaction]: Math.min(50, (priorSummary.counts[reaction] || 0) + 1) };
+  const effect = pulseShowcaseReactionEffect(reaction);
+  const speakerAffinity = { ...priorSummary.speakerAffinity };
+  if (speakerId) {
+    speakerAffinity[speakerId] = Math.max(-30, Math.min(30, Math.round(Number(speakerAffinity[speakerId] || 0) + effect.status)));
+  }
+  const reactionSummary = sanitizePulseShowcaseReactionSummary({
+    counts,
+    total: priorSummary.total + 1,
+    lastReaction: reaction,
+    lastSpeakerId: speakerId,
+    lastMessageId: messageId,
+    speakerAffinity
+  });
+  const socialSignals = projectShowcaseSocialSignals({
+    mode,
+    roomMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
+    responseMode: roomState.responseMode || 'single',
+    messageEvents: speakerId ? [{ speakerId, role: 'reaction', visibleState: reaction }] : [],
+    silentReactions: [],
+    continuityLedger: [],
+    roomState,
+    socialCues: {
+      roomMove: effect.roomMove,
+      tensionDelta: effect.tension || 0,
+      continuityDelta: effect.continuity || 0,
+      speakerCues: speakerId ? [{
+        speakerId,
+        stance: effect.status < 0 ? 'defensive' : 'allied',
+        statusDelta: effect.status
+      }] : []
+    },
+    diagnostics: {}
+  });
+  return {
+    statusCode: 200,
+    payload: {
+      ok: true,
+      sessionId,
+      mode,
+      reaction,
+      reactionSummary,
+      socialSignals: {
+        ...socialSignals,
+        reactionSummary
+      }
+    }
   };
 }
 
@@ -3200,6 +3306,11 @@ router.options('/pulse-showcase/turn-stream', (req, res) => {
   res.status(204).end();
 });
 
+router.options('/pulse-showcase/reaction', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  res.status(204).end();
+});
+
 router.get('/pulse-showcase/status', async (req, res) => {
   if (!guardPulseShowcaseOrigin(req, res)) return;
   const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
@@ -3342,6 +3453,13 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
   } finally {
     releaseStream();
   }
+});
+
+router.post('/pulse-showcase/reaction', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  const result = buildPulseShowcaseReactionPayload(req.body || {});
+  if (result.error) return res.status(result.error.statusCode).json(result.error.payload);
+  res.status(result.statusCode || 200).json(result.payload);
 });
 
 router.post('/pulse-social', async (req, res) => {
@@ -5731,5 +5849,6 @@ router.post('/pulse/idle-tick', handlePulseIdle);
 
 router.__resetPulseShowcaseGuardForTests = __resetPulseShowcaseGuardForTests;
 router.__getPulseShowcaseVisibleHistoryForTests = __getPulseShowcaseVisibleHistoryForTests;
+router.__buildPulseShowcaseReactionPayloadForTests = buildPulseShowcaseReactionPayload;
 
 module.exports = router;

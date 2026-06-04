@@ -1693,6 +1693,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /\/api\/studio\/pulse-showcase\/status/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn-stream/);
+  assert.match(script, /\/api\/studio\/pulse-showcase\/reaction/);
   assert.doesNotMatch(script, /api\/studio\/pulse['"`\)]/);
   assert.match(script, /function parseSseBlock/);
   assert.match(script, /async function apiStream/);
@@ -1714,13 +1715,16 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /function updateLedgerFromPayload/);
   assert.match(script, /payload\.continuityLedger/);
   assert.match(script, /socialSignals/);
+  assert.match(script, /REACTION_TYPES = \['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'\]/);
+  assert.match(script, /function submitReaction/);
+  assert.match(script, /reactionSummary/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
   assert.match(script, /function mergeGlobalStatusFromTurn/);
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(payload\)/);
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(data \|\| \{\}\)/);
   assert.doesNotMatch(script, /state\.status = \{\s*activeEngine: payload\.activeEngine/);
-  assert.match(script, /SHOWCASE_VERSION = '1\.7\.1'/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.8\.0'/);
   assert.match(script, /var MAX_USER_TEXT = 1500/);
   assert.match(html, /maxlength="1500"/);
   assert.match(html, /0\/1500/);
@@ -1786,6 +1790,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.dynamics-item\.status-event/);
   assert.match(css, /\.social-memory-item/);
   assert.match(css, /\.pair-pressure-friction/);
+  assert.match(css, /\.message-reactions/);
+  assert.match(css, /\.reaction-button\.active/);
   assert.match(css, /\.interruption-pressure/);
   assert.match(css, /\.continuity-meter/);
   assert.match(css, /body\.is-pulse-embed/);

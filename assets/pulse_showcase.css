@@ -481,6 +481,30 @@ body.has-room-messages .room-feed {
   color: var(--text);
 }
 
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.reaction-button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid color-mix(in srgb, var(--speaker-color) 16%, rgba(255, 255, 255, .075));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .028);
+  color: var(--muted);
+  font: 500 11px "DM Mono", ui-monospace, monospace;
+}
+
+.reaction-button:hover,
+.reaction-button.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--speaker-color) 38%, rgba(255, 255, 255, .16));
+  background: color-mix(in srgb, var(--speaker-color) 13%, rgba(255, 255, 255, .035));
+}
+
 .room-input {
   position: relative;
   z-index: 2;

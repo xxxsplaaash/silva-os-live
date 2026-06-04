@@ -27,7 +27,16 @@
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
   var MAX_USER_TEXT = 1500;
-  var SHOWCASE_VERSION = '1.7.1';
+  var SHOWCASE_VERSION = '1.8.0';
+  var REACTION_TYPES = ['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'];
+  var REACTION_LABELS = {
+    sharp: 'Sharp',
+    funny: 'Funny',
+    useful: 'Useful',
+    too_much: 'Too much',
+    more_like: 'More like',
+    less_like: 'Less like'
+  };
   window.__PULSE_SHOWCASE_VERSION = SHOWCASE_VERSION;
   var EMBED_MODE = queryFlag('embed') === '1';
   var TRUSTED_PARENT_ORIGINS = [
@@ -41,6 +50,7 @@
     sessionId: readSessionId(),
     mode: 'social_hierarchy_lab',
     messages: [],
+    reactions: {},
     ledger: [],
     presence: {},
     roomMood: 'focused',
@@ -173,7 +183,8 @@
         pairPressure: [],
         recentRoomMoves: [],
         interruptionPressure: 0
-      }
+      },
+      reactionSummary: normalizeReactionSummary({})
     };
   }
 
@@ -211,6 +222,7 @@
       sessionStorage.setItem(STATE_KEY, JSON.stringify({
         mode: state.mode,
         messages: state.messages.slice(-30),
+        reactions: state.reactions,
         ledger: state.ledger.slice(0, 16),
         presence: state.presence,
         roomMood: state.roomMood,
@@ -230,6 +242,7 @@
       var saved = JSON.parse(raw);
       if (saved && MODES[saved.mode]) state.mode = saved.mode;
       if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(-30);
+      if (saved.reactions && typeof saved.reactions === 'object') state.reactions = normalizeReactionState(saved.reactions);
       if (Array.isArray(saved.ledger)) state.ledger = saved.ledger.slice(0, 16);
       if (saved.presence && typeof saved.presence === 'object') state.presence = normalizePresenceState(saved.presence);
       if (saved.roomMood) state.roomMood = compact(saved.roomMood, 40) || state.roomMood;
@@ -262,6 +275,53 @@
   function safeSpeakerId(value) {
     var id = safeToken(value, '');
     return SPEAKER_IDS.includes(id) ? id : '';
+  }
+
+  function normalizeReaction(value) {
+    var token = String(value || '').trim().toLowerCase().replace(/[^a-z_]+/g, '_').replace(/^_+|_+$/g, '');
+    return REACTION_TYPES.includes(token) ? token : '';
+  }
+
+  function normalizeReactionState(value) {
+    var source = value && typeof value === 'object' ? value : {};
+    var next = {};
+    Object.keys(source).slice(-80).forEach(function (messageId) {
+      var reaction = normalizeReaction(source[messageId]);
+      if (messageId && reaction) next[messageId] = reaction;
+    });
+    return next;
+  }
+
+  function normalizeReactionSummary(value) {
+    var source = value && typeof value === 'object' ? value : {};
+    var counts = {};
+    REACTION_TYPES.forEach(function (type) {
+      counts[type] = boundedNumber(source.counts && source.counts[type] != null ? source.counts[type] : source[type], 0, 50);
+    });
+    var rawAffinity = source.speakerAffinity && typeof source.speakerAffinity === 'object' ? source.speakerAffinity : {};
+    var speakerAffinity = {};
+    SPEAKER_IDS.forEach(function (id) {
+      var valueNumber = boundedNumber(rawAffinity[id], -30, 30);
+      if (valueNumber) speakerAffinity[id] = valueNumber;
+    });
+    return {
+      counts: counts,
+      total: boundedNumber(source.total != null ? source.total : REACTION_TYPES.reduce(function (sum, type) { return sum + counts[type]; }, 0), 0, 200),
+      lastReaction: normalizeReaction(source.lastReaction),
+      lastSpeakerId: safeSpeakerId(source.lastSpeakerId),
+      lastMessageId: compact(source.lastMessageId || '', 96),
+      speakerAffinity: speakerAffinity
+    };
+  }
+
+  function messageIdFor(message, index) {
+    if (message && message.id) return compact(message.id, 96);
+    var key = [index, message && message.speakerId || '', message && message.role || '', message && message.text || ''].join('|');
+    var hash = 0;
+    for (var i = 0; i < key.length; i += 1) {
+      hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
+    }
+    return 'msg-' + index + '-' + Math.abs(hash).toString(36);
   }
 
   function boundedNumber(value, min, max) {
@@ -429,7 +489,8 @@
         })
         .filter(Boolean)
         .slice(0, 4),
-      socialMemory: normalizeSocialMemory(source.socialMemory, fallback.socialMemory)
+      socialMemory: normalizeSocialMemory(source.socialMemory, fallback.socialMemory),
+      reactionSummary: normalizeReactionSummary(source.reactionSummary || fallback.reactionSummary || {})
     };
     if (!state.socialSignals.hierarchy.length) state.socialSignals.hierarchy = defaultSocialSignals().hierarchy;
     state.tensionScore = state.socialSignals.tension;
@@ -882,10 +943,20 @@
       state.forceScroll = false;
       return;
     }
-    el.feed.innerHTML = state.messages.map(function (message) {
+    el.feed.innerHTML = state.messages.map(function (message, index) {
       var id = message.speakerId || 'user';
       var className = id === 'user' ? 'user' : 'character';
       var speakerToken = safeToken(id, 'unknown');
+      var messageId = messageIdFor(message, index);
+      message.id = messageId;
+      var activeReaction = normalizeReaction(state.reactions[messageId]);
+      var reactions = id === 'user' ? '' : [
+        '<div class="message-reactions" role="group" aria-label="Message reactions">',
+        REACTION_TYPES.map(function (reaction) {
+          return '<button type="button" class="reaction-button ' + (activeReaction === reaction ? 'active' : '') + '" data-message-id="' + escapeHtml(messageId) + '" data-speaker-id="' + escapeHtml(speakerToken) + '" data-reaction="' + escapeHtml(reaction) + '">' + escapeHtml(REACTION_LABELS[reaction]) + '</button>';
+        }).join(''),
+        '</div>'
+      ].join('');
       return [
         '<article class="message ' + className + ' speaker-' + speakerToken + '" style="--speaker-color:' + speakerAccent(id) + '">',
         '<div class="message-head">',
@@ -893,6 +964,7 @@
         '<div class="message-role">' + escapeHtml(message.role || '') + '</div>',
         '</div>',
         '<p class="message-text">' + escapeHtml(message.text || '') + '</p>',
+        reactions,
         '</article>'
       ].join('');
     }).join('');
@@ -1176,9 +1248,47 @@
     }
   }
 
+  async function submitReaction(messageId, reaction, speakerId) {
+    var safeReaction = normalizeReaction(reaction);
+    var safeMessageId = compact(messageId || '', 96);
+    if (!safeReaction || !safeMessageId || state.busy) return;
+    state.reactions[safeMessageId] = safeReaction;
+    renderMessages();
+    persistState();
+    try {
+      var payload = await apiJson('/api/studio/pulse-showcase/reaction', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: state.sessionId,
+          mode: state.mode,
+          messageId: safeMessageId,
+          reaction: safeReaction,
+          speakerId: safeSpeakerId(speakerId),
+          roomState: {
+            roomMood: state.roomMood,
+            responseMode: state.responseMode,
+            priorSpeaker: state.priorSpeaker || '',
+            socialSignals: state.socialSignals
+          }
+        })
+      });
+      updateSocialSignals(payload.socialSignals || {});
+      renderSocialSignals();
+      renderStatus();
+      persistState();
+      reportTurnState({ runtimePhase: 'final' });
+    } catch (err) {
+      delete state.reactions[safeMessageId];
+      renderMessages();
+      persistState();
+      reportError('reaction-failed', 'Reaction did not land.');
+    }
+  }
+
   function resetSession() {
     state.sessionId = makeSessionId();
     state.messages = [];
+    state.reactions = {};
     state.ledger = [];
     state.presence = {};
     state.roomMood = 'focused';
@@ -1243,6 +1353,11 @@
     });
     $('reset-session').addEventListener('click', resetSession);
     el.form.addEventListener('submit', submitTurn);
+    el.feed.addEventListener('click', function (event) {
+      var button = event.target && event.target.closest ? event.target.closest('.reaction-button') : null;
+      if (!button) return;
+      submitReaction(button.dataset.messageId, button.dataset.reaction, button.dataset.speakerId);
+    });
     el.userText.addEventListener('input', function () {
       el.charCount.textContent = (el.userText.value || '').length + '/' + MAX_USER_TEXT;
     });

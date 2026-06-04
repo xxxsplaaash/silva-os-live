@@ -942,6 +942,18 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: "Yeah, that's a fair reaction. It feels like we're stuck on repeat."
     },
     {
+      label: 'live fair shorthand',
+      issue: 'voice-lock:generic-warmth:vanya',
+      speaker: 'vanya',
+      text: 'Yeah, fair. No more loop: your next move is one simple week.'
+    },
+    {
+      label: 'live fair reset',
+      issue: 'voice-lock:generic-warmth:vanya',
+      speaker: 'vanya',
+      text: 'Fair. No fourth version. Clear space and start the first set.'
+    },
+    {
       label: 'announced humor',
       issue: 'voice-lock:announced-humor:grok',
       speaker: 'grok',
@@ -1047,6 +1059,21 @@ test('social director quality validator rejects live generic fitness variants an
 
   assert.equal(liveFirstTurn.ok, false);
   assert.ok(liveFirstTurn.issues.includes('generic-advice-column'));
+
+  const liveRepairedVariant = validateDirectorOutput({
+    roomBeat: 'Live repaired turn still sounded like support-bot fitness copy.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'Three training days a week is a solid start. Focus on one compound lift and one accessory movement per session.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "That's a great way to begin. Make sure you're eating enough to support the work, and get your sleep." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(liveRepairedVariant.ok, false);
+  assert.ok(liveRepairedVariant.issues.includes('generic-advice-column'));
 
   const movie = validateDirectorOutput({
     roomBeat: 'Refuses a benign topic.',

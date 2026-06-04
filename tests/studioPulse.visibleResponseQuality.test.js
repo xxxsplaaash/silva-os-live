@@ -318,6 +318,18 @@ test('visible response quality rejects live support-bot fitness encouragement', 
   assert.ok(issueKeys(issues).includes('generic-advice:fitness'));
 });
 
+test('visible response quality rejects live repaired support-bot fitness variant', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'LOL I WANNA GROW MY MUSCLES',
+    visibleText: [
+      'Three training days a week is a solid start. Focus on one compound lift and one accessory movement per session.',
+      "That's a great way to begin. Make sure you're eating enough to support the work, and get your sleep."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('generic-advice:fitness'));
+});
+
 test('visible response quality rejects stale superseded visual attributes on style correction', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Actually my landing page style is white editorial with no red.',
@@ -446,15 +458,21 @@ test('visible response quality rejects room self-review language from live repai
 });
 
 test('visible response quality rejects support-bot softening from live frustration turns', () => {
-  const issues = evaluateVisibleResponse({
-    userMessage: 'BRUH...',
-    visibleText: [
+  for (const visibleText of [
+    [
       "Yeah, that's a fair reaction. It feels like we're stuck on repeat instead of moving forward.",
       'The next move is one workout, one meal, one sleep window. That is the constraint.'
-    ].join('\n')
-  });
+    ].join('\n'),
+    'Yeah, fair. No more loop: your next move is one simple week.',
+    'Fair. No fourth version. Clear space and start the first set.'
+  ]) {
+    const issues = evaluateVisibleResponse({
+      userMessage: 'BRUH...',
+      visibleText
+    });
 
-  assert.ok(issueKeys(issues).includes('speaker-flatness:generic-warmth'));
+    assert.ok(issueKeys(issues).includes('speaker-flatness:generic-warmth'), visibleText);
+  }
 });
 
 test('visible response quality rejects too-thin quality judgments', () => {
