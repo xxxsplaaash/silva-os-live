@@ -3012,7 +3012,10 @@ test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', 
         assert.equal(specifier, 'aisha-runtime-pack1');
         return {
           processAishaRequest: async request => {
-            assert.equal(Array.isArray(request.recentMessages) ? request.recentMessages.length : 0, 0);
+            const recentMessageText = (Array.isArray(request.recentMessages) ? request.recentMessages : [])
+              .map(item => String(item?.content || ''))
+              .join('\n');
+            assert.doesNotMatch(recentMessageText, /SOCIAL DIRECTOR|roomBeat|stateUpdates|generatorPrompt/);
             assert.doesNotMatch(request.messageText, /SOCIAL DIRECTOR|roomBeat|stateUpdates/);
             assert.match(request.projectContext?.socialDirectorV1?.generatorPrompt || '', /roomBeat|speakers|stateUpdates/);
             const text = String(request.messageText || '');

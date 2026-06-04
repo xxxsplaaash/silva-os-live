@@ -1510,7 +1510,8 @@ function forceContinuityFallbackIfNeeded({
     history: continuityRecentTurns,
     recentTurns: continuityRecentTurns,
     roomState,
-    memorySummary
+    memorySummary,
+    continuityLedger
   });
   const fallbackCheck = validateDirectorOutput(fallbackOutput, {
     userMessage: userText,
@@ -2220,7 +2221,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       history: continuityRecentTurns,
       recentTurns: continuityRecentTurns,
       roomState,
-      memorySummary
+      memorySummary,
+      continuityLedger
     });
     const fallbackValidation = validateDirectorOutput(fallbackOutput, {
       userMessage: userText,
@@ -2254,12 +2256,12 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     visibleRecentTurns,
     roomState,
     memorySummary,
+    continuityLedger,
     responseMode,
     roomMood,
     messageEvents,
     silentReactions,
     continuityProof,
-    continuityLedger,
     impulsePlan: showcaseImpulsePlan
   });
   if (forcedContinuityRepair) {

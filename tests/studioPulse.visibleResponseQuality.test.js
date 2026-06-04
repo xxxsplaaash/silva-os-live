@@ -388,6 +388,18 @@ test('visible response quality rejects generic short-window fitness boilerplate'
   assert.ok(issues.some(item => item.family === 'generic-advice'));
 });
 
+test('visible response quality rejects chosen-exercises boilerplate from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'WHERE DO I START',
+    visibleText: [
+      'Start with three rounds of your chosen exercises. Focus on clean form for 40 seconds, then rest for 20.',
+      "That's a solid structure to begin. Just show up for those twenty minutes and move with intention."
+    ].join('\n')
+  });
+
+  assert.ok(issues.some(item => item.family === 'generic-advice'));
+});
+
 test('visible response quality rejects live support-bot fitness encouragement', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'LOL I WANNA GROW MY MUSCLES',
@@ -619,6 +631,17 @@ test('visible response quality rejects question-bounce repetition recovery from 
   });
 
   assert.ok(issueKeys(issues).includes('frustration-miss:repeat-complaint'));
+
+  const softerIssues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      "It's understandable to feel that way when the point gets lost in the noise. We're trying to land the answer, not just talk around it.",
+      "The abstraction is the dodge. If we're not answering the person, we're just performing.",
+      "Let's name the specific point that feels repeated. Then we can define one clear constraint for the next answer."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(softerIssues).includes('frustration-miss:repeat-complaint'));
 });
 
 test('visible response quality rejects normal-answer question bounce from live gauntlet', () => {

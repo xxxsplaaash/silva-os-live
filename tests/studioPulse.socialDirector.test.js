@@ -1518,6 +1518,29 @@ test('social director quality validator rejects current live accepted fitness bo
   assert.equal(liveShortWindow.ok, false);
   assert.ok(liveShortWindow.issues.includes('generic-advice-column'));
 
+  const liveChosenExercises = validateDirectorOutput({
+    roomBeat: 'The room leaks the exact follow-up boilerplate from the live gauntlet.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'Start with three rounds of your chosen exercises. Focus on clean form for 40 seconds, then rest for 20.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "That's a solid structure to begin. Just show up for those twenty minutes and move with intention." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'WHERE DO I START',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+      { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
+      { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' }
+    ]
+  });
+
+  assert.equal(liveChosenExercises.ok, false);
+  assert.ok(liveChosenExercises.issues.includes('generic-advice-column'));
+
   const objectiveDrift = validateDirectorOutput({
     roomBeat: 'The room loses the concrete muscle context.',
     roomMood: 'focused',
@@ -2027,6 +2050,23 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(liveQuestionBounceRepeatComplaint.ok, false);
   assert.ok(liveQuestionBounceRepeatComplaint.issues.includes('frustration-ignored'));
   assert.ok(liveQuestionBounceRepeatComplaint.issues.includes('product-frustration-miss:repeat-complaint'));
+
+  const softerLiveRepeatComplaint = validateDirectorOutput({
+    roomBeat: 'The room sounds sympathetic but still asks the user to frame the answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'soft', text: "It's understandable to feel that way when the point gets lost in the noise. We're trying to land the answer, not just talk around it." },
+      { speakerId: 'leah', role: 'side', tone: 'direct', text: "The abstraction is the dodge. If we're not answering the person, we're just performing." },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "Let's name the specific point that feels repeated. Then we can define one clear constraint for the next answer." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'you keep repeating yourself' });
+
+  assert.equal(softerLiveRepeatComplaint.ok, false);
+  assert.ok(softerLiveRepeatComplaint.issues.includes('frustration-ignored'));
+  assert.ok(softerLiveRepeatComplaint.issues.includes('product-frustration-miss:repeat-complaint'));
 
   const bruhPlanSermon = validateDirectorOutput({
     roomBeat: 'The room doubles down instead of reading frustration.',
