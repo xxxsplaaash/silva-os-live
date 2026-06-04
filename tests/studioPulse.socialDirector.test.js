@@ -1499,6 +1499,22 @@ test('social director quality validator rejects continuity claims answered as bu
   assert.equal(liveSpecsDrift.ok, false);
   assert.ok(liveSpecsDrift.issues.includes('operational-jargon'));
 
+  const liveTechnicalRequirementsDrift = validateDirectorOutput({
+    roomBeat: 'The room turns style into implementation planning.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "Black glass with a single red pulse. That's the direction." },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'It is a strong visual. Minimalist, but with a clear focal point.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "I can map out the technical requirements for that. We'll need to ensure the pulse is subtle and doesn't overwhelm the glass effect." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My landing page style is black glass with a single red pulse.' });
+
+  assert.equal(liveTechnicalRequirementsDrift.ok, false);
+  assert.ok(liveTechnicalRequirementsDrift.issues.includes('operational-jargon'));
+
   const liveImplementationDrift = validateDirectorOutput({
     roomBeat: 'The room acknowledges style but slides into implementation posture.',
     roomMood: 'focused',
