@@ -2264,6 +2264,22 @@ test('social director quality validator rejects invented planning details not su
 
   assert.equal(liveThreePointAgendaPromise.ok, false);
   assert.ok(liveThreePointAgendaPromise.issues.includes('product-invented-detail:project-planning'));
+
+  const liveThreeStageAgendaPromise = validateDirectorOutput({
+    roomBeat: 'The room invents agenda stages and a meeting shape for a generic planning ask.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's map out the critical path for tomorrow. I'll draft a three-stage agenda: morning sync, core work block, and afternoon review." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'I can lead the morning sync. Just need a quick heads-up on any specific points we need to land before the main work begins.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(liveThreeStageAgendaPromise.ok, false);
+  assert.ok(liveThreeStageAgendaPromise.issues.includes('operational-jargon'));
+  assert.ok(liveThreeStageAgendaPromise.issues.includes('product-invented-detail:project-planning'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
@@ -2804,6 +2820,62 @@ test('social director quality validator rejects stale planning posture in food a
   assert.ok(vagueLunch.issues.includes('product-weak-food-answer:food'));
 });
 
+test('social director quality validator rejects bland accepted practical answers from live gauntlet', () => {
+  const today = validateDirectorOutput({
+    roomBeat: 'The room accepts a normal-answer request but still dodges.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'Name the actual ask for today. Then, identify one concrete step to move it forward.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Let's cut the noise and find one thing that feels useful, not just more of the same." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'answer normally, what should I do today?'
+  });
+
+  assert.equal(today.ok, false);
+  assert.ok(today.issues.includes('product-weak-next-move:normal-answer'));
+
+  const planning = validateDirectorOutput({
+    roomBeat: 'The room accepts a planning pivot but punts back to the user.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's map out tomorrow. I'll need a list of priorities by end of day." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Sounds like a solid plan. Just make sure we build in a moment to breathe between tasks.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'new topic: I need help planning tomorrow'
+  });
+
+  assert.equal(planning.ok, false);
+  assert.ok(planning.issues.includes('operational-jargon'));
+  assert.ok(planning.issues.includes('product-invented-detail:project-planning'));
+
+  const lunch = validateDirectorOutput({
+    roomBeat: 'The room accepts a lunch ask but answers like generic wellness copy.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'For lunch, a quick salad or a sandwich will keep you moving. Something with protein.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Or, if you have a moment, a warm bowl of soup can be surprisingly grounding before diving back in.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'quick help: what should I eat for lunch?'
+  });
+
+  assert.equal(lunch.ok, false);
+  assert.ok(lunch.issues.includes('food-answer-dodged'));
+  assert.ok(lunch.issues.includes('generic-advice-column'));
+  assert.ok(lunch.issues.includes('product-weak-food-answer:food'));
+});
+
 test('social director quality validator rejects fake design implementation promises', () => {
   const thinLogo = validateDirectorOutput({
     roomBeat: 'The room talks around the logo direction.',
@@ -3063,6 +3135,23 @@ test('social director quality validator rejects fake design implementation promi
   assert.equal(liveImplementationQuestion.ok, false);
   assert.ok(liveImplementationQuestion.issues.includes('operational-jargon'));
   assert.ok(liveImplementationQuestion.issues.includes('product-self-theater:meta-language'));
+
+  const liveDashboardUtilityObjective = validateDirectorOutput({
+    roomBeat: 'The room invents a dashboard objective from a color preference.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: "Pale blue, no red. That's a clear shift from the previous choice." },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: "The functional requirement remains the dashboard's utility. The color scheme is secondary to that core objective." },
+      { speakerId: 'leah', role: 'side', tone: 'sharp', text: 'Pale blue is a safe choice. It avoids the potential for a red accent to become a distraction or an unintended signal.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Actually my dashboard preference is pale blue with no red accents.' });
+
+  assert.equal(liveDashboardUtilityObjective.ok, false);
+  assert.ok(liveDashboardUtilityObjective.issues.includes('operational-jargon'));
+  assert.ok(liveDashboardUtilityObjective.issues.includes('product-self-theater:meta-language'));
 });
 
 test('social director quality validator rejects logo direction answers that punt back to discovery', () => {

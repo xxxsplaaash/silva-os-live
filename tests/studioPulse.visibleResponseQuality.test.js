@@ -656,6 +656,39 @@ test('visible response quality rejects normal-answer question bounce from live g
   assert.ok(issueKeys(issues).includes('weak-next-move:normal-answer'));
 });
 
+test('visible response quality rejects bland accepted practical answers from live gauntlet', () => {
+  const todayIssues = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      'Name the actual ask for today. Then, identify one concrete step to move it forward.',
+      "Let's cut the noise and find one thing that feels useful, not just more of the same."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(todayIssues).includes('weak-next-move:normal-answer'));
+
+  const planningIssues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      "Let's map out tomorrow. I'll need a list of priorities by end of day.",
+      'Sounds like a solid plan. Just make sure we build in a moment to breathe between tasks.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(planningIssues).includes('invented-detail:project-planning'));
+
+  const lunchIssues = evaluateVisibleResponse({
+    userMessage: 'quick help: what should I eat for lunch?',
+    visibleText: [
+      'For lunch, a quick salad or a sandwich will keep you moving. Something with protein.',
+      'Or, if you have a moment, a warm bowl of soup can be surprisingly grounding before diving back in.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(lunchIssues).includes('weak-food-answer:food'));
+  assert.ok(lunchIssues.some(item => item.family === 'generic-advice'));
+});
+
 test('visible response quality rejects softer objective-speech residue', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'WHERE DO I START',
@@ -747,6 +780,31 @@ test('visible response quality rejects fake three-point agenda promise from live
   });
 
   assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects live invented three-stage agenda details', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      "Let's map out the critical path for tomorrow. I'll draft a three-stage agenda: morning sync, core work block, and afternoon review.",
+      'I can lead the morning sync. Just need a quick heads-up on any specific points we need to land before the main work begins.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects invented dashboard utility objective on preference claims', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Actually my dashboard preference is pale blue with no red accents.',
+    visibleText: [
+      "Pale blue, no red. That's a clear shift from the previous choice.",
+      "The functional requirement remains the dashboard's utility. The color scheme is secondary to that core objective.",
+      'Pale blue is a safe choice. It avoids the potential for a red accent to become a distraction or an unintended signal.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('self-theater:meta-language'));
 });
 
 test('visible response quality rejects live design-direction punts', () => {
