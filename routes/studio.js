@@ -1480,7 +1480,8 @@ function buildPulseShowcaseReactionPayload(body = {}) {
 
 function splitShowcaseExpansionClauses(text = '') {
   const clean = safeShowcaseText(text, 520)
-    .replace(/\s*[-–—]\s*/g, '. ')
+    .replace(/\s+[-–—]\s+/g, '. ')
+    .replace(/[–—]/g, '. ')
     .replace(/\s*;\s*/g, '. ');
   return clean
     .split(/[.!?]+/)

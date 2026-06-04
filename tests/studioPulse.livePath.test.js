@@ -282,7 +282,7 @@ test('pulse showcase expand returns brief local voice bullets without Pack 1 mem
     mode: 'social_hierarchy_lab',
     messageId: 'msg-grok-1',
     speakerId: 'grok',
-    text: 'The failure is not the model. The boundary is lying about what it can verify.',
+    text: 'The failure is not the model. The full-body boundary is lying about what it can verify.',
     roomState: {
       roomMood: 'sharp',
       responseMode: 'single',
@@ -309,7 +309,9 @@ test('pulse showcase expand returns brief local voice bullets without Pack 1 mem
     assert.ok(bullet.length >= 12);
     assert.ok(bullet.length <= 170);
     assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph)\b/i);
+    assert.doesNotMatch(bullet, /\bfull is\b/i);
   });
+  assert.match(result.payload.bullets.join(' '), /\bfull-body\b/i);
   assert.equal(result.payload.continuityLedger, undefined);
   assert.equal(result.payload.memorySummary, undefined);
 });
