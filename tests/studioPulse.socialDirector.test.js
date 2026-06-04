@@ -1220,6 +1220,8 @@ test('deterministic continuity fallback answers old preference recall from visib
 
   assert.match(text, /obsidian/i);
   assert.match(text, /pale blue/i);
+  assert.match(text, /\bOld record:\s*dashboard preference is obsidian with one red accent/i);
+  assert.match(text, /\bCurrent record:\s*dashboard preference is pale blue with no red accents/i);
   assert.equal(issues.length, 0);
 });
 

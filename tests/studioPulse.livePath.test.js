@@ -1773,6 +1773,8 @@ test('Studio Pulse showcase last-mile gate repairs old preference recall boilerp
         assert.equal(final.repairedByRuntime, true);
         assert.match(text, /obsidian with one red accent/i);
         assert.match(text, /pale blue with no red accents/i);
+        assert.match(text, /\bOld record:\s*dashboard preference is obsidian with one red accent/i);
+        assert.match(text, /\bCurrent record:\s*dashboard preference is pale blue with no red accents/i);
         assert.match(text, /\b(prior|old|previous|superseded|record)\b/i);
         assert.equal(final.messageEvents[0].speakerName, 'Aisha Motsepe');
         assert.doesNotMatch(text, /\b(room is here|silence means absence|earn a voice)\b/i);
