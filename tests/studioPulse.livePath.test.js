@@ -2181,11 +2181,11 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
                     roomMood: 'focused',
                     responseMode: 'open_floor',
                     speakers: [
-                      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Present. Focused on the current objective.', visibleState: 'Watching' },
-                      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Here and ready. Just checking the temperature.', visibleState: 'Watching' },
-                      { speakerId: 'leah', role: 'side', tone: 'flat', text: "Present. Observing the room's current state.", visibleState: 'Watching' },
-                      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Operational. Ready for the next step.', visibleState: 'Watching' },
-                      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Here. Monitoring for anomalies.', visibleState: 'Watching' }
+                      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Operational. The current episode is stable.', visibleState: 'Watching' },
+                      { speakerId: 'vanya', role: 'called_in', tone: 'flat', text: 'Present and ready to engage. Hope you are too.', visibleState: 'Watching' },
+                      { speakerId: 'leah', role: 'called_in', tone: 'flat', text: "Observing. Let's ensure the signal is clear.", visibleState: 'Watching' },
+                      { speakerId: 'claudia', role: 'called_in', tone: 'flat', text: 'Structured and awaiting direction. What is the next move?', visibleState: 'Watching' },
+                      { speakerId: 'grok', role: 'called_in', tone: 'flat', text: "Functioning. Though 'how' implies a metric I have yet to see.", visibleState: 'Watching' }
                     ],
                     silentReactions: [],
                     socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
@@ -2237,7 +2237,7 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
             sessionId: 'showcase-flat-rollcall-pack1-repair',
             userText: 'how is everyone?',
             expectedIssue: 'product-speaker-flatness:roll-call',
-            rejected: /current objective|monitoring for anomalies/i,
+            rejected: /current episode|awaiting direction|signal is clear|functioning|present and ready/i,
             rejectedAfterRepair: /\b(Aisha here|Vanya here|Claudia here|Grok here|room is held|socially operational)\b/i,
             expected: /\b(alive|slightly restless|attendance|room is awake|one clean move|specific)\b/i
           },

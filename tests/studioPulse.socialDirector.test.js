@@ -2048,6 +2048,21 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(bruhObjectiveStart.ok, false);
   assert.ok(bruhObjectiveStart.issues.includes('frustration-ignored'));
   assert.ok(bruhObjectiveStart.issues.includes('product-false-objective:command-posture'));
+
+  const stressObjectiveSignal = validateDirectorOutput({
+    roomBeat: 'The room answers stress with objective language and calls it useful.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'It sounds like the pressure is making the details feel like noise. That happens when the objective gets lost in the weeds.' },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The objective is the signal. If the details are not serving it, they are the problem, not the stress.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(stressObjectiveSignal.ok, false);
+  assert.ok(stressObjectiveSignal.issues.includes('product-false-objective:command-posture'));
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
@@ -2386,6 +2401,29 @@ test('social director quality validator rejects generic operational check-in rep
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('generic-status-report'));
+});
+
+test('social director quality validator rejects sterile accepted roll-call from live gauntlet', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room reports a social check-in.',
+    roomMood: 'focused',
+    responseMode: 'open_floor',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Operational. The current episode is stable.', visibleState: 'Watching' },
+      { speakerId: 'vanya', role: 'called_in', tone: 'flat', text: 'Present and ready to engage. Hope you are too.', visibleState: 'Watching' },
+      { speakerId: 'leah', role: 'called_in', tone: 'flat', text: "Observing. Let's ensure the signal is clear.", visibleState: 'Watching' },
+      { speakerId: 'claudia', role: 'called_in', tone: 'flat', text: 'Structured and awaiting direction. What is the next move?', visibleState: 'Watching' },
+      { speakerId: 'grok', role: 'called_in', tone: 'flat', text: "Functioning. Though 'how' implies a metric I have yet to see.", visibleState: 'Watching' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'how is everyone?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(
+    validation.issues.includes('generic-status-report') || validation.issues.includes('product-speaker-flatness:roll-call'),
+    `expected roll-call issue, got ${validation.issues.join(', ')}`
+  );
 });
 
 test('social director fallback drops stale fitness context for movie and room-tension pivots', async () => {

@@ -339,6 +339,21 @@ test('visible response quality rejects live diagnostic roll-call voice', () => {
   assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
 });
 
+test('visible response quality rejects sterile accepted roll-call from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'Operational. The current episode is stable.',
+      'Present and ready to engage. Hope you are too.',
+      "Observing. Let's ensure the signal is clear.",
+      'Structured and awaiting direction. What is the next move?',
+      "Functioning. Though 'how' implies a metric I have yet to see."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
+});
+
 test('visible response quality rejects thin next-action non-answers', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'answer normally, what should I do today?',
@@ -609,6 +624,18 @@ test('visible response quality rejects stress answers that dodge into tension an
   });
 
   assert.ok(issueKeys(issues).includes('frustration-miss:stress-recovery'));
+});
+
+test('visible response quality rejects stress answers that hide behind objective slogans', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: [
+      'It sounds like the pressure is making the details feel like noise. That happens when the objective gets lost in the weeds.',
+      'The objective is the signal. If the details are not serving it, they are the problem, not the stress.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
 });
 
 test('visible response quality rejects generic action-flick movie answers', () => {

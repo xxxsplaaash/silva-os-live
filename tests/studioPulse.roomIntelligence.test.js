@@ -918,6 +918,18 @@ test('v0.6.2 fallback quality handles live degraded prompts without template lea
   assert.doesNotMatch(text, /ok what the nex t highest valuable move what/i);
   assert.doesNotMatch(text, FORBIDDEN_FALLBACK_QUALITY_RX);
 
+  const contaminatedFollowUp = {
+    ...followUp,
+    taskType: 'roll_call',
+    asksRollCall: true,
+    asksAboutRoomState: true
+  };
+  plan = planRoomTurn({ perception: contaminatedFollowUp, roomState: state });
+  text = fallbackTexts(plan, contaminatedFollowUp, { providerMode: 'provider-unavailable-fallback' });
+  assert.equal(plan.intentFamily, 'direct-answer');
+  assert.match(text, /verification, not another layer|fix the live seam/i);
+  assert.doesNotMatch(text, /Role call|Online check|available when called in/i);
+
   const openFloor = perceiveRoomMessage('open floor', state);
   plan = planRoomTurn({ perception: openFloor, roomState: state });
   text = fallbackTexts(plan, openFloor);
