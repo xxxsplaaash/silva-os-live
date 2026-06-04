@@ -1618,6 +1618,26 @@ test('social director quality validator rejects weak continuity change summaries
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('continuity-question-ignored'));
+
+  const liveClarificationMiss = validateDirectorOutput({
+    roomBeat: 'A.I.S.H.A asks the user to summarize the change instead of citing the room record.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'What has changed since the last check-in? I need a clear summary of any new developments or shifts in focus.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ]
+  });
+
+  assert.equal(liveClarificationMiss.ok, false);
+  assert.ok(liveClarificationMiss.issues.includes('continuity-question-ignored'));
 });
 
 test('social director quality validator rejects false continuity denials', () => {
@@ -2259,6 +2279,17 @@ test('visible response evaluator rejects generic food advice and weak denial con
     userMessage: 'quick help: what should I eat for lunch?'
   });
   assert.ok(vagueFoodIssues.some(item => item.family === 'weak-food-answer'));
+
+  const continuityPromptEcho = evaluateVisibleResponse({
+    visibleText: 'What has changed since the last check-in? I need a clear summary of any new developments or shifts in focus.',
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ],
+    continuity: { active: 1, superseded: 1, disputed: 0 }
+  });
+  assert.ok(continuityPromptEcho.some(item => item.family === 'continuity-miss'));
 
   const denial = validateDirectorOutput({
     roomBeat: 'A.I.S.H.A cites only the old record.',
