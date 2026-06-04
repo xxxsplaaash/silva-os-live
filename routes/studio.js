@@ -66,6 +66,7 @@ const {
   getAishaResponseUsability
 } = require('../lib/aisha/aishaAdapter');
 const {
+  buildRoomDirectorInput,
   runSocialDirectorTurn,
   socialCuesForPayload,
   socialFallbackFor,
@@ -1327,7 +1328,7 @@ function showcaseContinuityQualityContext(continuityProof = {}, continuityLedger
   };
 }
 
-function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], continuity = {} } = {}) {
+function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], continuity = {}, impulsePlan = null } = {}) {
   return validateDirectorOutput({
     roomBeat: '',
     roomMood,
@@ -1345,7 +1346,7 @@ function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', mess
       reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns, continuity });
+  }, { userMessage: userText, recentTurns, continuity, impulsePlan });
 }
 
 function forceContinuityFallbackIfNeeded({
@@ -1359,7 +1360,8 @@ function forceContinuityFallbackIfNeeded({
   messageEvents = [],
   silentReactions = [],
   continuityProof = {},
-  continuityLedger = []
+  continuityLedger = [],
+  impulsePlan = null
 } = {}) {
   const continuityRecentTurns = dedupeShowcaseRecentTurns([...recentTurns, ...visibleRecentTurns]);
   const check = validateShowcaseVisiblePayload({
@@ -1369,7 +1371,8 @@ function forceContinuityFallbackIfNeeded({
     silentReactions,
     userText,
     recentTurns: continuityRecentTurns,
-    continuity: showcaseContinuityQualityContext(continuityProof, continuityLedger)
+    continuity: showcaseContinuityQualityContext(continuityProof, continuityLedger),
+    impulsePlan
   });
   const continuityIssue = (check.issues || []).find(item =>
     /^product-continuity-(conflict|miss)/.test(String(item || ''))
@@ -1961,18 +1964,20 @@ function parsePulseShowcaseTurnRequest(body = {}) {
 
 async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const { userText, mode, sessionId, recentTurns, references, roomState } = parsed;
+  const directorBody = {
+    question: userText,
+    threadId: sessionId,
+    history: recentTurns,
+    recentTurns,
+    references,
+    roomState,
+    currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
+    openFloor: mode === 'social_hierarchy_lab',
+    uiState: { surface: 'pulse-showcase', visibleMode: mode }
+  };
+  const showcaseImpulsePlan = buildRoomDirectorInput(directorBody).impulsePlan;
   const result = await runSocialDirectorTurn({
-    body: {
-      question: userText,
-      threadId: sessionId,
-      history: recentTurns,
-      recentTurns,
-      references,
-      roomState,
-      currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
-      openFloor: mode === 'social_hierarchy_lab',
-      uiState: { surface: 'pulse-showcase', visibleMode: mode }
-    },
+    body: directorBody,
     callAishaEngine,
     runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
     includeMemorySummary: true
@@ -2020,7 +2025,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns: visibleRecentTurns, continuity: continuityQuality });
+  }, { userMessage: userText, recentTurns: visibleRecentTurns, continuity: continuityQuality, impulsePlan: showcaseImpulsePlan });
   if (!publicQuality.ok) {
     const fallbackOutput = socialFallbackFor(userText, {
       history: visibleRecentTurns,
@@ -2031,7 +2036,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     const fallbackValidation = validateDirectorOutput(fallbackOutput, {
       userMessage: userText,
       recentTurns: visibleRecentTurns,
-      continuity: continuityQuality
+      continuity: continuityQuality,
+      impulsePlan: showcaseImpulsePlan
     });
     const fallbackSafe = fallbackValidation.output || fallbackOutput || {};
     responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
@@ -2064,7 +2070,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     messageEvents,
     silentReactions,
     continuityProof,
-    continuityLedger
+    continuityLedger,
+    impulsePlan: showcaseImpulsePlan
   });
   if (forcedContinuityRepair) {
     const fallbackSafe = forcedContinuityRepair.output || {};

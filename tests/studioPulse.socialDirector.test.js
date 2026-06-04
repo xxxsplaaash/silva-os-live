@@ -451,6 +451,50 @@ test('showcase impulse planner enforces caps and selected speakers before genera
   assert.ok(Array.isArray(body.silentReactions));
 });
 
+test('showcase fallback obeys impulse caps on short practical follow-ups', async () => {
+  let capturedRequest = null;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'ok but I only have 20 minutes',
+      roomState: { roomMood: 'focused' },
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.' }
+      ]
+    },
+    callAishaEngine: async request => {
+      capturedRequest = request;
+      return mockAishaJson({
+        roomBeat: 'The provider tries to turn a short practical ask into a chorus.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Twenty minutes is enough if you stop negotiating with it.' },
+          { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'Do three rounds: squat or hinge, push, pull, core.' },
+          { speakerId: 'grok', role: 'closer', tone: 'dry diagnostic', text: 'The constraint is useful. It forces a session you can finish.' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      });
+    }
+  });
+
+  const body = result.payload;
+  const plan = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan;
+  assert.equal(plan.category, 'practical');
+  assert.equal(plan.maxSpeakers, 2);
+  assert.equal(plan.enforceSelectedSpeakers, true);
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.equal(body.validation.fallbackUsed, true);
+  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
+  assert.ok(body.messageEvents.length <= 2);
+  assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
+  assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && String(item.reason || '').trim()));
+  assertCleanVisible(body);
+});
+
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
   const input = buildRoomDirectorInput({
     message: 'I need a sharper logo direction',
@@ -2337,6 +2381,7 @@ test('social director fallback answers short fitness follow-up and Grok quality 
       ];
       const shortSession = await postSocial(baseUrl, 'ok but I only have 20 minutes', { recentTurns });
       const shortText = visibleText(shortSession.body);
+      assert.ok(shortSession.body.messageEvents.length <= 2);
       assert.match(shortText, /\b(Twenty minutes|three rounds|forty seconds|squat|push|pull)\b/i);
       assert.doesNotMatch(shortText, /\b(consistency is key|adequate protein|timing is key)\b/i);
 
@@ -2374,6 +2419,47 @@ test('social director fallback recovers repetition complaints and planning pivot
       assert.match(planningText, /\b(Tomorrow|three blocks|first decision|main build|cleanup)\b/i);
       assert.doesNotMatch(planningText, /\b(muscle|training|protein|workout)\b/i);
     });
+  });
+});
+
+test('pulse showcase public façade caps repaired practical follow-up to impulse plan', async () => {
+  await withAishaFlag('true', async () => {
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async () => mockAishaJson({
+        roomBeat: 'The model keeps drifting into objective posture.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is to start. Pick one workout, one meal, and one sleep window.' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      })
+    }));
+
+    const parsed = studioRouter.__parsePulseShowcaseTurnRequestForTests({
+      sessionId: 'showcase-practical-cap',
+      mode: 'social_hierarchy_lab',
+      userText: 'ok but I only have 20 minutes',
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
+      ]
+    });
+    assert.equal(parsed.error, undefined);
+
+    const { payload: body, statusCode } = await studioRouter.__buildPulseShowcaseTurnPayloadForTests(parsed);
+
+    assert.equal(statusCode, 200);
+    assert.equal(body.ok, true);
+    assert.equal(body.activeEngine, 'local-social-director');
+    assert.equal(body.repairedByRuntime, true);
+    assert.ok(body.messageEvents.length <= 2);
+    assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['vanya', 'claudia']);
+    assert.match(visibleText(body), /\b(Twenty minutes|three rounds|squat|push|pull)\b/i);
+    assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && item.reason));
+    assertCleanVisible(body);
   });
 });
 
