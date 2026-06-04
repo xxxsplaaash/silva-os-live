@@ -666,6 +666,26 @@ test('social director fallback answers logo direction with concrete brand moves'
   });
 });
 
+test('social director fallback answers landing-page design direction instead of generic room banter', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const { body } = await postSocial(baseUrl, 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.', {
+        recentTurns: [
+          { speakerId: 'user', role: 'user', text: 'answer normally, what should I do today?' },
+          { speakerId: 'vanya', role: 'primary', text: 'Hey. The room is here; nobody has to perform a job title just to be allowed to speak.' }
+        ]
+      });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.match(text, /\b(landing|hero|Silva|black glass|red pulse|CTA|SaaS|premium|direction|accent)\b/i);
+      assert.doesNotMatch(text, /\b(room is here|perform a job title|silence means absence)\b/i);
+      assert.doesNotMatch(text, /\b(push-ups|workout|protein|training week)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director quality validator rejects stale fitness answer after open-floor pivot', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'Old fitness context leaks into a new open-floor prompt.',
@@ -2085,6 +2105,23 @@ test('social director quality validator rejects logo direction answers that punt
   assert.ok(softerPunt.issues.includes('design-answer-punted'));
 });
 
+test('social director quality validator rejects landing-page prompts answered as generic room banter', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room opens socially and ignores the design prompt.',
+    roomMood: 'warm',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Hey. The room is here; nobody has to perform a job title just to be allowed to speak.' },
+      { speakerId: 'leah', role: 'side', tone: 'playful', text: 'Thank God. I was getting bored of pretending silence means absence.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('design-answer-punted'));
+});
+
 test('social director quality validator rejects objective slogans for casual choices', () => {
   const movieObjective = validateDirectorOutput({
     roomBeat: 'The room turns a movie choice into process language.',
@@ -2871,6 +2908,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/planning tomorrow/i.test(userText)) return 'Tomorrow needs a first block, a second block, and one owner for the messiest next step.';
       if (/lunch/i.test(userText)) return 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.';
       if (/logo direction/i.test(userText)) return 'Silva logo direction: one sharp mark, restrained contrast, black field, small red signal only if it earns the attention.';
+      if (/landing page direction/i.test(userText)) return 'Silva landing page direction: black glass, one red pulse, quiet hero, obvious CTA, and no generic SaaS gloss.';
       if (/never said black glass/i.test(userText)) return 'Yes: prior record was black glass with a single red pulse; current record is white editorial with no red.';
       if (/black glass/i.test(userText)) return 'Recorded: landing page style is black glass with a single red pulse.';
       if (/white editorial/i.test(userText)) return 'Changed: landing page style is white editorial with no red. Prior record stays black glass with a single red pulse.';
@@ -2934,9 +2972,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.counts.accepted, 8);
-    assert.equal(summary.counts.repaired, 16);
+    assert.equal(summary.counts.repaired, 17);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 24);
+    assert.equal(calls, 25);
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
