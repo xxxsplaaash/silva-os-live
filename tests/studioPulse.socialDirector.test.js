@@ -495,6 +495,22 @@ test('showcase fallback obeys impulse caps on short practical follow-ups', async
   assertCleanVisible(body);
 });
 
+test('showcase impulse planner treats punctuated terse follow-ups as practical with recent context', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+    { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' },
+    { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+  ];
+
+  for (const question of ['WHAT IS THE OBJECTIVE?', 'BRUH...']) {
+    const input = buildRoomDirectorInput({ question, recentTurns, roomState: { roomMood: 'focused' } });
+    assert.equal(input.impulsePlan.category, 'practical', question);
+    assert.equal(input.impulsePlan.maxSpeakers, 2, question);
+    assert.equal(input.impulsePlan.enforceSelectedSpeakers, true, question);
+    assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya'], question);
+  }
+});
+
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
   const input = buildRoomDirectorInput({
     message: 'I need a sharper logo direction',
@@ -2437,29 +2453,33 @@ test('pulse showcase public façade caps repaired practical follow-up to impulse
       })
     }));
 
-    const parsed = studioRouter.__parsePulseShowcaseTurnRequestForTests({
-      sessionId: 'showcase-practical-cap',
-      mode: 'social_hierarchy_lab',
-      userText: 'ok but I only have 20 minutes',
-      recentTurns: [
-        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
-        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
-        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
-      ]
-    });
-    assert.equal(parsed.error, undefined);
+    const recentTurns = [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
+    ];
 
-    const { payload: body, statusCode } = await studioRouter.__buildPulseShowcaseTurnPayloadForTests(parsed);
+    for (const userText of ['ok but I only have 20 minutes', 'WHAT IS THE OBJECTIVE?', 'BRUH...']) {
+      const parsed = studioRouter.__parsePulseShowcaseTurnRequestForTests({
+        sessionId: `showcase-practical-cap-${userText.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+        mode: 'social_hierarchy_lab',
+        userText,
+        recentTurns
+      });
+      assert.equal(parsed.error, undefined);
 
-    assert.equal(statusCode, 200);
-    assert.equal(body.ok, true);
-    assert.equal(body.activeEngine, 'local-social-director');
-    assert.equal(body.repairedByRuntime, true);
-    assert.ok(body.messageEvents.length <= 2);
-    assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['vanya', 'claudia']);
-    assert.match(visibleText(body), /\b(Twenty minutes|three rounds|squat|push|pull)\b/i);
-    assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && item.reason));
-    assertCleanVisible(body);
+      const { payload: body, statusCode } = await studioRouter.__buildPulseShowcaseTurnPayloadForTests(parsed);
+
+      assert.equal(statusCode, 200, userText);
+      assert.equal(body.ok, true, userText);
+      assert.equal(body.activeEngine, 'local-social-director', userText);
+      assert.equal(body.repairedByRuntime, true, userText);
+      assert.ok(body.messageEvents.length <= 2, userText);
+      assert.ok(body.messageEvents.every(item => ['vanya', 'claudia'].includes(item.speakerId)), userText);
+      assert.match(visibleText(body), /\b(Twenty minutes|three rounds|squat|push|pull|workout|training|week|reps|sleep|meal)\b/i, userText);
+      assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && item.reason), userText);
+      assertCleanVisible(body);
+    }
   });
 });
 

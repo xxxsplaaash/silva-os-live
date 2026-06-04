@@ -1964,6 +1964,7 @@ function parsePulseShowcaseTurnRequest(body = {}) {
 
 async function buildPulseShowcaseTurnPayload(parsed = {}) {
   const { userText, mode, sessionId, recentTurns, references, roomState } = parsed;
+  const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
   const directorBody = {
     question: userText,
     threadId: sessionId,
@@ -1975,7 +1976,11 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     openFloor: mode === 'social_hierarchy_lab',
     uiState: { surface: 'pulse-showcase', visibleMode: mode }
   };
-  const showcaseImpulsePlan = buildRoomDirectorInput(directorBody).impulsePlan;
+  const showcaseImpulsePlan = buildRoomDirectorInput({
+    ...directorBody,
+    history: visibleRecentTurns,
+    recentTurns: visibleRecentTurns
+  }).impulsePlan;
   const result = await runSocialDirectorTurn({
     body: directorBody,
     callAishaEngine,
@@ -2006,7 +2011,6 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     || debug.repaired === true
     || (payload.aishaConnected === true && fallbackCategory === 'quality-rejected');
   let qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
-  const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
   const continuityQuality = showcaseContinuityQualityContext(continuityProof, continuityLedger);
   const publicQuality = validateDirectorOutput({
     roomBeat: payload.roomBeat || '',
