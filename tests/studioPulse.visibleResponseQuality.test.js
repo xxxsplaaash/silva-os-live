@@ -116,6 +116,30 @@ test('visible response quality rejects fake UI surface-reflection implementation
   }
 });
 
+test('visible response quality rejects passive and adjacent surface-reflection promises', () => {
+  const fixtures = [
+    'The website will reflect that edge across the landing page.',
+    'The app will reflect that edge across the landing page.',
+    'The homepage will reflect that edge across the product.',
+    'The page now reflects that edge across the dashboard.',
+    'The visuals now reflect that edge across the dashboard.',
+    'This will be reflected in the interface across the landing page.',
+    'That edge will be reflected in the UI.'
+  ];
+
+  for (const fixture of fixtures) {
+    const issues = evaluateVisibleResponse({
+      userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.',
+      visibleText: [
+        'The direction is black field, severe spacing, one red signal, and no friendly SaaS softness.',
+        fixture
+      ].join('\n')
+    });
+
+    assert.ok(issueKeys(issues).includes('self-theater:meta-language'), fixture);
+  }
+});
+
 test('visible response quality rejects continuity answers that ask what changed instead of using ledger evidence', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What changed?',
