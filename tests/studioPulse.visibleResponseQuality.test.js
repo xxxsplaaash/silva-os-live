@@ -563,6 +563,19 @@ test('visible response quality rejects softened objective-to-start recovery from
   assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
 });
 
+test('visible response quality rejects objective-language repetition recovery from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      "It feels like we're circling. Let's name the specific point that needs a new angle, not just repeat the last one.",
+      'Repeating the same observation without a new move is just noise. What is the actual position we need to take?',
+      'Okay, the objective is to land this exchange with a clear next step. What is the single constraint or action that moves us forward?'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
 test('visible response quality rejects generic action-flick movie answers', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'new topic: what movie should we watch tonight?',

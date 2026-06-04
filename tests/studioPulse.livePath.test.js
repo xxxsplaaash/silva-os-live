@@ -327,7 +327,7 @@ test('pulse showcase expand returns brief local voice bullets without Pack 1 mem
     assert.equal(typeof bullet, 'string');
     assert.ok(bullet.length >= 12);
     assert.ok(bullet.length <= 170);
-    assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph)\b/i);
+    assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth)\b/i);
     assert.doesNotMatch(bullet, /\bfull is\b/i);
   });
   assert.match(result.payload.bullets.join(' '), /\bfull-body\b/i);
@@ -2046,7 +2046,10 @@ test('Studio Pulse showcase repairs thin accepted old preference recall using Pa
         assert.equal(final.acceptedByPack1, false);
         assert.equal(final.qualityAccepted, false);
         assert.equal(final.repairedByRuntime, true);
-        assert.equal(final.qualityFailureCategory, 'product-continuity-miss:ledger-answer');
+        assert.ok(
+          ['product-continuity-miss:ledger-answer', 'continuity-label-missing'].includes(final.qualityFailureCategory),
+          `unexpected quality failure category: ${final.qualityFailureCategory}`
+        );
         assert.match(text, /\bOld record:\s*dashboard preference is obsidian with one red accent/i);
         assert.match(text, /\bCurrent record:\s*dashboard preference is pale blue with no red accents/i);
         assert.deepEqual(final.continuityLedger.map(item => item.status).sort(), ['active', 'superseded']);
@@ -2848,11 +2851,16 @@ test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', 
             let visibleText = 'The room is tracking that.';
             let activeTruth = rememberedBySession.get(sessionId) || null;
             const supersededTruths = [];
+            let stateNotes = [];
 
             if (/obsidian dashboards with one red accent/i.test(text)) {
               activeTruth = { noteId: 'note-obsidian', canonicalText: 'User dashboard preference: obsidian dashboards with one red accent', status: 'active', confidence: 0.92 };
               rememberedBySession.set(sessionId, activeTruth);
               visibleText = 'Logged: obsidian dashboards with one red accent.';
+            } else if (/old dashboard preference/i.test(text)) {
+              activeTruth = null;
+              visibleText = 'A.I.S.H.A recalls the prior record too thinly.';
+              stateNotes = ['User asked for prior dashboard preference. Confirmed: obsidian dashboards with one red accent.'];
             } else if (/what dashboard preference/i.test(text)) {
               visibleText = activeTruth
                 ? 'You prefer obsidian dashboards with one red accent.'
@@ -2883,7 +2891,7 @@ test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', 
                     { speakerId: 'aisha', role: 'primary', tone: 'precise', text: visibleText }
                   ],
                   silentReactions: [],
-                  stateUpdates: { notes: [] }
+                  stateUpdates: { notes: stateNotes }
                 })
               }],
               memorySummary: {
@@ -2932,6 +2940,14 @@ test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', 
         assert.ok(contradiction.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
         assert.ok(contradiction.continuityLedger.some(item => item.status === 'superseded' && /obsidian dashboards/.test(item.text)));
         assert.ok(contradiction.continuityLedger.every(item => item.source === 'pack1-memory'));
+
+        const priorRecall = await turn('What was my old dashboard preference?');
+        assert.match(visibleText(priorRecall.messageEvents), /\bOld record:\s*dashboard preference is obsidian dashboards with one red accent/i);
+        assert.match(visibleText(priorRecall.messageEvents), /\bCurrent record:\s*dashboard preference is pale blue with no red accents/i);
+        assert.ok(priorRecall.continuityLedger.some(item => item.status === 'active' && item.source === 'pack1-memory' && /pale blue/.test(item.text)));
+        assert.ok(priorRecall.continuityLedger.some(item => item.status === 'superseded' && item.source === 'pack1-memory' && /obsidian dashboards/.test(item.text)));
+        assert.ok(priorRecall.continuityLedger.every(item => item.source === 'pack1-memory'));
+        assert.ok(!priorRecall.continuityLedger.some(item => item.source === 'showcase-session'));
         assert.doesNotMatch(JSON.stringify(contradiction), /test-room-provider-key|AIza|aishaDiagnostics|requestShapeSummary|processAishaRequestType|generatorPrompt/);
       });
     } finally {

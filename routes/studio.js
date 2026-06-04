@@ -932,6 +932,7 @@ const pulseShowcaseIpBuckets = new Map();
 const pulseShowcaseActiveStreamSessions = new Set();
 const pulseShowcaseActiveStreams = new Set();
 const pulseShowcaseVisibleHistories = new Map();
+const pulseShowcasePack1Ledgers = new Map();
 let lastPulseShowcaseTurnProof = {
   acceptedByPack1: false,
   qualityAccepted: false,
@@ -1177,6 +1178,7 @@ function __resetPulseShowcaseGuardForTests(options = {}) {
   pulseShowcaseActiveStreamSessions.clear();
   pulseShowcaseActiveStreams.clear();
   pulseShowcaseVisibleHistories.clear();
+  pulseShowcasePack1Ledgers.clear();
   const activeStreams = Math.max(0, Math.round(Number(options.activeStreams || 0) || 0));
   for (let index = 0; index < activeStreams; index += 1) {
     pulseShowcaseActiveStreams.add(`test-stream-${index}`);
@@ -1282,6 +1284,9 @@ function prunePulseShowcaseVisibleHistories(now = Date.now()) {
   for (const [sessionId, entry] of pulseShowcaseVisibleHistories.entries()) {
     if (!entry || Number(entry.expiresAt || 0) <= now) pulseShowcaseVisibleHistories.delete(sessionId);
   }
+  for (const [sessionId, entry] of pulseShowcasePack1Ledgers.entries()) {
+    if (!entry || Number(entry.expiresAt || 0) <= now) pulseShowcasePack1Ledgers.delete(sessionId);
+  }
 }
 
 function dedupeShowcaseRecentTurns(items = []) {
@@ -1326,6 +1331,39 @@ function recordPulseShowcaseVisibleHistory(sessionId = '', userText = '', messag
   });
 }
 
+function sanitizePulseShowcaseLedgerRows(rows = []) {
+  const seen = new Set();
+  return (Array.isArray(rows) ? rows : [])
+    .map(item => {
+      const text = safeShowcaseText(item?.text || item?.canonicalText || item?.claimText || item?.normalizedValue || '', 240);
+      const source = safeShowcaseText(item?.source || '', 40);
+      if (!text || source !== 'pack1-memory') return null;
+      const rawStatus = String(item?.status || '').trim().toLowerCase();
+      const status = ['active', 'superseded', 'disputed'].includes(rawStatus) ? rawStatus : 'active';
+      const id = safeShowcaseText(item?.id || item?.noteId || item?.claimId || `pack1-memory-${status}-${text}`, 140);
+      const key = `${status}:${text.toLowerCase()}`;
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return { id, text, status, source: 'pack1-memory' };
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function pulseShowcaseSessionPack1Ledger(sessionId = '') {
+  prunePulseShowcaseVisibleHistories();
+  return sanitizePulseShowcaseLedgerRows(pulseShowcasePack1Ledgers.get(pulseShowcaseSessionId(sessionId))?.rows || []);
+}
+
+function recordPulseShowcasePack1Ledger(sessionId = '', continuityLedger = []) {
+  const rows = sanitizePulseShowcaseLedgerRows(continuityLedger);
+  if (!rows.length) return;
+  pulseShowcasePack1Ledgers.set(pulseShowcaseSessionId(sessionId), {
+    rows,
+    expiresAt: Date.now() + PULSE_SHOWCASE_VISIBLE_HISTORY_TTL_MS
+  });
+}
+
 function showcaseContinuityQualityContext(continuityProof = {}, continuityLedger = []) {
   const source = continuityProof && typeof continuityProof === 'object' ? continuityProof : {};
   const rows = Array.isArray(continuityLedger) ? continuityLedger : [];
@@ -1354,7 +1392,7 @@ function showcaseContinuityLabelIssue({
   continuityLedger = []
 } = {}) {
   const current = String(userText || '').toLowerCase();
-  if (!/\b(what changed|what was changed|what did .*change|difference|previous|superseded)\b/i.test(current)) return '';
+  if (!/\b(what changed|what was changed|what did .*change|difference|previous|superseded|old|original|earlier|used to|what was my|what did i use to|what did i used to)\b/i.test(current)) return '';
   const recentClaims = (Array.isArray(recentTurns) ? recentTurns : [])
     .filter(item => /^user$/i.test(String(item?.speakerId || item?.role || '')))
     .map(item => String(item?.text || item?.content || ''))
@@ -1653,6 +1691,46 @@ function showcaseExpansionTemplates(speakerId = '', anchor = '', roomMood = '') 
   ];
 }
 
+function showcasePositiveReactionExpansionLine(speakerId = '') {
+  return {
+    aisha: 'This lane has a receipt; keep tightening the claim instead of widening the speech.',
+    vanya: 'That tone landed; keep the human read specific and do not sweeten it into mush.',
+    leah: 'The edge is working; keep the bite aimed at the weak point, not the person.',
+    claudia: 'That structure is useful; keep the next step visible and cut the extra ceremony.',
+    grok: 'That suspicion earned its chair; keep the fault line sharp and do not build a theory museum around it.'
+  }[speakerId] || 'Keep the useful lane and make the point cleaner.';
+}
+
+function showcaseNegativeReactionExpansionLine(speakerId = '') {
+  return {
+    aisha: 'Tighten the correction; authority gets worse when it starts decorating itself.',
+    vanya: 'Ease the hosting voice; warmer is not better if it blurs the point.',
+    leah: 'Pull the edge back one notch; taste pressure dies when it becomes noise.',
+    claudia: 'Reduce the structure; one usable step beats a tidy little meeting in bullet form.',
+    grok: 'Lower the voltage; the premise can be wrong without needing a courtroom.'
+  }[speakerId] || 'Make the point cleaner and less loud.';
+}
+
+function showcaseLocalExpansionLine(speakerId = '') {
+  return {
+    aisha: 'Treat this as a receipt on the line, not a new fact entering the record.',
+    vanya: 'Keep it attached to what was just said; do not turn it into a new room mood.',
+    leah: 'Stay on the sentence in front of us; no importing a bigger aesthetic war.',
+    claudia: 'Hold it to this line: one point, one constraint, no new workstream.',
+    grok: 'Keep the blast radius small; this is a line check, not a cosmology.'
+  }[speakerId] || 'Keep the expansion tied to the original line.';
+}
+
+function showcaseNoNewTruthExpansionLine(speakerId = '') {
+  return {
+    aisha: 'If it needs truth status, it goes through the real continuity path.',
+    vanya: 'Let it clarify the moment, then leave it there.',
+    leah: 'It can sharpen the read without pretending to rewrite the brief.',
+    claudia: 'Clarify what the line means; do not promote it into a decision.',
+    grok: 'No new canon from a button click. Pleasantly authoritarian, but correct.'
+  }[speakerId] || 'Clarify the line without creating a new decision.';
+}
+
 function buildPulseShowcaseExpandPayload(body = {}) {
   const sessionId = pulseShowcaseSessionId(body.sessionId || '');
   const mode = normalizePulseShowcaseMode(body.mode);
@@ -1676,9 +1754,9 @@ function buildPulseShowcaseExpandPayload(body = {}) {
   const reactionSummary = sanitizePulseShowcaseReactionSummary(roomState.socialSignals?.reactionSummary || {});
   const affinity = Number(reactionSummary.speakerAffinity?.[speakerId] || 0) || 0;
   const reactionLine = affinity > 0
-    ? 'Audience signal says this voice is useful; sharpen the same lane, do not widen it.'
+    ? showcasePositiveReactionExpansionLine(speakerId)
     : affinity < 0
-      ? 'Audience signal says ease off; make the point cleaner, not louder.'
+      ? showcaseNegativeReactionExpansionLine(speakerId)
       : '';
   const bullets = uniqueShowcaseBullets([
     ...showcaseExpansionTemplates(speakerId, anchor, roomState.roomMood),
@@ -1696,8 +1774,8 @@ function buildPulseShowcaseExpandPayload(body = {}) {
       speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
       bullets: bullets.length >= 3 ? bullets.slice(0, 5) : uniqueShowcaseBullets([
         ...bullets,
-        'Stay local to this card; do not invent a new project truth.',
-        'The expansion is a visible aside, not a new room decision.'
+        showcaseLocalExpansionLine(speakerId),
+        showcaseNoNewTruthExpansionLine(speakerId)
       ]).slice(0, 5)
     }
   };
@@ -1892,7 +1970,7 @@ function recordPulseShowcaseRuntimeStatusFromTurn({ payload = {}, debug = {}, ac
   });
 }
 
-function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
+function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPack1Rows = []) {
   const rows = [];
   const seen = new Set();
   const add = (item = {}, fallbackStatus = 'active', source = 'pack1-memory') => {
@@ -1927,6 +2005,11 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
     });
   (Array.isArray(memorySummary.supersededTruths) ? memorySummary.supersededTruths : [])
     .forEach(item => add(item, 'superseded', 'pack1-memory'));
+  const hasCurrentPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
+  if (!hasCurrentPack1MemoryRows) {
+    sanitizePulseShowcaseLedgerRows(priorPack1Rows)
+      .forEach(item => add(item, item.status || 'active', 'pack1-memory'));
+  }
   const hasPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasPack1MemoryRows) {
     (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
@@ -2051,8 +2134,10 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
   let messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
   let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || []);
-  const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates);
+  const priorPack1Ledger = pulseShowcaseSessionPack1Ledger(sessionId);
+  const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates, priorPack1Ledger);
   const continuityProof = continuityProofFromLedger(continuityLedger);
+  recordPulseShowcasePack1Ledger(sessionId, continuityLedger);
   let activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
   const aishaEngineConnected = payload.aishaConnected === true;
   const traceStatus = safeRuntimeStatusText(debug.aishaTraceStatus || '');
