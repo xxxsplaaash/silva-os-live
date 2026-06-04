@@ -1123,6 +1123,17 @@ test('visible response evaluator flags audit-level product failures', () => {
     visibleText: 'We are on track. The objective is to start, not to assess current states. Everyone is moving forward with the new structure. The next steps are clear: one workout, one meal, one sleep window.'
   }).includes('stale-context'));
 
+  assert.ok(families({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'Present. Focused on the current objective.',
+      'Here and ready. Just checking the temperature.',
+      "Present. Observing the room's current state.",
+      'Operational. Ready for the next step.',
+      'Here. Monitoring for anomalies.'
+    ].join('\n')
+  }).includes('speaker-flatness'));
+
   assert.ok(!families({
     userMessage: 'BRUH...',
     visibleText: 'Yeah. Strip it down: one workout, one meal, one sleep window. Do push, pull, legs, or the closest safe versions. Log reps.'
@@ -1153,6 +1164,11 @@ test('visible response evaluator flags audit-level product failures', () => {
   assert.ok(families({
     userMessage: 'answer normally, what should I do today?',
     visibleText: 'What is the one thing you need to do next, and what part of the last answer was useful?'
+  }).includes('weak-next-move'));
+
+  assert.ok(families({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: 'The ask is to move forward. Name one thing you need to do next, and do it.'
   }).includes('weak-next-move'));
 
   assert.ok(families({

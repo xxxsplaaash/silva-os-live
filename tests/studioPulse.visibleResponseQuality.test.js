@@ -242,6 +242,30 @@ test('visible response quality rejects old preference recall answers that omit t
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects sterile roll-call monitoring voice', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'Present. Focused on the current objective.',
+      'Here and ready. Just checking the temperature.',
+      "Present. Observing the room's current state.",
+      'Operational. Ready for the next step.',
+      'Here. Monitoring for anomalies.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
+});
+
+test('visible response quality rejects thin next-action non-answers', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: 'The ask is to move forward. Name one thing you need to do next, and do it.'
+  });
+
+  assert.ok(issueKeys(issues).includes('weak-next-move:normal-answer'));
+});
+
 test('visible response quality accepts specific preference recall from memory', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',

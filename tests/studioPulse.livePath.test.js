@@ -1889,6 +1889,133 @@ test('Studio Pulse showcase repairs thin accepted old preference recall using Pa
   });
 });
 
+test('Studio Pulse showcase repairs flat accepted social and normal-answer outputs', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            const userText = String(request.messageText || request.userText || '');
+            const isCheckIn = /how is everyone/i.test(userText);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify(isCheckIn
+                  ? {
+                    roomBeat: 'The room reports sterile presence.',
+                    roomMood: 'focused',
+                    responseMode: 'open_floor',
+                    speakers: [
+                      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Present. Focused on the current objective.', visibleState: 'Watching' },
+                      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Here and ready. Just checking the temperature.', visibleState: 'Watching' },
+                      { speakerId: 'leah', role: 'side', tone: 'flat', text: "Present. Observing the room's current state.", visibleState: 'Watching' },
+                      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Operational. Ready for the next step.', visibleState: 'Watching' },
+                      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Here. Monitoring for anomalies.', visibleState: 'Watching' }
+                    ],
+                    silentReactions: [],
+                    socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                    stateUpdates: { notes: [] }
+                  }
+                  : {
+                    roomBeat: 'The room gives a thin next move.',
+                    roomMood: 'focused',
+                    responseMode: 'single',
+                    speakers: [
+                      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The ask is to move forward. Name one thing you need to do next, and do it.', visibleState: 'Watching' }
+                    ],
+                    silentReactions: [],
+                    socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                    stateUpdates: { notes: [] }
+                  })
+              }],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.83
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const cases = [
+          {
+            sessionId: 'showcase-flat-rollcall-pack1-repair',
+            userText: 'how is everyone?',
+            expectedIssue: 'product-speaker-flatness:roll-call',
+            rejected: /current objective|monitoring for anomalies/i,
+            expected: /\b(Aisha here|Vanya here|Grok here|room is held)\b/i
+          },
+          {
+            sessionId: 'showcase-thin-normal-answer-pack1-repair',
+            userText: 'answer normally, what should I do today?',
+            recentTurns: [{ speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }],
+            expectedIssue: 'product-weak-next-move:normal-answer',
+            rejected: /name one thing you need to do next/i,
+            expected: /\b(Plain version|one block|one result|first visible step)\b/i
+          }
+        ];
+
+        for (const item of cases) {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+            body: JSON.stringify({
+              sessionId: item.sessionId,
+              mode: 'social_hierarchy_lab',
+              userText: item.userText,
+              recentTurns: item.recentTurns || []
+            })
+          });
+          assert.equal(response.status, 200);
+          const events = parseSseEvents(await response.text());
+          const final = events.find(event => event.event === 'final').data;
+          const text = visibleText(final.messageEvents);
+
+          assert.equal(final.ok, true);
+          assert.equal(final.activeEngine, 'local-social-director');
+          assert.equal(final.acceptedByPack1, false);
+          assert.equal(final.qualityAccepted, false);
+          assert.equal(final.repairedByRuntime, true);
+          assert.ok(
+            final.qualityFailureCategory === item.expectedIssue || final.qualityFailureCategory === 'quality-rejected',
+            `unexpected quality failure category: ${final.qualityFailureCategory}`
+          );
+          assert.doesNotMatch(text, item.rejected);
+          assert.match(text, item.expected);
+          assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|The room reports sterile presence|The room gives a thin next move/);
+        }
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase last-mile gate repairs reversed prior/current denial answers', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
