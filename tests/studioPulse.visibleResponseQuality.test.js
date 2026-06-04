@@ -747,6 +747,13 @@ test('visible response quality rejects live thin Grok quality check fallback', (
   });
 
   assert.ok(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'));
+
+  const liveDodgeIssues = evaluateVisibleResponse({
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    visibleText: 'It was useful. The dodge is the problem, not the directness.'
+  });
+
+  assert.ok(issueKeys(liveDodgeIssues).includes('speaker-flatness:thin-quality-judgment'));
 });
 
 test('visible response quality accepts concrete useful-versus-fake quality split', () => {

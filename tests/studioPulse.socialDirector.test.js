@@ -1224,6 +1224,20 @@ test('social director quality validator rejects too-thin live quality judgments'
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('product-speaker-flatness:thin-quality-judgment'));
+
+  const liveThinDodge = validateDirectorOutput({
+    roomBeat: 'Grok answers quality but the line is still too thin.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'It was useful. The dodge is the problem, not the directness.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(liveThinDodge.ok, false);
+  assert.ok(liveThinDodge.issues.includes('product-speaker-flatness:thin-quality-judgment'));
 });
 
 test('social director quality validator rejects live generic fitness variants and movie refusal', () => {
