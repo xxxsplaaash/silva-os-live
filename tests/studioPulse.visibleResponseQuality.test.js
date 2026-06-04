@@ -140,6 +140,27 @@ test('visible response quality rejects passive and adjacent surface-reflection p
   }
 });
 
+test('visible response quality rejects fake implementation-alignment promises from live turns', () => {
+  const fixtures = [
+    'Let us ensure the implementation aligns with that clarity.',
+    'We need to ensure all assets align with that constraint.',
+    'The implementation aligns with that clarity.',
+    'Assets align with that constraint now.'
+  ];
+
+  for (const fixture of fixtures) {
+    const issues = evaluateVisibleResponse({
+      userMessage: 'My dashboard preference is obsidian with one red accent.',
+      visibleText: [
+        'Obsidian with one red accent. Noted.',
+        fixture
+      ].join('\n')
+    });
+
+    assert.ok(issueKeys(issues).includes('self-theater:meta-language'), fixture);
+  }
+});
+
 test('visible response quality rejects continuity answers that ask what changed instead of using ledger evidence', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What changed?',

@@ -1948,6 +1948,21 @@ test('social director quality validator rejects fake design implementation promi
   assert.ok(placement.issues.includes('operational-jargon'));
   assert.ok(placement.issues.includes('product-self-theater:meta-language'));
 
+  const implementationAlignment = validateDirectorOutput({
+    roomBeat: 'The room acknowledges a preference but turns it into fake implementation posture.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: "Obsidian with one red accent. Noted. Let's ensure the implementation aligns with that clarity." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'My dashboard preference is obsidian with one red accent.' });
+
+  assert.equal(implementationAlignment.ok, false);
+  assert.ok(implementationAlignment.issues.includes('operational-jargon'));
+  assert.ok(implementationAlignment.issues.includes('product-self-theater:meta-language'));
+
   const parameters = validateDirectorOutput({
     roomBeat: 'The room pretends the dashboard has been changed.',
     roomMood: 'focused',
