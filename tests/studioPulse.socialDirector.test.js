@@ -3045,6 +3045,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     calls += 1;
     const accepted = calls <= 8;
     const userText = String(req.body?.userText || '');
+    const recentText = (Array.isArray(req.body?.recentTurns) ? req.body.recentTurns : [])
+      .map(item => String(item?.text || item?.content || ''))
+      .join('\n');
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const text = (() => {
       if (/wanna grow/i.test(userText)) return 'Start this week: incline push-ups, backpack rows, split squats, and planks. Log reps; add one clean rep next time.';
@@ -3070,7 +3073,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/white editorial/i.test(userText)) return 'Changed: landing page style is white editorial with no red. Prior record stays black glass with a single red pulse.';
       if (/obsidian/i.test(userText)) return 'Recorded dashboard preference: obsidian with one red accent.';
       if (/pale blue/i.test(userText)) return 'Updated dashboard preference: pale blue with no red accents.';
+      if (/what changed/i.test(userText) && /black glass/i.test(recentText)) return 'Changed: active style is white editorial with no red. Prior record: black glass with a single red pulse.';
       if (/what changed/i.test(userText)) return 'Changed: active preference is pale blue with no red accents. Prior record: obsidian with one red accent.';
+      if (/old dashboard preference/i.test(userText)) return 'Prior record: obsidian with one red accent. Current record: pale blue with no red accents.';
       return isFitness
         ? 'Start with training, food, and recovery matched to the week.'
         : 'The room keeps the turn bounded.';
@@ -3128,9 +3133,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.equal(result.code, 0, result.stderr || result.stdout);
     const summary = JSON.parse(result.stdout);
     assert.equal(summary.counts.accepted, 8);
-    assert.equal(summary.counts.repaired, 17);
+    assert.equal(summary.counts.repaired, 18);
     assert.equal(summary.counts.fallback, 0);
-    assert.equal(calls, 25);
+    assert.equal(calls, 26);
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {

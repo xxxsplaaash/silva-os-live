@@ -203,6 +203,31 @@ test('visible response quality rejects preference recall answers that ignore led
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects old preference recall answers that only cite current record', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Obsidian with one red accent. Noted.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Current record is pale blue with no red accents. Prior record was obsidian with one red accent.' }
+  ];
+
+  for (const userMessage of [
+    'What was my old dashboard preference?',
+    'What was my original dashboard preference?',
+    'What was my earlier dashboard preference?',
+    'What did I used to want for the dashboard?'
+  ]) {
+    const issues = evaluateVisibleResponse({
+      userMessage,
+      recentTurns,
+      visibleText: 'Your dashboard preference is pale blue with no red accents.',
+      continuity: { active: 1, superseded: 1 }
+    });
+
+    assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'), userMessage);
+  }
+});
+
 test('visible response quality accepts specific preference recall from memory', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',
@@ -239,6 +264,21 @@ test('visible response quality rejects reversed active and prior continuity deni
   });
 
   assert.ok(issueKeys(issues).includes('continuity-conflict:reversed-active-prior'));
+});
+
+test('visible response quality rejects continuity answers from the wrong claim pair', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+      { speakerId: 'aisha', role: 'primary', text: 'landing page style is white editorial with no red. Noted.' }
+    ],
+    visibleText: 'Changed: active preference is pale blue with no red accents. Prior record: obsidian with one red accent.'
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
 test('visible response quality rejects invented project specifics on generic planning asks', () => {
