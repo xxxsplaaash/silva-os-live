@@ -32,6 +32,7 @@ const REJECTED_VISIBLE_RX = /\b(that's a solid goal|that's a great goal|that's a
 const LIVE_REJECTED_VISIBLE_RX = /\b(all systems nominal|current episode parameters|human temperature is stable|aesthetic standards are holding|no blandness detected|operational flow is clear|next steps are defined|no immediate faults detected|emergent anomalies|that'?s a fair reaction|that is a fair reaction|fair reaction|yeah,? fair|fair\.?\s+no fourth|fair\.?\s+no more loop|fair\.?\s+no more repeat|fair\.?\s+if this feels|that'?s a valid reaction|useful is the direct answer|fake is the dodge|circling the drain|not landing anywhere concrete|stress is the signal|stress is a symptom of the dodge|room needs to take a position|observe the tension)\b/i;
 const VAGUE_FOOD_RX = /\b(simple fuel stop|something easily digestible|something digestible|whatever is fastest|no time for gourmet|grab whatever)\b/i;
 const WEAK_NORMAL_RX = /\b(the ask is to move forward|name one thing you need to do next|identify the core problem|core problem you need solved)\b/i;
+const SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
 
 const PROMPTS = [
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
@@ -64,6 +65,50 @@ const PROMPTS = [
 
 function assertOk(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function responderCapForPrompt(prompt = {}) {
+  const text = visibleKey(prompt.userText || '');
+  if (/\b(aisha|vanya|leah|claudia|grok)\b/.test(text) && !/\beveryone\b/.test(text)) return { min: 1, max: 1, reason: 'direct address' };
+  if (/\beveryone\b/.test(text)) return { min: 1, max: 5, reason: 'explicit everyone' };
+  if (/\b(stressed|stress|dumb|frustrated|annoyed|this sucks|bruh|bro|wtf|sad|scared|worried|overwhelmed|panic|anxious|grief|grieving|loss|died|funeral)\b/.test(text)) {
+    return { min: 1, max: 2, reason: 'emotional/heavy' };
+  }
+  if (/\b(muscles?|fitness|workout|gym|training|train|lunch|dinner|snack|hungry|eat|food|meal|plan|planning|schedule|tomorrow|logo|design|landing page|website|build|bug|provider|timeout|python|pdf|script|code|parser|parse|movie|film|watch|netflix|series|show|social media|instagram|tiktok|caption|post|disagreement|disagree)\b/.test(text)) {
+    return { min: 1, max: 2, reason: 'practical' };
+  }
+  return { min: 2, max: 3, reason: 'normal' };
+}
+
+function assertSpeakerCap(prompt = {}, final = {}) {
+  const messageEvents = Array.isArray(final.messageEvents) ? final.messageEvents : [];
+  const cap = responderCapForPrompt(prompt);
+  assertOk(
+    messageEvents.length >= cap.min && messageEvents.length <= cap.max,
+    `wrong speaker count for ${cap.reason} prompt "${prompt.userText}": got ${messageEvents.length}, expected ${cap.min}-${cap.max}`
+  );
+  assertOk(
+    /\beveryone\b/i.test(prompt.userText || '') || messageEvents.length < 5,
+    `all-five pile-on without explicit everyone request: ${prompt.userText}`
+  );
+}
+
+function assertIntentionalSilence(prompt = {}, final = {}) {
+  const messageEvents = Array.isArray(final.messageEvents) ? final.messageEvents : [];
+  const silentReactions = Array.isArray(final.silentReactions) ? final.silentReactions : [];
+  const speaking = new Set(messageEvents.map(item => String(item?.speakerId || '').trim().toLowerCase()).filter(Boolean));
+  const silentBySpeaker = new Map(silentReactions.map(item => [String(item?.speakerId || '').trim().toLowerCase(), item]));
+  for (const item of silentReactions) {
+    const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+    assertOk(!speaking.has(speakerId), `speaker ${speakerId} appeared as both speaking and silent after "${prompt.userText}"`);
+  }
+  for (const speakerId of SPEAKER_IDS) {
+    if (speaking.has(speakerId)) continue;
+    const reaction = silentBySpeaker.get(speakerId);
+    assertOk(reaction, `missing quiet presence for non-speaking ${speakerId} after "${prompt.userText}"`);
+    assertOk(String(reaction.visibleState || '').trim(), `missing silent visibleState for ${speakerId} after "${prompt.userText}"`);
+    assertOk(String(reaction.reason || '').trim(), `missing intentional silence reason for ${speakerId} after "${prompt.userText}"`);
+  }
 }
 
 function parseSseEvents(text = '') {
@@ -219,6 +264,8 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   assertOk(events.some(item => item.event === 'final'), 'stream missing final');
   const final = events.find(item => item.event === 'final')?.data || {};
   assertOk(final.ok === true, 'final payload was not ok');
+  assertSpeakerCap(prompt, final);
+  assertIntentionalSilence(prompt, final);
   const visible = visibleText(final);
   assertOk(!REJECTED_VISIBLE_RX.test(visible) && !LIVE_REJECTED_VISIBLE_RX.test(visible), `visible answer still contains rejected boilerplate: ${visible}`);
   const continuityProof = final.continuityProof || final.continuity || {};
@@ -294,7 +341,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     assertOk(/pale blue/i.test(visible) && /obsidian/i.test(visible), `continuity change prompt missed active/prior values: ${visible}`);
   }
   if (prompt.expectsPriorPreference) {
-    assertOk(/\b(prior|previous|old|original|earlier|superseded|changed from|used to)\b/i.test(visible), `old preference prompt did not label the prior record: ${visible}`);
+    assertOk(/\b(prior|previous|old|original|earlier|superseded|changed from|used to|it was)\b/i.test(visible), `old preference prompt did not label the prior record: ${visible}`);
     assertOk(/obsidian/i.test(visible) && /pale blue/i.test(visible), `old preference prompt missed active/prior values: ${visible}`);
   }
   const fallbackCategory = String(final.fallbackCategory || final.diagnostics?.fallbackCategory || '');
@@ -323,6 +370,45 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     visibleText: visible,
     socialSignals: final.socialSignals || {},
     messageEvents: Array.isArray(final.messageEvents) ? final.messageEvents : []
+  };
+}
+
+async function submitReaction(result = {}, prior = {}) {
+  const card = (Array.isArray(result.messageEvents) ? result.messageEvents : [])
+    .find(item => String(item?.speakerId || '').trim() && String(item?.text || '').trim());
+  assertOk(card, 'cannot submit gauntlet reaction without an assistant card');
+  const messageId = `gauntlet-reaction-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64)}`;
+  const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/reaction`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sessionId: SESSION_ID,
+      mode: result.mode,
+      messageId,
+      speakerId: card.speakerId,
+      reaction: 'more_like',
+      roomState: {
+        roomMood: result.roomMood || prior.roomMood || 'focused',
+        responseMode: result.responseMode || prior.responseMode || 'single',
+        socialSignals: result.socialSignals || prior.socialSignals || undefined
+      }
+    })
+  });
+  const text = await response.text();
+  assertOk(!LEAK_RX.test(text), 'reaction response leaked prompt/runtime internals or secret-like material');
+  assertOk(response.ok, `reaction failed HTTP ${response.status}: ${text.slice(0, 180)}`);
+  const payload = JSON.parse(text);
+  assertOk(payload.ok === true, 'reaction payload was not ok');
+  assertOk(payload.reaction === 'more_like', `reaction payload returned ${payload.reaction}`);
+  assertOk(payload.reactionSummary?.counts?.more_like >= 1, 'reaction summary did not count more_like');
+  assertOk(payload.reactionSummary?.lastSpeakerId === card.speakerId, 'reaction summary did not retain reacted speaker');
+  assertOk(payload.socialSignals?.reactionSummary?.lastMessageId === messageId, 'reaction social signal did not retain local message id');
+  return {
+    messageId,
+    speakerId: card.speakerId,
+    reaction: payload.reaction,
+    reactionSummary: payload.reactionSummary,
+    socialSignals: payload.socialSignals
   };
 }
 
@@ -355,6 +441,7 @@ if (!ALLOW_LOCAL_FALLBACK) {
 
 const results = [];
 const groupState = new Map();
+let reactionProbe = null;
 for (const prompt of PROMPTS) {
   const group = prompt.sessionGroup || 'main';
   const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set(), visibleLineKeys: new Set() };
@@ -377,8 +464,9 @@ for (const prompt of PROMPTS) {
     ...(result.messageEvents || []).map(item => `card: ${item.speakerName || item.speakerId} [${item.role || 'message'}] state=${item.visibleState || '-'}: ${item.text || ''}`),
     ...(result.silentReactions || []).map(item => `silence: ${item.speakerId} state=${item.visibleState || '-'} reason=${item.reason || '-'}`),
     ...(result.continuityLedger || []).map(item => `ledger: ${item.status || '-'} ${item.source || '-'} ${item.id || '-'}: ${item.text || ''}`),
+    reactionProbe ? `reaction-effect: ${reactionProbe.reaction} speaker=${reactionProbe.speakerId} message=${reactionProbe.messageId} summary=${JSON.stringify(reactionProbe.reactionSummary || {})}` : '',
     `social: ${JSON.stringify(result.socialSignals || {})}`
-  ].join('\n'));
+  ].filter(Boolean).join('\n'));
   results.push({
     prompt: result.prompt,
     mode: result.mode,
@@ -407,6 +495,11 @@ for (const prompt of PROMPTS) {
     priorSpeaker: '',
     socialSignals: result.socialSignals
   };
+  if (!reactionProbe && result.messageEvents.length) {
+    reactionProbe = await submitReaction(result, state.prior);
+    console.error(`reaction-effect: ${reactionProbe.reaction} speaker=${reactionProbe.speakerId} message=${reactionProbe.messageId} summary=${JSON.stringify(reactionProbe.reactionSummary || {})}`);
+    state.prior.socialSignals = reactionProbe.socialSignals;
+  }
   for (const event of result.messageEvents) {
     state.recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });
   }

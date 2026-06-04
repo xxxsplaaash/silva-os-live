@@ -1939,6 +1939,28 @@ test('social director quality validator rejects stress turns answered with meta 
 
   assert.equal(bruhPlanSermon.ok, false);
   assert.ok(bruhPlanSermon.issues.includes('frustration-ignored'));
+
+  const bruhObjectiveFirst = validateDirectorOutput({
+    roomBeat: 'The room labels a frustration turn as accepted while keeping command-posture language.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "Okay, that 'BRUH' means we're looping. Let's reset the frame." },
+      { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The objective is the first move. Pick three training days.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'vanya', role: 'primary', text: 'Yeah. Strip it down: one workout, one meal, one sleep window.' }
+    ]
+  });
+
+  assert.equal(bruhObjectiveFirst.ok, false);
+  assert.ok(bruhObjectiveFirst.issues.includes('frustration-ignored'));
+  assert.ok(bruhObjectiveFirst.issues.includes('product-false-objective:command-posture'));
 });
 
 test('social director quality validator rejects food prompts that dodge before answering', () => {
@@ -2820,6 +2842,22 @@ test('social director quality validator rejects objective slogans for casual cho
   assert.equal(liveMoviePunt.ok, false);
   assert.ok(liveMoviePunt.issues.includes('movie-answer-too-thin'));
   assert.ok(liveMoviePunt.issues.includes('product-speaker-flatness:movie'));
+
+  const genericActionFlick = validateDirectorOutput({
+    roomBeat: 'The room technically answers the movie prompt but with no taste or character.',
+    roomMood: 'playful',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "Something that doesn't require too much thought. A classic action flick, maybe?" },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: "Agreed. Let's go for something light to unwind." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: what movie should we watch tonight?' });
+
+  assert.equal(genericActionFlick.ok, false);
+  assert.ok(genericActionFlick.issues.includes('movie-answer-too-thin'));
+  assert.ok(genericActionFlick.issues.includes('product-speaker-flatness:movie'));
 });
 
 test('visible response evaluator rejects generic food advice and weak denial continuity', () => {
@@ -3586,6 +3624,43 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       maxUserTextLength: 1500
     });
   });
+  app.post('/api/studio/pulse-showcase/reaction', (req, res) => {
+    const reaction = String(req.body?.reaction || '');
+    const speakerId = String(req.body?.speakerId || '');
+    const messageId = String(req.body?.messageId || '');
+    res.json({
+      ok: true,
+      sessionId: 'script-test-session',
+      mode: 'social_hierarchy_lab',
+      reaction,
+      reactionSummary: {
+        counts: { sharp: 0, funny: 0, useful: 0, too_much: 0, more_like: reaction === 'more_like' ? 1 : 0, less_like: 0 },
+        total: 1,
+        lastReaction: reaction,
+        lastSpeakerId: speakerId,
+        lastMessageId: messageId,
+        speakerAffinity: { [speakerId]: 2 }
+      },
+      socialSignals: {
+        tension: 19,
+        continuityPressure: 0,
+        hierarchy: [],
+        alliances: [],
+        interruptions: [],
+        roomMove: 'redirect',
+        statusEvents: [],
+        socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: ['redirect'], interruptionPressure: 0 },
+        reactionSummary: {
+          counts: { sharp: 0, funny: 0, useful: 0, too_much: 0, more_like: reaction === 'more_like' ? 1 : 0, less_like: 0 },
+          total: 1,
+          lastReaction: reaction,
+          lastSpeakerId: speakerId,
+          lastMessageId: messageId,
+          speakerAffinity: { [speakerId]: 2 }
+        }
+      }
+    });
+  });
   app.post('/api/studio/pulse-showcase/turn-stream', (req, res) => {
     calls += 1;
     const accepted = calls <= 8;
@@ -3610,8 +3685,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/actual tension/i.test(userText)) return 'The tension is direct answers versus ceremony. The room gets worse when it sounds polished instead of useful.';
       if (/useful or did it sound fake/i.test(userText)) return 'It had one useful piece, then went fake when it turned into room commentary. Keep the useful piece; cut the posture.';
       if (/stressed/i.test(userText)) return 'Stop the room noise. Pick one clean next move, do that first, then decide if the room earned another sentence.';
-      if (/repeating yourself/i.test(userText)) return 'New shape: one direct answer, one useful next move, then the room stops decorating it.';
-      if (/answer normally/i.test(userText)) return 'Today: pick one clean next move, do it plainly, and stop decorating the room.';
+      if (/repeating yourself/i.test(userText)) return 'New shape: one direct answer, one useful next move, then stop after it lands.';
+      if (/answer normally/i.test(userText)) return 'Today: choose one task, set a short timer, finish a rough pass, then decide what needs help.';
       if (/planning tomorrow/i.test(userText)) return 'Tomorrow needs a first block, a second block, and one owner for the messiest next step.';
       if (/lunch/i.test(userText)) return 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.';
       if (/logo direction/i.test(userText)) return 'Silva logo direction: one sharp mark, restrained contrast, black field, small red signal only if it earns the attention.';
@@ -3628,6 +3703,61 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
         ? 'Start with training, food, and recovery matched to the week.'
         : 'The room keeps the turn bounded.';
     })();
+    const isDirectAddress = /\b(aisha|vanya|leah|claudia|grok)\b/i.test(userText) && !/\beveryone\b/i.test(userText);
+    const sideText = (() => {
+      if (/open floor|watch next/i.test(userText)) return 'Leah shifts it from recommendation to read: pressure, voltage, or bite, then commit.';
+      if (/movie|watch tonight/i.test(userText)) return 'Leah keeps the choice sharp: choose the mood, then choose the title.';
+      if (/answer normally/i.test(userText)) return 'Claudia keeps it plain: first task, timed pass, quick review, no extra ceremony.';
+      if (/repeating yourself/i.test(userText)) return 'Claudia changes the pattern: fewer voices, cleaner ask, one concrete action.';
+      if (/stressed/i.test(userText)) return 'Claudia lowers the noise: one decision now, another only after the first is done.';
+      if (/planning tomorrow/i.test(userText)) return 'Claudia gives tomorrow edges: first block, second block, messy owner.';
+      if (/hungry|lunch|\beat\b|eating/i.test(userText)) return 'Claudia keeps it practical: light enough to move, concrete enough to stop guessing.';
+      if (/20 minutes/i.test(userText)) return 'Claudia keeps the clock honest: one small circuit, no extra menu, no fake productivity.';
+      if (/where do i start/i.test(userText)) return 'Claudia makes the first step visible: choose three moves before adding equipment, apps, or drama.';
+      if (/what is the objective/i.test(userText)) return 'Claudia narrows it to the actual target: show up, track the work, recover, repeat.';
+      if (/bruh/i.test(userText)) return 'Claudia changes shape: one blunt next move, then silence so the room stops chewing the same point.';
+      if (/muscle/i.test(userText)) return 'Claudia keeps the start repeatable: one short session, logged, then adjusted next time.';
+      if (/never said/i.test(userText)) return 'Claudia holds the denial against the trace: prior claim exists, current claim still stands.';
+      if (/old dashboard preference/i.test(userText)) return 'Claudia answers the archive cleanly: old value first, current value second.';
+      if (/what changed/i.test(userText)) return 'Claudia separates the before and after so the room cannot blur them together.';
+      if (/landing page direction|sharper landing page/i.test(userText)) return 'Leah protects the restraint: one hero mood, one pulse, no decorative compromise.';
+      if (/logo/i.test(userText)) return 'Leah keeps the mark severe: one cut, high contrast, no agency-template softness.';
+      if (/white editorial/i.test(userText)) return 'Claudia pins the change: white editorial now; black glass remains prior.';
+      if (/black glass/i.test(userText)) return 'Claudia pins the first style claim: black glass, single red pulse.';
+      if (/pale blue/i.test(userText)) return 'Claudia pins the change: pale blue now; obsidian remains prior.';
+      if (/obsidian/i.test(userText)) return 'Claudia pins the dashboard preference: obsidian, one red accent.';
+      if (/actual tension/i.test(userText)) return 'Leah names the fracture: answer the ask, or admit the room is performing around it.';
+      if (/how is everyone/i.test(userText)) return 'Leah watches where the room sounds useful and where it starts performing usefulness.';
+      return 'Claudia keeps the next move visible without adding ceremony.';
+    })();
+    const sideSpeakerId = /movie|watch next|watch tonight|open floor|logo|landing page direction|how is everyone|actual tension/i.test(userText)
+      ? 'leah'
+      : 'claudia';
+    const messageEvents = [{
+      speakerId: 'vanya',
+      speakerName: 'Vanya',
+      role: 'primary',
+      tone: 'steady',
+      text,
+      visibleState: 'Reading'
+    }];
+    if (!isDirectAddress) {
+      messageEvents.push({
+        speakerId: sideSpeakerId,
+        speakerName: sideSpeakerId === 'leah' ? 'Leah' : 'Claudia',
+        role: 'side',
+        tone: 'steady',
+        text: sideText,
+        visibleState: sideSpeakerId === 'leah' ? 'Holding critique' : 'Tracking next steps'
+      });
+    }
+    const speakingIds = new Set(messageEvents.map(item => item.speakerId));
+    const silentReactions = [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until a correction changes the room' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the taste cut until there is a useful edge' },
+      { speakerId: 'claudia', visibleState: 'Tracking next steps', reason: 'tracking structure without turning the exchange into a project plan' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+    ].filter(item => !speakingIds.has(item.speakerId));
     const payload = {
       ok: true,
       sessionId: 'script-test-session',
@@ -3636,15 +3766,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       aishaEngineConnected: true,
       roomMood: 'focused',
       responseMode: 'single',
-      messageEvents: [{
-        speakerId: 'vanya',
-        speakerName: 'Vanya',
-        role: 'primary',
-        tone: 'steady',
-        text,
-        visibleState: 'Reading'
-      }],
-      silentReactions: [],
+      messageEvents,
+      silentReactions,
       continuityLedger: [],
       socialSignals: { tension: 18, continuityPressure: 0, hierarchy: [], alliances: [], interruptions: [], roomMove: 'observe', statusEvents: [], socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: [], interruptionPressure: 0 } },
       acceptedByPack1: accepted,
@@ -3685,9 +3808,12 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.equal(summary.counts.fallback, 0);
     assert.equal(calls, 26);
     assert.equal(referencesSeen.length, 1);
-    assert.match(referencesSeen[0].text, /actual tension|direct answers|ceremony|polished|useful/i);
+    assert.match(referencesSeen[0].text, /actual tension|direct answers|ceremony|fracture|answer the ask|useful/i);
     assert.ok(summary.results.some(item => item.prompt === 'Grok, be honest: was that useful or did it sound fake?' && item.referenceCount === 1));
+    assert.ok(summary.results.every(item => item.messageCount >= 1 && item.messageCount <= 5));
+    assert.ok(summary.results.every(item => item.messageCount + item.silenceCount === 5));
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
+    assert.match(result.stderr, /reaction-effect: more_like speaker=vanya/);
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
     await new Promise(resolve => server.close(resolve));

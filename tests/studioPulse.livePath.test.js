@@ -275,6 +275,25 @@ test('pulse showcase reactions update session social signals without Pack 1 memo
   assert.equal(changed.payload.reactionSummary.lastReaction, 'less_like');
 });
 
+test('pulse showcase public payload fills intentional silence for non-speaking characters', () => {
+  assert.equal(typeof studioRouter.__ensurePulseShowcaseSilentPresenceForTests, 'function');
+  const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(
+    [
+      { speakerId: 'vanya', text: 'The room is warm enough to answer plainly.' },
+      { speakerId: 'claudia', text: 'One next step, then stop.' }
+    ],
+    [
+      { speakerId: 'vanya', visibleState: 'Reading', reason: 'should be dropped because Vanya spoke' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+    ]
+  );
+
+  assert.deepEqual(silent.map(item => item.speakerId).sort(), ['aisha', 'grok', 'leah']);
+  assert.ok(silent.every(item => item.visibleState && item.reason));
+  assert.equal(silent.find(item => item.speakerId === 'grok').reason, 'watching for the premise fault before interrupting');
+  assert.equal(silent.find(item => item.speakerId === 'aisha').visibleState, 'Anchoring');
+});
+
 test('pulse showcase expand returns brief local voice bullets without Pack 1 memory rows', () => {
   assert.equal(typeof studioRouter.__buildPulseShowcaseExpandPayloadForTests, 'function');
   const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({

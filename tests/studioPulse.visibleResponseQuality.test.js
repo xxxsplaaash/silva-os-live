@@ -257,6 +257,24 @@ test('visible response quality rejects live prior-only old preference recall usi
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality accepts live old preference recall when it cites old and current values', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ],
+    visibleText: [
+      'It was obsidian with a single red accent. A bit more dramatic, perhaps.',
+      'Correct. The ledger confirms: obsidian, one red accent.',
+      'A bold choice, but the current pale blue is certainly cleaner.'
+    ].join('\n'),
+    continuity: { active: 1, superseded: 1 }
+  });
+
+  assert.equal(issueKeys(issues).includes('continuity-miss:ledger-answer'), false);
+});
+
 test('visible response quality rejects sterile roll-call monitoring voice', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'how is everyone?',
@@ -502,6 +520,30 @@ test('visible response quality rejects objective-language recovery from live bru
   });
 
   assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
+test('visible response quality rejects objective-first recovery from live bruh turn', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    visibleText: [
+      "Okay, that 'BRUH' means we're looping. Let's reset the frame.",
+      'The objective is the first move. Pick three training days.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
+test('visible response quality rejects generic action-flick movie answers', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: what movie should we watch tonight?',
+    visibleText: [
+      "Something that doesn't require too much thought. A classic action flick, maybe?",
+      "Agreed. Let's go for something light to unwind."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:movie'));
 });
 
 test('visible response quality rejects too-thin quality judgments', () => {

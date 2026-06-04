@@ -872,6 +872,28 @@ const PULSE_SHOWCASE_SPEAKER_NAMES = Object.freeze({
   claudia: 'Claudia Naidoo',
   grok: 'Grok / Gerhard'
 });
+const PULSE_SHOWCASE_SILENT_DEFAULTS = Object.freeze({
+  aisha: {
+    visibleState: 'Anchoring',
+    reason: 'holding authority until a correction changes the room'
+  },
+  vanya: {
+    visibleState: 'Reading the room',
+    reason: 'listening for emotional temperature before entering'
+  },
+  leah: {
+    visibleState: 'Holding critique',
+    reason: 'saving the taste cut until there is a useful edge'
+  },
+  claudia: {
+    visibleState: 'Tracking next steps',
+    reason: 'tracking structure without turning the exchange into a project plan'
+  },
+  grok: {
+    visibleState: 'Tracking',
+    reason: 'watching for the premise fault before interrupting'
+  }
+});
 const PULSE_SHOWCASE_SAFE_HOLD_MESSAGE = 'The room held that turn. Try again in a moment.';
 const PULSE_SHOWCASE_ALLOWED_ORIGINS = Object.freeze([
   'https://silva-os-live.vercel.app',
@@ -1891,6 +1913,27 @@ function sanitizeShowcaseSilentReactions(items = []) {
     .slice(0, 5);
 }
 
+function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions = []) {
+  const speaking = new Set((Array.isArray(messageEvents) ? messageEvents : [])
+    .map(item => String(item?.speakerId || '').trim().toLowerCase())
+    .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id)));
+  const bySpeaker = new Map();
+  sanitizeShowcaseSilentReactions(silentReactions).forEach(item => {
+    if (speaking.has(item.speakerId) || bySpeaker.has(item.speakerId)) return;
+    bySpeaker.set(item.speakerId, item);
+  });
+  PULSE_SHOWCASE_SPEAKERS.forEach(speakerId => {
+    if (speaking.has(speakerId) || bySpeaker.has(speakerId)) return;
+    const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[speakerId] || {};
+    bySpeaker.set(speakerId, {
+      speakerId,
+      visibleState: fallback.visibleState || 'Watching',
+      reason: fallback.reason || 'intentionally quiet while another character carries the turn'
+    });
+  });
+  return [...bySpeaker.values()].slice(0, 5);
+}
+
 function parsePulseShowcaseTurnRequest(body = {}) {
   const userText = safeShowcaseText(body?.userText || body?.message || body?.question || '', PULSE_SHOWCASE_MAX_USER_TEXT + 1);
   if (!userText) {
@@ -1938,7 +1981,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
   let roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
   let messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
-  let silentReactions = sanitizeShowcaseSilentReactions(payload.silentReactions || []);
+  let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || []);
   const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates);
   const continuityProof = continuityProofFromLedger(continuityLedger);
   let activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
@@ -1996,7 +2039,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = sanitizeShowcaseSilentReactions(fallbackSafe.silentReactions || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || []);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
@@ -2030,7 +2073,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = sanitizeShowcaseSilentReactions(fallbackSafe.silentReactions || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || []);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
@@ -6021,6 +6064,7 @@ router.__resetPulseShowcaseGuardForTests = __resetPulseShowcaseGuardForTests;
 router.__getPulseShowcaseVisibleHistoryForTests = __getPulseShowcaseVisibleHistoryForTests;
 router.__buildPulseShowcaseReactionPayloadForTests = buildPulseShowcaseReactionPayload;
 router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPayload;
+router.__ensurePulseShowcaseSilentPresenceForTests = ensurePulseShowcaseSilentPresence;
 router.__parsePulseShowcaseTurnRequestForTests = parsePulseShowcaseTurnRequest;
 router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
 
