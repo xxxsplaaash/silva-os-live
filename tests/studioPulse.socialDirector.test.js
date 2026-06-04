@@ -1802,6 +1802,20 @@ test('social director quality validator rejects live thin movie and fake-quality
   assert.equal(fakeCheck.ok, false);
   assert.ok(fakeCheck.issues.includes('operational-jargon') || fakeCheck.issues.includes('social-question-ignored'));
 
+  const binaryDodge = validateDirectorOutput({
+    roomBeat: 'Grok evaluates the prior answer.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'flat', text: 'The question implies a binary of useful or fake. The real tension is whether the statement landed as intended, or if the room needed a different kind of signal entirely.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(binaryDodge.ok, false);
+  assert.ok(binaryDodge.issues.includes('product-speaker-flatness:thin-quality-judgment'));
+
   const executionCheck = validateDirectorOutput({
     roomBeat: 'Grok evaluates the prior answer.',
     roomMood: 'focused',
