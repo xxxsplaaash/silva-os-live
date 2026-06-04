@@ -354,6 +354,21 @@ test('visible response quality rejects sterile accepted roll-call from live gaun
   assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
 });
 
+test('visible response quality rejects episode-candidate roll-call from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'Operational. The current focus is on the episode candidate.',
+      "Present and tracking the room's energy. It feels ready for the next phase.",
+      'As sharp as ever. Waiting to see if anything interesting emerges.',
+      'Structured and ready for the next operational step. What is the immediate priority?',
+      "Observing. The premise of 'how is everyone' is broad, but the data suggests functional."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
+});
+
 test('visible response quality rejects thin next-action non-answers', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'answer normally, what should I do today?',
@@ -438,6 +453,16 @@ test('visible response quality rejects sustainable-routine objective drift from 
   });
 
   assert.ok(issues.some(item => item.family === 'generic-advice'));
+
+  const timerIssues = evaluateVisibleResponse({
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    visibleText: [
+      'The objective is to complete the workout within your 20-minute window. Focus on the four moves provided and run the timer.',
+      'Stop negotiating with the clock. The objective is movement, not a perfect plan.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(timerIssues).includes('false-objective:command-posture'));
 });
 
 test('visible response quality rejects live support-bot fitness encouragement', () => {

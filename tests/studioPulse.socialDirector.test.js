@@ -1804,6 +1804,28 @@ test('social director quality validator rejects current live accepted fitness bo
 
   assert.equal(objectiveDrift.ok, false);
   assert.ok(objectiveDrift.issues.includes('topic-ignored:fitness') || objectiveDrift.issues.includes('generic-advice-column'));
+
+  const timerObjective = validateDirectorOutput({
+    roomBeat: 'The room turns a fitness follow-up into an objective slogan.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The objective is to complete the workout within your 20-minute window. Focus on the four moves provided and run the timer.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Stop negotiating with the clock. The objective is movement, not a perfect plan.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Four moves: chair squat, incline push-up, backpack row, dead bug.' },
+      { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' }
+    ]
+  });
+
+  assert.equal(timerObjective.ok, false);
+  assert.ok(timerObjective.issues.includes('false-objective-claim'));
 });
 
 test('social director quality validator rejects live thin movie and fake-quality answers', () => {
@@ -2856,6 +2878,27 @@ test('social director quality validator rejects sterile accepted roll-call from 
   assert.ok(
     validation.issues.includes('generic-status-report') || validation.issues.includes('product-speaker-flatness:roll-call'),
     `expected roll-call issue, got ${validation.issues.join(', ')}`
+  );
+
+  const liveEpisodeCandidate = validateDirectorOutput({
+    roomBeat: 'The room reports a sterile episode check-in.',
+    roomMood: 'focused',
+    responseMode: 'open_floor',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'Operational. The current focus is on the episode candidate.', visibleState: 'Watching' },
+      { speakerId: 'vanya', role: 'called_in', tone: 'flat', text: "Present and tracking the room's energy. It feels ready for the next phase.", visibleState: 'Watching' },
+      { speakerId: 'leah', role: 'called_in', tone: 'flat', text: 'As sharp as ever. Waiting to see if anything interesting emerges.', visibleState: 'Watching' },
+      { speakerId: 'claudia', role: 'called_in', tone: 'flat', text: 'Structured and ready for the next operational step. What is the immediate priority?', visibleState: 'Watching' },
+      { speakerId: 'grok', role: 'called_in', tone: 'flat', text: "Observing. The premise of 'how is everyone' is broad, but the data suggests functional.", visibleState: 'Watching' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'how is everyone?' });
+
+  assert.equal(liveEpisodeCandidate.ok, false);
+  assert.ok(
+    liveEpisodeCandidate.issues.includes('generic-status-report') || liveEpisodeCandidate.issues.includes('product-speaker-flatness:roll-call'),
+    `expected roll-call issue, got ${liveEpisodeCandidate.issues.join(', ')}`
   );
 });
 
