@@ -140,6 +140,28 @@ test('visible response quality rejects passive and adjacent surface-reflection p
   }
 });
 
+test('visible response quality rejects fake surface translation and update promises', () => {
+  const fixtures = [
+    'We can translate that into the interface across the landing page.',
+    'We can carry that into the dashboard visuals.',
+    'That will carry through the hero and product pages.',
+    'We will apply that aesthetic across the site.',
+    'I can update the page to match that direction.'
+  ];
+
+  for (const fixture of fixtures) {
+    const issues = evaluateVisibleResponse({
+      userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.',
+      visibleText: [
+        'The direction is black field, severe spacing, one red signal, and no friendly SaaS softness.',
+        fixture
+      ].join('\n')
+    });
+
+    assert.ok(issueKeys(issues).includes('self-theater:meta-language'), fixture);
+  }
+});
+
 test('visible response quality rejects fake implementation-alignment promises from live turns', () => {
   const fixtures = [
     'Let us ensure the implementation aligns with that clarity.',
@@ -230,4 +252,46 @@ test('visible response quality rejects invented project specifics on generic pla
   });
 
   assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects live planning invention and sterile execution voice', () => {
+  const planningIssues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      "Let's outline tomorrow's priorities. What are the critical items we need to address first?",
+      "I have a draft schedule based on today's outcomes. We need to confirm the key deliverables for the morning session.",
+      "Before we dive into specifics, let's ensure everyone's energy levels are accounted for. Any immediate needs or concerns for tomorrow?"
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(planningIssues).includes('invented-detail:project-planning'));
+
+  const foodIssues = evaluateVisibleResponse({
+    userMessage: 'I am hungry before training, what should I eat?',
+    visibleText: [
+      'Eat something simple. A banana and a handful of almonds if training is immediate.',
+      'Sustenance is a parameter, not a performance art. Execute.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(foodIssues).includes('self-theater:meta-language'));
+});
+
+test('visible response quality rejects room self-review language from live repairs', () => {
+  const fixtures = [
+    'The tension is simple: this room wants to be useful without shrinking into customer support.',
+    'The weak point is the polished dodge. Useful beats impressive here.',
+    'The constraint is useful. It removes theatrical planning.',
+    'Do the first block before reopening the debate. Evidence beats another round of room theatre.',
+    'A repeated answer is a failed answer wearing a badge. Good.'
+  ];
+
+  for (const fixture of fixtures) {
+    const issues = evaluateVisibleResponse({
+      userMessage: 'everyone, what is the actual tension in this room?',
+      visibleText: fixture
+    });
+
+    assert.ok(issueKeys(issues).includes('self-theater:meta-language'), fixture);
+  }
 });

@@ -468,7 +468,7 @@ test('social director fallback treats exercise artifacts as fitness context afte
         { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
         { speakerId: 'vanya', role: 'primary', text: 'Twenty minutes is enough if you stop negotiating with it. Warm up, move clean, leave while you still want to come back.' },
         { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' },
-        { speakerId: 'grok', role: 'closer', text: 'The constraint is useful. It removes theatrical planning.' }
+        { speakerId: 'grok', role: 'closer', text: 'The constraint is useful. It forces a session you can actually finish.' }
       ];
       const { body } = await postSocial(baseUrl, 'WHERE DO I START', { recentTurns });
       const text = visibleText(body);
@@ -489,7 +489,7 @@ test('social director fallback changes shape again after the no-more-loop recove
         { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
         { speakerId: 'vanya', role: 'primary', text: 'Yeah, fair. No more loop: your next move is one simple week, not another speech about the objective.' },
         { speakerId: 'claudia', role: 'side', text: 'Pick three training days, write the exercises down, and add one tiny progression each week.' },
-        { speakerId: 'grok', role: 'closer', text: 'If the plan cannot survive week one, it was decoration. Start boring enough to repeat.' }
+        { speakerId: 'grok', role: 'closer', text: 'If it cannot survive week one, shrink it until it can. Start boring enough to repeat.' }
       ];
       const { body } = await postSocial(baseUrl, 'BRUH...', { recentTurns });
       const text = visibleText(body);
@@ -497,7 +497,7 @@ test('social director fallback changes shape again after the no-more-loop recove
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
       assert.doesNotMatch(text, /No more loop/i);
-      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|run out of excuses)\b/i);
+      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|specific enough to start)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -509,7 +509,7 @@ test('social director fallback closes the third fitness recovery without repeati
       const recentTurns = [
         { speakerId: 'vanya', role: 'primary', text: 'Yeah. Strip it down: one workout, one meal, one sleep window.' },
         { speakerId: 'claudia', role: 'side', text: 'Do push, pull, legs, or the closest safe versions. Log reps.' },
-        { speakerId: 'grok', role: 'closer', text: 'The room has now run out of excuses and poetry. Excellent conditions for starting.' }
+        { speakerId: 'grok', role: 'closer', text: 'Good. That is specific enough to start.' }
       ];
       const { body } = await postSocial(baseUrl, 'BRUH...', { recentTurns });
       const text = visibleText(body);
@@ -1736,7 +1736,7 @@ test('social director fallback drops stale fitness context for movie and room-te
       const tensionText = visibleText(tension.body);
       assert.equal(tension.body.ok, true);
       assert.doesNotMatch(tensionText, /\b(movie|film|specific suggestions|content selection)\b/i);
-      assert.match(tensionText, /\b(tension|customer support|taste|pressure|fake)\b/i);
+      assert.match(tensionText, /\b(tension|help desk|pressure|direct|answer)\b/i);
     });
   });
 });
@@ -1755,7 +1755,7 @@ test('social director fallback answers short fitness follow-up and Grok quality 
 
       const grok = await postSocial(baseUrl, 'Grok, be honest: was that useful or did it sound fake?', { recentTurns });
       const grokText = visibleText(grok.body);
-      assert.match(grokText, /\b(fake-sounding|parameter language|less doctrine|more room)\b/i);
+      assert.match(grokText, /\b(too abstract|lost the person|answer the person|partly useful)\b/i);
       assert.doesNotMatch(grokText, /\b(parameters were clear|within those parameters)\b/i);
     });
   });
@@ -1773,7 +1773,7 @@ test('social director fallback recovers repetition complaints and planning pivot
 
       const repeat = await postSocial(baseUrl, 'you keep repeating yourself', { recentTurns });
       const repeatText = visibleText(repeat.body);
-      assert.match(repeatText, /\b(repeat loop|failed answer|answers the turn)\b/i);
+      assert.match(repeatText, /\b(repeat loop|change shape|answers the turn)\b/i);
       assert.doesNotMatch(repeatText, /\b(current priorities|objective is clear|personal fitness routines)\b/i);
 
       const normal = await postSocial(baseUrl, 'answer normally, what should I do today?', { recentTurns });
@@ -3048,7 +3048,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const text = (() => {
       if (/wanna grow/i.test(userText)) return 'Start this week: incline push-ups, backpack rows, split squats, and planks. Log reps; add one clean rep next time.';
-      if (/20 minutes/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes theatre.';
+      if (/20 minutes/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes a planning session.';
       if (/where do i start/i.test(userText)) return 'Begin with one short training day today. Pick three moves, write reps down, and repeat before changing the plan.';
       if (/what is the objective/i.test(userText)) return 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.';
       if (/bruh/i.test(userText)) return 'No more loop. Keep week one boring enough to repeat, then add one small progression.';
@@ -3056,9 +3056,9 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/hungry/i.test(userText)) return 'Before training, eat light enough to move: yogurt, eggs and toast, or rice and chicken if you have time.';
       if (/open floor/i.test(userText)) return 'Open floor: watch the next visible decision, then pick Heat if the room wants pressure or Spider-Verse if it needs voltage.';
       if (/movie|watch next|watch tonight/i.test(userText)) return 'Watch Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if the room wants bite.';
-      if (/actual tension/i.test(userText)) return 'The tension is usefulness versus performance. The room gets worse when it sounds polished instead of answering.';
-      if (/useful or did it sound fake/i.test(userText)) return 'Partly useful, mostly fake-sounding. Less doctrine, more room.';
-      if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then drop the theatre.';
+      if (/actual tension/i.test(userText)) return 'The tension is direct answers versus ceremony. The room gets worse when it sounds polished instead of useful.';
+      if (/useful or did it sound fake/i.test(userText)) return 'Partly useful, then too abstract. Answer the person, not the room concept.';
+      if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then stop adding commentary.';
       if (/repeating yourself/i.test(userText)) return 'Fair. No more repeat loop; plain answer, then we move.';
       if (/answer normally/i.test(userText)) return 'Today: pick one clean next move, do it plainly, and stop decorating the room.';
       if (/planning tomorrow/i.test(userText)) return 'Tomorrow needs a first block, a second block, and one owner for the messiest next step.';
