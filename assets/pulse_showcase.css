@@ -481,10 +481,12 @@ body.has-room-messages .room-feed {
   color: var(--text);
 }
 
+.message-reference,
 .message-expand {
   margin-top: 12px;
 }
 
+.reference-button,
 .expand-button {
   min-height: 28px;
   padding: 0 10px;
@@ -496,6 +498,19 @@ body.has-room-messages .room-feed {
   text-transform: uppercase;
 }
 
+.reference-button {
+  border-color: rgba(255, 255, 255, .075);
+  background: rgba(255, 255, 255, .022);
+  color: var(--muted);
+}
+
+.reference-button.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--speaker-color) 40%, rgba(255, 255, 255, .16));
+  background: color-mix(in srgb, var(--speaker-color) 12%, rgba(255, 255, 255, .03));
+}
+
+.reference-button:hover,
 .expand-button:hover {
   color: var(--text);
   border-color: color-mix(in srgb, var(--speaker-color) 42%, rgba(255, 255, 255, .16));
@@ -587,6 +602,54 @@ body.has-room-messages .room-feed {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+
+.reference-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -2px 0 2px;
+}
+
+.reference-strip[hidden] {
+  display: none;
+}
+
+.reference-chip {
+  max-width: min(100%, 620px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px 7px 11px;
+  border: 1px solid rgba(214, 196, 238, .17);
+  border-radius: 999px;
+  background: rgba(214, 196, 238, .052);
+  color: var(--soft);
+  font: 500 11px "DM Mono", ui-monospace, monospace;
+}
+
+.reference-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-remove {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .085);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .03);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.reference-remove:hover {
+  color: var(--text);
+  border-color: rgba(214, 196, 238, .24);
 }
 
 #user-text {

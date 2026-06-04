@@ -492,6 +492,18 @@ test('visible response quality rejects support-bot softening from live frustrati
   }
 });
 
+test('visible response quality rejects objective-language recovery from live bruh turn', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    visibleText: [
+      "Okay, that 'BRUH' means we're looping. Let's strip it back to one concrete action for today, not the whole objective.",
+      'The next move is one workout, logged. That is the only objective for this turn.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
 test('visible response quality rejects too-thin quality judgments', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Grok, be honest: was that useful or did it sound fake?',

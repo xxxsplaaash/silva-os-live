@@ -316,6 +316,60 @@ test('pulse showcase expand returns brief local voice bullets without Pack 1 mem
   assert.equal(result.payload.memorySummary, undefined);
 });
 
+test('pulse showcase turn forwards selected message references as local anchors only', async () => {
+  await withAishaFlag('true', async () => {
+    let capturedRequest = null;
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequest = request;
+        return showcaseAishaResponse(
+          request,
+          'That Leah card is the useful anchor: keep the warning-light edge and make the next move concrete.'
+        );
+      }
+    }));
+
+    await withStudioServer(async baseUrl => {
+      const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'reference-route-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'Use the referenced card and make the next move sharper.',
+          references: [
+            {
+              messageId: 'msg-leah-1',
+              speakerId: 'leah',
+              speakerName: 'Leah Mokoena',
+              role: 'primary',
+              text: 'Make the mark feel like a warning light, not a wellness badge.'
+            },
+            {
+              messageId: 'bad-ref',
+              speakerId: 'ghost',
+              text: 'This should be ignored.'
+            }
+          ],
+          roomState: { roomMood: 'sharp', responseMode: 'single' }
+        })
+      });
+      assert.equal(response.status, 200);
+      const body = await response.json();
+      assert.equal(body.ok, true);
+      assert.ok(capturedRequest);
+      const references = capturedRequest.projectContext?.socialDirectorV1?.references || [];
+      assert.equal(references.length, 1);
+      assert.equal(references[0].speakerId, 'leah');
+      assert.match(references[0].text, /warning light/);
+      assert.match(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /warning light/);
+      assert.doesNotMatch(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /This should be ignored/);
+      assert.equal(body.continuityLedger.length, 0);
+      assert.doesNotMatch(JSON.stringify(body), /ghost|This should be ignored|generatorPrompt|socialCues|aishaDiagnostics/);
+    });
+  });
+});
+
 test('Studio Pulse text provider can resolve the server-side Gemini vault', () => {
   const source = read('routes/studio.js');
   assert.match(source, /geminiVaultKeyEntries/);

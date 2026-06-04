@@ -1176,6 +1176,27 @@ function sanitizeShowcaseRecentTurns(items = []) {
     .slice(-18);
 }
 
+function sanitizeShowcaseReferences(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const rawSpeaker = String(item?.speakerId || item?.speaker || '').trim().toLowerCase();
+      const speakerId = PULSE_SHOWCASE_SPEAKERS.includes(rawSpeaker)
+        ? rawSpeaker
+        : (rawSpeaker === 'user' ? 'user' : '');
+      const text = safeShowcaseText(item?.text || item?.content || item?.message || '', 360);
+      if (!speakerId || !text) return null;
+      return {
+        messageId: safeShowcaseText(item?.messageId || item?.id || '', 96),
+        speakerId,
+        speakerName: safeShowcaseText(item?.speakerName || item?.name || '', 80),
+        role: safeShowcaseText(item?.role || 'message', 40) || 'message',
+        text
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
   const turns = sanitizeShowcaseRecentTurns(items);
   const currentKey = showcaseTurnTextKey(userText);
@@ -1877,18 +1898,20 @@ function parsePulseShowcaseTurnRequest(body = {}) {
     mode,
     sessionId: pulseShowcaseSessionId(body?.sessionId),
     recentTurns: removeCurrentUserTurnFromRecentTurns(body?.recentTurns || body?.history || [], userText),
+    references: sanitizeShowcaseReferences(body?.references || body?.messageReferences || []),
     roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode)
   };
 }
 
 async function buildPulseShowcaseTurnPayload(parsed = {}) {
-  const { userText, mode, sessionId, recentTurns, roomState } = parsed;
+  const { userText, mode, sessionId, recentTurns, references, roomState } = parsed;
   const result = await runSocialDirectorTurn({
     body: {
       question: userText,
       threadId: sessionId,
       history: recentTurns,
       recentTurns,
+      references,
       roomState,
       currentMood: roomState.roomMood || (mode === 'continuity_breaker' ? 'sharp' : 'focused'),
       openFloor: mode === 'social_hierarchy_lab',
@@ -5990,5 +6013,7 @@ router.__resetPulseShowcaseGuardForTests = __resetPulseShowcaseGuardForTests;
 router.__getPulseShowcaseVisibleHistoryForTests = __getPulseShowcaseVisibleHistoryForTests;
 router.__buildPulseShowcaseReactionPayloadForTests = buildPulseShowcaseReactionPayload;
 router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPayload;
+router.__parsePulseShowcaseTurnRequestForTests = parsePulseShowcaseTurnRequest;
+router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
 
 module.exports = router;

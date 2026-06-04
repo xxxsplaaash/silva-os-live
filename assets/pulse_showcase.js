@@ -27,7 +27,7 @@
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
   var MAX_USER_TEXT = 1500;
-  var SHOWCASE_VERSION = '1.9.0';
+  var SHOWCASE_VERSION = '1.10.0';
   var REACTION_TYPES = ['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'];
   var REACTION_LABELS = {
     sharp: 'Sharp',
@@ -52,6 +52,7 @@
     messages: [],
     reactions: {},
     expansions: {},
+    references: [],
     ledger: [],
     presence: {},
     roomMood: 'focused',
@@ -225,6 +226,7 @@
         messages: state.messages.slice(-30),
         reactions: state.reactions,
         expansions: state.expansions,
+        references: state.references,
         ledger: state.ledger.slice(0, 16),
         presence: state.presence,
         roomMood: state.roomMood,
@@ -246,6 +248,7 @@
       if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(-30);
       if (saved.reactions && typeof saved.reactions === 'object') state.reactions = normalizeReactionState(saved.reactions);
       if (saved.expansions && typeof saved.expansions === 'object') state.expansions = normalizeExpansionState(saved.expansions);
+      if (Array.isArray(saved.references)) state.references = normalizeReferenceState(saved.references);
       if (Array.isArray(saved.ledger)) state.ledger = saved.ledger.slice(0, 16);
       if (saved.presence && typeof saved.presence === 'object') state.presence = normalizePresenceState(saved.presence);
       if (saved.roomMood) state.roomMood = compact(saved.roomMood, 40) || state.roomMood;
@@ -312,6 +315,28 @@
       }
     });
     return next;
+  }
+
+  function normalizeReferenceState(value) {
+    var seen = {};
+    return (Array.isArray(value) ? value : [])
+      .map(function (item) {
+        var messageId = compact(item && (item.messageId || item.id) || '', 96);
+        var rawSpeaker = safeToken(item && item.speakerId, '');
+        var speakerId = safeSpeakerId(rawSpeaker) || (rawSpeaker === 'user' ? 'user' : '');
+        var text = compact(item && item.text || '', 360);
+        if (!messageId || !speakerId || !text || seen[messageId]) return null;
+        seen[messageId] = true;
+        return {
+          messageId: messageId,
+          speakerId: speakerId,
+          speakerName: compact(item && item.speakerName || CHARACTER_NAMES[speakerId] || speakerId, 80),
+          role: compact(item && item.role || 'message', 40),
+          text: text
+        };
+      })
+      .filter(Boolean)
+      .slice(-3);
   }
 
   function normalizeReactionSummary(value) {
@@ -973,6 +998,14 @@
       message.id = messageId;
       var activeReaction = normalizeReaction(state.reactions[messageId]);
       var expanded = state.expansions[messageId];
+      var referenced = state.references.some(function (item) { return item.messageId === messageId; });
+      var referenceControl = [
+        '<div class="message-reference">',
+        '<button type="button" class="reference-button ' + (referenced ? 'active' : '') + '" data-message-id="' + escapeHtml(messageId) + '" data-speaker-id="' + escapeHtml(speakerToken) + '">',
+        referenced ? 'Referenced' : 'Reference this',
+        '</button>',
+        '</div>'
+      ].join('');
       var reactions = id === 'user' ? '' : [
         '<div class="message-reactions" role="group" aria-label="Message reactions">',
         REACTION_TYPES.map(function (reaction) {
@@ -997,6 +1030,7 @@
         '<div class="message-role">' + escapeHtml(message.role || '') + '</div>',
         '</div>',
         '<p class="message-text">' + escapeHtml(message.text || '') + '</p>',
+        referenceControl,
         expand,
         reactions,
         '</article>'
@@ -1040,11 +1074,29 @@
     }).join('');
   }
 
+  function renderReferences() {
+    if (!el.referenceStrip) return;
+    var refs = normalizeReferenceState(state.references);
+    state.references = refs;
+    el.referenceStrip.hidden = !refs.length;
+    el.referenceStrip.innerHTML = refs.length
+      ? refs.map(function (item) {
+        return [
+          '<span class="reference-chip" title="' + escapeHtml(item.text) + '">',
+          '<span>' + escapeHtml((item.speakerName || speakerName(item.speakerId)) + ': ' + compact(item.text, 72)) + '</span>',
+          '<button type="button" class="reference-remove" data-message-id="' + escapeHtml(item.messageId) + '" aria-label="Remove reference">×</button>',
+          '</span>'
+        ].join('');
+      }).join('')
+      : '';
+  }
+
   function renderAll() {
     el.roomMood.textContent = 'Mood: ' + state.roomMood;
     el.responseMode.textContent = 'Mode: ' + state.responseMode;
     renderStatus();
     renderMessages();
+    renderReferences();
     renderLedger();
     renderSocialSignals();
     renderPresence();
@@ -1110,12 +1162,13 @@
     });
   }
 
-  function turnRequestBody(text, priorSpeaker, priorRecentTurns) {
+  function turnRequestBody(text, priorSpeaker, priorRecentTurns, references) {
     return {
       sessionId: state.sessionId,
       mode: state.mode,
       userText: text,
       recentTurns: Array.isArray(priorRecentTurns) ? priorRecentTurns : recentTurns(),
+      references: normalizeReferenceState(Array.isArray(references) ? references : state.references),
       roomState: {
         roomMood: state.roomMood,
         responseMode: state.responseMode,
@@ -1251,6 +1304,7 @@
 
     var priorSpeaker = state.priorSpeaker;
     var priorRecentTurns = recentTurns();
+    var turnReferences = normalizeReferenceState(state.references);
     setBusy(true);
     setProcessingText('Room is reading the turn.');
     state.messages.push({ speakerId: 'user', speakerName: 'You', role: 'user', text: text });
@@ -1261,7 +1315,9 @@
     persistState();
 
     try {
-      await submitTurnPayload(turnRequestBody(text, priorSpeaker, priorRecentTurns));
+      await submitTurnPayload(turnRequestBody(text, priorSpeaker, priorRecentTurns, turnReferences));
+      state.references = [];
+      renderReferences();
     } catch (err) {
       state.messages.push({
         speakerId: 'aisha',
@@ -1360,11 +1416,57 @@
     }
   }
 
+  function toggleReference(messageId, speakerId) {
+    var safeMessageId = compact(messageId || '', 96);
+    if (!safeMessageId) return;
+    var existingIndex = state.references.findIndex(function (item) { return item.messageId === safeMessageId; });
+    if (existingIndex >= 0) {
+      state.references.splice(existingIndex, 1);
+      renderMessages();
+      renderReferences();
+      persistState();
+      reportHeight();
+      return;
+    }
+    var message = state.messages.find(function (item, index) {
+      return messageIdFor(item, index) === safeMessageId;
+    });
+    if (!message || !message.text) return;
+    var rawSpeaker = safeToken(speakerId || message.speakerId, '');
+    var id = safeSpeakerId(rawSpeaker) || (rawSpeaker === 'user' ? 'user' : '');
+    if (!id) return;
+    state.references = normalizeReferenceState([
+      ...state.references,
+      {
+        messageId: safeMessageId,
+        speakerId: id,
+        speakerName: compact(message.speakerName || CHARACTER_NAMES[id] || id, 80),
+        role: compact(message.role || 'message', 40),
+        text: compact(message.text || '', 360)
+      }
+    ]);
+    renderMessages();
+    renderReferences();
+    persistState();
+    reportHeight();
+  }
+
+  function removeReference(messageId) {
+    var safeMessageId = compact(messageId || '', 96);
+    if (!safeMessageId) return;
+    state.references = state.references.filter(function (item) { return item.messageId !== safeMessageId; });
+    renderMessages();
+    renderReferences();
+    persistState();
+    reportHeight();
+  }
+
   function resetSession() {
     state.sessionId = makeSessionId();
     state.messages = [];
     state.reactions = {};
     state.expansions = {};
+    state.references = [];
     state.ledger = [];
     state.presence = {};
     state.roomMood = 'focused';
@@ -1410,6 +1512,7 @@
     el.userText = $('user-text');
     el.charCount = $('char-count');
     el.send = $('send-turn');
+    el.referenceStrip = $('reference-strip');
     el.processingStatus = $('processing-status');
     el.engineValue = $('engine-value');
     el.persistenceValue = $('persistence-value');
@@ -1438,7 +1541,16 @@
       var expandButton = event.target && event.target.closest ? event.target.closest('.expand-button') : null;
       if (expandButton) {
         submitExpand(expandButton.dataset.messageId, expandButton.dataset.speakerId);
+        return;
       }
+      var referenceButton = event.target && event.target.closest ? event.target.closest('.reference-button') : null;
+      if (referenceButton) {
+        toggleReference(referenceButton.dataset.messageId, referenceButton.dataset.speakerId);
+      }
+    });
+    el.form.addEventListener('click', function (event) {
+      var removeButton = event.target && event.target.closest ? event.target.closest('.reference-remove') : null;
+      if (removeButton) removeReference(removeButton.dataset.messageId);
     });
     el.userText.addEventListener('input', function () {
       el.charCount.textContent = (el.userText.value || '').length + '/' + MAX_USER_TEXT;

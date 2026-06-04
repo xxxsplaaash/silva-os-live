@@ -9,7 +9,7 @@ const BACKEND_URL = String(
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
-const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.9.0');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.10.0');
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
@@ -44,7 +44,7 @@ const PROMPTS = [
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'open floor: what should the room watch next?', rejectsStaleFitness: true, expectsMovie: true },
   { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'how is everyone?', expectsCheckIn: true },
   { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'everyone, what is the actual tension in this room?', expectsRoomTension: true },
-  { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'Grok, be honest: was that useful or did it sound fake?', expectsQualityCheck: true },
+  { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'Grok, be honest: was that useful or did it sound fake?', expectsQualityCheck: true, referenceLastAssistant: true },
   { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'I am stressed and this is starting to feel dumb.', expectsFrustrationRecovery: true },
   { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'you keep repeating yourself', expectsFrustrationRecovery: true },
   { sessionGroup: 'social-recovery', mode: 'social_hierarchy_lab', userText: 'answer normally, what should I do today?', expectsUsefulNextMove: true },
@@ -138,6 +138,24 @@ function recentTurnWindow(turns = []) {
   return selected.slice(-18);
 }
 
+function referenceAnchorsFor(prompt = {}, recentTurns = []) {
+  if (!prompt.referenceLastAssistant) return [];
+  const lastAssistant = [...recentTurns].reverse().find(item => {
+    const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+    return speakerId && speakerId !== 'user' && String(item?.text || item?.content || '').trim();
+  });
+  if (!lastAssistant) return [];
+  const speakerId = String(lastAssistant.speakerId || '').trim().toLowerCase();
+  const text = String(lastAssistant.text || lastAssistant.content || '').replace(/\s+/g, ' ').trim().slice(0, 360);
+  return [{
+    messageId: `gauntlet-ref-${visibleKey(`${speakerId}-${text}`).slice(0, 48)}`,
+    speakerId,
+    speakerName: String(lastAssistant.speakerName || speakerId),
+    role: String(lastAssistant.role || 'message'),
+    text
+  }];
+}
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -149,6 +167,7 @@ function sessionIdFor(group = 'main') {
 async function streamTurn(prompt, prior = {}, recentTurns = []) {
   const startedAt = Date.now();
   const outboundRecentTurns = recentTurnWindow(recentTurns);
+  const references = referenceAnchorsFor(prompt, recentTurns);
   const outboundRecentText = outboundRecentTurns
     .map(item => String(item?.text || item?.content || ''))
     .join('\n');
@@ -163,6 +182,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     mode: prompt.mode,
     userText: prompt.userText,
     recentTurns: outboundRecentTurns,
+    references,
     roomState: {
       roomMood: prior.roomMood || 'focused',
       responseMode: prior.responseMode || 'single',
@@ -295,6 +315,9 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     latencyMs: Date.now() - startedAt,
     messageCount: Array.isArray(final.messageEvents) ? final.messageEvents.length : 0,
     ledgerCount: Array.isArray(final.continuityLedger) ? final.continuityLedger.length : 0,
+    references,
+    silentReactions: Array.isArray(final.silentReactions) ? final.silentReactions : [],
+    continuityLedger: Array.isArray(final.continuityLedger) ? final.continuityLedger : [],
     roomMood: String(final.roomMood || ''),
     responseMode: String(final.responseMode || ''),
     visibleText: visible,
@@ -350,7 +373,11 @@ for (const prompt of PROMPTS) {
   console.error([
     `\nUSER: ${prompt.userText}`,
     `state: ${result.classification} accepted=${result.acceptedByPack1} quality=${result.qualityAccepted} repaired=${result.repairedByRuntime} engine=${result.activeEngine} fallback=${result.fallbackCategory || '-'} qfail=${result.qualityFailureCategory || '-'} latency=${result.latencyMs}ms`,
-    ...(result.messageEvents || []).map(item => `- ${item.speakerName || item.speakerId} [${item.role || 'message'}]: ${item.text || ''}`)
+    ...(result.references || []).map(item => `reference: ${item.speakerName || item.speakerId} [${item.role || 'message'}] ${item.messageId}: ${item.text || ''}`),
+    ...(result.messageEvents || []).map(item => `card: ${item.speakerName || item.speakerId} [${item.role || 'message'}] state=${item.visibleState || '-'}: ${item.text || ''}`),
+    ...(result.silentReactions || []).map(item => `silence: ${item.speakerId} state=${item.visibleState || '-'} reason=${item.reason || '-'}`),
+    ...(result.continuityLedger || []).map(item => `ledger: ${item.status || '-'} ${item.source || '-'} ${item.id || '-'}: ${item.text || ''}`),
+    `social: ${JSON.stringify(result.socialSignals || {})}`
   ].join('\n'));
   results.push({
     prompt: result.prompt,
@@ -369,6 +396,9 @@ for (const prompt of PROMPTS) {
     latencyMs: result.latencyMs,
     messageCount: result.messageCount,
     ledgerCount: result.ledgerCount,
+    referenceCount: result.references.length,
+    silenceCount: result.silentReactions.length,
+    socialSignals: result.socialSignals,
     visiblePreview: result.visibleText.slice(0, 360)
   });
   state.prior = {
