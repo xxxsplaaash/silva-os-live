@@ -2135,6 +2135,22 @@ test('social director quality validator rejects invented planning details not su
 
   assert.equal(inventedPlanning.ok, false);
   assert.ok(inventedPlanning.issues.includes('product-invented-detail:project-planning'));
+
+  const livePlanningPromise = validateDirectorOutput({
+    roomBeat: 'The room invents a schedule deliverable for a generic planning ask.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's map out tomorrow. I'll draft a preliminary schedule with key tasks and deadlines by EOD." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Good idea. We should also build in a buffer for unexpected items, so it doesn't feel too rigid." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(livePlanningPromise.ok, false);
+  assert.ok(livePlanningPromise.issues.includes('operational-jargon'));
+  assert.ok(livePlanningPromise.issues.includes('product-invented-detail:project-planning'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
@@ -2923,6 +2939,21 @@ test('social director quality validator rejects logo direction answers that punt
 
   assert.equal(softerPunt.ok, false);
   assert.ok(softerPunt.issues.includes('design-answer-punted'));
+
+  const liveLogoPunt = validateDirectorOutput({
+    roomBeat: 'The room critiques the logo but does not give direction.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: "Silva's current logo feels like a placeholder. It needs a visual identity that speaks to ambition, not just function." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ambition is a variable. What specific pattern of ambition are we trying to signal, or are we just adding more noise to the visual spectrum?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper logo direction for Silva' });
+
+  assert.equal(liveLogoPunt.ok, false);
+  assert.ok(liveLogoPunt.issues.includes('design-answer-punted'));
 });
 
 test('social director quality validator rejects landing-page prompts answered as generic room banter', () => {
@@ -2940,6 +2971,21 @@ test('social director quality validator rejects landing-page prompts answered as
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('design-answer-punted'));
+
+  const liveLandingPunt = validateDirectorOutput({
+    roomBeat: 'The room critiques the landing page but does not give direction.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'flat', text: "Black glass and one red pulse. That's a start, but ambition needs more than just a color." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ambition is a variable. Are we signaling the ambition to disrupt, to dominate, or simply to exist with more expensive materials?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.' });
+
+  assert.equal(liveLandingPunt.ok, false);
+  assert.ok(liveLandingPunt.issues.includes('design-answer-punted'));
 });
 
 test('social director quality validator rejects objective slogans for casual choices', () => {

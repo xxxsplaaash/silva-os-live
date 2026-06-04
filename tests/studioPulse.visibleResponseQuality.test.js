@@ -193,6 +193,23 @@ test('visible response quality rejects continuity answers that ask what changed 
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects continuity answers that mention values without current and prior labels', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ],
+    visibleText: [
+      "It sounds like we've landed on white editorial, no red. The pulse is the remaining question.",
+      'The initial claim was black glass with a red pulse. The correction is white editorial, no red.',
+      "A pulse without information is just noise. We need to know if it's serving a function or just adding visual clutter."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
+});
+
 test('visible response quality rejects preference recall answers that ignore ledger evidence', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',
@@ -583,4 +600,38 @@ test('visible response quality accepts concrete useful-versus-fake quality split
   });
 
   assert.equal(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'), false);
+});
+
+test('visible response quality rejects live fake planning action promises', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      "Let's map out tomorrow. I'll draft a preliminary schedule with key tasks and deadlines by EOD.",
+      "Good idea. We should also build in a buffer for unexpected items, so it doesn't feel too rigid."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects live design-direction punts', () => {
+  const logoIssues = evaluateVisibleResponse({
+    userMessage: 'I need a sharper logo direction for Silva',
+    visibleText: [
+      "Silva's current logo feels like a placeholder. It needs a visual identity that speaks to ambition, not just function.",
+      'Ambition is a variable. What specific pattern of ambition are we trying to signal, or are we just adding more noise to the visual spectrum?'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(logoIssues).includes('design-answer-punted:direction'));
+
+  const landingIssues = evaluateVisibleResponse({
+    userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.',
+    visibleText: [
+      "Black glass and one red pulse. That's a start, but ambition needs more than just a color.",
+      'Ambition is a variable. Are we signaling the ambition to disrupt, to dominate, or simply to exist with more expensive materials?'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(landingIssues).includes('design-answer-punted:direction'));
 });

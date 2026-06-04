@@ -2188,6 +2188,143 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
   });
 });
 
+test('Studio Pulse showcase repairs accepted planning and design punts', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            const userText = String(request.messageText || request.userText || '');
+            const output = (() => {
+              if (/planning tomorrow/i.test(userText)) {
+                return {
+                  roomBeat: 'The room invents a planning deliverable.',
+                  roomMood: 'focused',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's map out tomorrow. I'll draft a preliminary schedule with key tasks and deadlines by EOD.", visibleState: 'Watching' },
+                    { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Good idea. We should also build in a buffer for unexpected items, so it doesn't feel too rigid.", visibleState: 'Watching' }
+                  ],
+                  silentReactions: [],
+                  socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                  stateUpdates: { notes: [] }
+                };
+              }
+              if (/logo direction/i.test(userText)) {
+                return {
+                  roomBeat: 'The room critiques the logo without direction.',
+                  roomMood: 'focused',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    { speakerId: 'leah', role: 'primary', tone: 'flat', text: "Silva's current logo feels like a placeholder. It needs a visual identity that speaks to ambition, not just function.", visibleState: 'Watching' },
+                    { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ambition is a variable. What specific pattern of ambition are we trying to signal, or are we just adding more noise to the visual spectrum?', visibleState: 'Watching' }
+                  ],
+                  silentReactions: [],
+                  socialCues: { roomMove: 'challenge', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                  stateUpdates: { notes: [] }
+                };
+              }
+              return {
+                roomBeat: 'The room critiques the landing page without direction.',
+                roomMood: 'focused',
+                responseMode: 'small_exchange',
+                speakers: [
+                  { speakerId: 'leah', role: 'primary', tone: 'flat', text: "Black glass and one red pulse. That's a start, but ambition needs more than just a color.", visibleState: 'Watching' },
+                  { speakerId: 'grok', role: 'side', tone: 'flat', text: 'Ambition is a variable. Are we signaling the ambition to disrupt, to dominate, or simply to exist with more expensive materials?', visibleState: 'Watching' }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'challenge', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              };
+            })();
+            return {
+              ok: true,
+              responses: [{ speakerId: 'aisha', content: JSON.stringify(output) }],
+              memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.83
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const cases = [
+          {
+            sessionId: 'showcase-live-planning-punt-repair',
+            userText: 'new topic: I need help planning tomorrow',
+            rejected: /draft a preliminary schedule|key tasks and deadlines|by EOD/i,
+            expected: /\b(Tomorrow|three blocks|first decision|main build|cleanup)\b/i
+          },
+          {
+            sessionId: 'showcase-live-logo-punt-repair',
+            userText: 'I need a sharper logo direction for Silva',
+            rejected: /placeholder|ambition is a variable|what specific pattern of ambition/i,
+            expected: /\b(one sharp mark|restrained contrast|small red signal|black field|agency-template softness|severe)\b/i
+          },
+          {
+            sessionId: 'showcase-live-landing-punt-repair',
+            userText: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.',
+            rejected: /ambition needs more than|ambition is a variable|exist with more expensive materials/i,
+            expected: /\b(black glass|one red pulse|quiet hero|obvious CTA|generic SaaS|no generic)\b/i
+          }
+        ];
+
+        for (const item of cases) {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+            body: JSON.stringify({
+              sessionId: item.sessionId,
+              mode: 'social_hierarchy_lab',
+              userText: item.userText
+            })
+          });
+          assert.equal(response.status, 200);
+          const events = parseSseEvents(await response.text());
+          const final = events.find(event => event.event === 'final').data;
+          const text = visibleText(final.messageEvents);
+
+          assert.equal(final.ok, true);
+          assert.equal(final.activeEngine, 'local-social-director');
+          assert.equal(final.acceptedByPack1, false);
+          assert.equal(final.qualityAccepted, false);
+          assert.equal(final.repairedByRuntime, true);
+          assert.doesNotMatch(text, item.rejected);
+          assert.match(text, item.expected);
+          assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|preliminary schedule|ambition is a variable/);
+        }
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase last-mile gate repairs reversed prior/current denial answers', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
@@ -2598,7 +2735,11 @@ test('Studio Pulse showcase repairs continuity misses from server visible histor
             } else if (/white editorial with no red/i.test(text)) {
               visibleText = 'White editorial. No red.';
             } else if (/what changed/i.test(text)) {
-              visibleText = 'What specifically has changed in your view? Anything concrete you have noticed?';
+              visibleText = [
+                "It sounds like we've landed on white editorial, no red. The pulse is the remaining question.",
+                'The initial claim was black glass with a red pulse. The correction is white editorial, no red.',
+                "A pulse without information is just noise. We need to know if it's serving a function or just adding visual clutter."
+              ].join('\n');
             }
 
             return {
@@ -2677,7 +2818,9 @@ test('Studio Pulse showcase repairs continuity misses from server visible histor
         assert.equal(final.repairedByRuntime, true);
         assert.match(text, /\bwhite editorial with no red\b/i);
         assert.match(text, /\bblack glass with a single red pulse\b/i);
-        assert.doesNotMatch(text, /\bwhat specifically has changed|anything concrete you have noticed|operational flow seems stable\b/i);
+        assert.match(text, /\bChanged: .*white editorial with no red\b/i);
+        assert.match(text, /\bPrior record: .*black glass with a single red pulse\b/i);
+        assert.doesNotMatch(text, /\bwhat specifically has changed|anything concrete you have noticed|operational flow seems stable|remaining question|initial claim|the correction is\b/i);
         assert.doesNotMatch(JSON.stringify(final), /test-room-provider-key|generatorPrompt|aishaDiagnostics/);
       });
     } finally {

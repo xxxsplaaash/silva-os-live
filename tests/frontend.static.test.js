@@ -48,6 +48,7 @@ const PULSE_WIX_RUNBOOK = path.join(ROOT, 'docs', 'STUDIO_PULSE_WIX_EMBED_RUNBOO
 const PULSE_PUBLIC_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-public.mjs');
 const PULSE_LOCAL_IFRAME_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-local-iframe.mjs');
 const PULSE_BROWSER_GAUNTLET = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-browser-gauntlet.mjs');
+const PULSE_TURN_ACCEPTANCE_GAUNTLET = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-turn-acceptance.mjs');
 const AISHA_GEMINI_ADAPTER = path.join(ROOT, 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts');
 
 function readIndex() {
@@ -1685,6 +1686,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   const smoke = fs.readFileSync(PULSE_PUBLIC_SMOKE, 'utf8');
   const localSmoke = fs.readFileSync(PULSE_LOCAL_IFRAME_SMOKE, 'utf8');
   const browserGauntlet = fs.readFileSync(PULSE_BROWSER_GAUNTLET, 'utf8');
+  const turnGauntlet = fs.readFileSync(PULSE_TURN_ACCEPTANCE_GAUNTLET, 'utf8');
   const combined = `${html}\n${script}\n${css}`;
 
   assert.match(html, /Studio Pulse Showcase/);
@@ -1859,6 +1861,15 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(browserGauntlet, /LEGACY_TURN_RX/);
   assert.match(browserGauntlet, /overflowX/);
   assert.doesNotMatch(browserGauntlet, /EventSource|WebSocket/);
+  assert.match(turnGauntlet, /initial claim/);
+  assert.match(turnGauntlet, /the correction is/);
+  assert.match(turnGauntlet, /remaining question/);
+  assert.match(turnGauntlet, /pulse without information/);
+  assert.match(turnGauntlet, /card:/);
+  assert.match(turnGauntlet, /silence:/);
+  assert.match(turnGauntlet, /ledger:/);
+  assert.match(turnGauntlet, /reaction-effect:/);
+  assert.match(turnGauntlet, /social:/);
 });
 
 test('A.I.S.H.A provider debug previews are gated behind explicit debug flags', () => {
