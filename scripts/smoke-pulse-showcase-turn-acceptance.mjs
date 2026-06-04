@@ -438,7 +438,7 @@ async function submitExpand(result = {}, prior = {}) {
   });
   const text = await response.text();
   assertOk(!LEAK_RX.test(text), 'expand response leaked prompt/runtime internals or secret-like material');
-  assertOk(!/\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth)\b/i.test(text), 'expand response leaked meta/policy language');
+  assertOk(!/\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth|therapy wallpaper|social move|room context matters|room matters here|new room mood|button click)\b/i.test(text), 'expand response leaked meta/policy language');
   assertOk(response.ok, `expand failed HTTP ${response.status}: ${text.slice(0, 180)}`);
   const payload = JSON.parse(text);
   const bullets = Array.isArray(payload.bullets) ? payload.bullets.map(item => String(item || '').trim()).filter(Boolean) : [];

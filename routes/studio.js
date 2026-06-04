@@ -1686,37 +1686,37 @@ function uniqueShowcaseBullets(items = []) {
 
 function showcaseExpansionTemplates(speakerId = '', anchor = '', roomMood = '') {
   const subject = anchor || 'that point';
-  const mood = roomMood ? `The ${roomMood} room matters here` : 'The room context matters here';
+  const mood = roomMood ? `${roomMood[0].toUpperCase()}${roomMood.slice(1)} pace` : 'Steady pace';
   return {
     aisha: [
       `Receipt: ${subject}.`,
       'Cut the decorative version and keep the claim someone can verify.',
-      'If the standard is real, the next move needs evidence, not theatre.',
-      `${mood}; do not let softness blur the actual decision.`
+      'Name what would prove it true, then keep everything else out of the way.',
+      `${mood}: keep the decision legible.`
     ],
     vanya: [
       `Temperature read: ${subject}.`,
-      'Keep the human read, but do not turn it into therapy wallpaper.',
-      'If this lands well, it should feel clearer and less performative.',
-      `${mood}; the social move is to lower noise without lowering standards.`
+      'Keep the first step small enough to do today.',
+      'If it lands well, the user should feel less trapped and more directed.',
+      `${mood}: lower the noise and keep one useful action in view.`
     ],
     leah: [
       `Taste problem: ${subject}.`,
       'Make it sharper, less obedient, and less desperate to be liked.',
       'The audience will forgive edge before they forgive bland confidence.',
-      `${mood}; do not sand the sentence until it sounds like a brochure.`
+      `${mood}: keep the bite aimed at the weak point.`
     ],
     claudia: [
       `Operational hinge: ${subject}.`,
       'Keep the structure light: one decision, one constraint, one follow-through.',
       'If it cannot be checked after the turn, it is just movement.',
-      `${mood}; the answer should reduce drift, not create a workstream for show.`
+      `${mood}: reduce drift without inventing a process.`
     ],
     grok: [
       `Boundary fault: ${subject}.`,
-      'The system either verifies the claim or admits it cannot. Secret third option: theatre.',
+      'Either verify the claim or admit the gap.',
       'Smallest real fix: remove the lie, then test the visible behavior.',
-      `${mood}; absurdity is acceptable only when the mechanism is honest.`
+      `${mood}: keep the mechanism honest.`
     ]
   }[speakerId] || [
     `${subject} is the useful part.`,

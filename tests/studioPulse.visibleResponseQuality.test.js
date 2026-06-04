@@ -608,6 +608,31 @@ test('visible response quality rejects objective-language repetition recovery fr
   assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
 });
 
+test('visible response quality rejects question-bounce repetition recovery from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      'You are right. We are looping.',
+      'The energy thins when we avoid the core question. What is the one thing we need to land here?',
+      "Let's define the ask clearly and commit to one direct answer. Who owns the next step?"
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('frustration-miss:repeat-complaint'));
+});
+
+test('visible response quality rejects normal-answer question bounce from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      "Let's name the ask: what is the one thing you need to accomplish today? I will track the completion.",
+      'And if that feels too big, what is one small thing that would make today feel less dumb?'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('weak-next-move:normal-answer'));
+});
+
 test('visible response quality rejects softer objective-speech residue', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'WHERE DO I START',
@@ -683,6 +708,18 @@ test('visible response quality rejects live fake planning action promises', () =
     visibleText: [
       "Let's map out tomorrow. I'll draft a preliminary schedule with key tasks and deadlines by EOD.",
       "Good idea. We should also build in a buffer for unexpected items, so it doesn't feel too rigid."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects fake three-point agenda promise from live gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      "Let's map out tomorrow's priorities. I'll draft a three-point agenda with clear owners for each item.",
+      "Good. We'll make sure the plan feels achievable, not just a list of demands."
     ].join('\n')
   });
 

@@ -327,12 +327,38 @@ test('pulse showcase expand returns brief local voice bullets without Pack 1 mem
     assert.equal(typeof bullet, 'string');
     assert.ok(bullet.length >= 12);
     assert.ok(bullet.length <= 170);
-    assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth)\b/i);
+    assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth|therapy wallpaper|social move|room context matters|room matters here|new room mood|button click)\b/i);
     assert.doesNotMatch(bullet, /\bfull is\b/i);
   });
   assert.match(result.payload.bullets.join(' '), /\bfull-body\b/i);
   assert.equal(result.payload.continuityLedger, undefined);
   assert.equal(result.payload.memorySummary, undefined);
+});
+
+test('pulse showcase expand avoids meta commentary from live gauntlet', () => {
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-meta-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-vanya-1',
+    speakerId: 'vanya',
+    text: 'Start at home this week. Three short sessions; no heroic rebrand required.',
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'small_exchange',
+      socialSignals: {
+        reactionSummary: {
+          counts: { more_like: 1 },
+          total: 1,
+          speakerAffinity: { vanya: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  const joined = result.payload.bullets.join(' ');
+  assert.doesNotMatch(joined, /\b(therapy wallpaper|social move|room context matters|room matters here|new room mood|button click|audience signal|local card|visible aside)\b/i);
+  assert.match(joined, /\b(Start at home this week|first step|do today|one useful action)\b/i);
 });
 
 test('pulse showcase turn forwards selected message references as local anchors only', async () => {

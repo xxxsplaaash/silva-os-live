@@ -2011,6 +2011,23 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(burdenShiftRepeatComplaint.ok, false);
   assert.ok(burdenShiftRepeatComplaint.issues.includes('frustration-ignored'));
 
+  const liveQuestionBounceRepeatComplaint = validateDirectorOutput({
+    roomBeat: 'The room admits the loop, then asks the user to rescue it.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'reset', text: 'You are right. We are looping.' },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'The energy thins when we avoid the core question. What is the one thing we need to land here?' },
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: "Let's define the ask clearly and commit to one direct answer. Who owns the next step?" }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'you keep repeating yourself' });
+
+  assert.equal(liveQuestionBounceRepeatComplaint.ok, false);
+  assert.ok(liveQuestionBounceRepeatComplaint.issues.includes('frustration-ignored'));
+  assert.ok(liveQuestionBounceRepeatComplaint.issues.includes('product-frustration-miss:repeat-complaint'));
+
   const bruhPlanSermon = validateDirectorOutput({
     roomBeat: 'The room doubles down instead of reading frustration.',
     roomMood: 'focused',
@@ -2192,6 +2209,21 @@ test('social director quality validator rejects invented planning details not su
   assert.equal(livePlanningPromise.ok, false);
   assert.ok(livePlanningPromise.issues.includes('operational-jargon'));
   assert.ok(livePlanningPromise.issues.includes('product-invented-detail:project-planning'));
+
+  const liveThreePointAgendaPromise = validateDirectorOutput({
+    roomBeat: 'The room promises to plan instead of giving the plan.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's map out tomorrow's priorities. I'll draft a three-point agenda with clear owners for each item." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Good. We'll make sure the plan feels achievable, not just a list of demands." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(liveThreePointAgendaPromise.ok, false);
+  assert.ok(liveThreePointAgendaPromise.issues.includes('product-invented-detail:project-planning'));
 });
 
 test('social director quality validator rejects continuity claims answered as build specs', () => {
@@ -2611,6 +2643,27 @@ test('social director quality validator rejects normal-answer dodges that ask fo
 
   assert.equal(singleTask.ok, false);
   assert.ok(singleTask.issues.includes('product-weak-next-move:normal-answer'));
+
+  const liveTodayQuestionBounce = validateDirectorOutput({
+    roomBeat: 'The room asks the user for the answer instead of answering.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: "Let's name the ask: what is the one thing you need to accomplish today? I will track the completion." },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'And if that feels too big, what is one small thing that would make today feel less dumb?' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+
+  assert.equal(liveTodayQuestionBounce.ok, false);
+  assert.ok(liveTodayQuestionBounce.issues.includes('frustration-ignored'));
+  assert.ok(liveTodayQuestionBounce.issues.includes('product-weak-next-move:normal-answer'));
 });
 
 test('social director quality validator rejects stress turns that dodge into command posture', () => {
