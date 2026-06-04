@@ -1461,6 +1461,13 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
     seen.add(key);
     rows.push({ id, text, status, source });
   };
+  const isShowcaseSessionLedgerNote = (value = '') => {
+    const text = safeShowcaseText(value, 240);
+    if (!text) return false;
+    return /\b(preference|style|color|dashboard|landing page|brand|claim|record)\b/i.test(text)
+      && /\b(is|confirmed|changed|updated|prior|previous|superseded|active|no red|red pulse|red accent)\b/i.test(text)
+      && !/\b(seeking clarity|operational shift|drift in aesthetic direction|reading the room|tracking next steps|summarized from visible recent turns|summarized from pack 1)\b/i.test(text);
+  };
 
   (Array.isArray(memorySummary.activeTruths) ? memorySummary.activeTruths : [])
     .forEach(item => {
@@ -1478,6 +1485,7 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}) {
   const hasPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasPack1MemoryRows) {
     (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
+      .filter(isShowcaseSessionLedgerNote)
       .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
   }
 

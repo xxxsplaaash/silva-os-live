@@ -2066,7 +2066,7 @@ test('social director quality validator rejects fake design implementation promi
     speakers: [
       { speakerId: 'leah', role: 'primary', tone: 'flat', text: 'Black glass with a single red pulse. It is stark, almost aggressive.' },
       { speakerId: 'aisha', role: 'side', tone: 'flat', text: 'The aesthetic is confirmed. It communicates a clear, singular focus.' },
-      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'Understood. We will ensure the build supports that visual intensity without performance lag.' }
+      { speakerId: 'claudia', role: 'closer', tone: 'flat', text: 'Understood. We will ensure the build reflects that visual intensity without performance lag.' }
     ],
     silentReactions: [],
     stateUpdates: { notes: [] }

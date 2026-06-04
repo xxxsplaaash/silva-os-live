@@ -1074,7 +1074,13 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
                   { speakerId: 'grok', visibleState: 'Tracking' },
                   { speakerId: 'claudia', visibleState: 'Tracking' }
                 ],
-                stateUpdates: { notes: [] },
+                stateUpdates: {
+                  notes: [
+                    'Aisha is seeking clarity on recent changes.',
+                    'Claudia notes an operational shift.',
+                    'Leah observes a drift in aesthetic direction.'
+                  ]
+                },
                 socialCues: {
                   roomMove: 'challenge',
                   tensionDelta: 7,
@@ -1190,6 +1196,8 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
         assert.equal(final.messageEvents[0].speakerId, 'aisha');
         assert.ok(final.continuityLedger.some(item => item.status === 'active' && /pale blue/.test(item.text)));
         assert.ok(final.continuityLedger.some(item => item.status === 'superseded' && /obsidian dashboards/.test(item.text)));
+        assert.ok(final.continuityLedger.every(item => item.source === 'pack1-memory'));
+        assert.doesNotMatch(JSON.stringify(final.continuityLedger), /seeking clarity|operational shift|drift in aesthetic direction/i);
         assert.ok(final.socialSignals.tension > 0 && final.socialSignals.tension <= 100);
         assert.ok(final.socialSignals.continuityPressure > 0 && final.socialSignals.continuityPressure <= 100);
         assert.ok(final.socialSignals.interruptions.some(item => item.interrupter === 'aisha' && item.interrupted === 'leah'));
