@@ -1290,7 +1290,8 @@ function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', mess
     })),
     silentReactions: silentReactions.map(item => ({
       speakerId: item.speakerId,
-      visibleState: item.visibleState
+      visibleState: item.visibleState,
+      reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
   }, { userMessage: userText, recentTurns, continuity });
@@ -1620,7 +1621,8 @@ function sanitizeShowcaseSilentReactions(items = []) {
       if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId)) return null;
       return {
         speakerId,
-        visibleState: safeShowcaseText(item?.visibleState || 'Watching', 80) || 'Watching'
+        visibleState: safeShowcaseText(item?.visibleState || 'Watching', 80) || 'Watching',
+        reason: safeShowcaseText(item?.reason || '', 160)
       };
     })
     .filter(Boolean)
@@ -1702,7 +1704,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     })),
     silentReactions: silentReactions.map(item => ({
       speakerId: item.speakerId,
-      visibleState: item.visibleState
+      visibleState: item.visibleState,
+      reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
   }, { userMessage: userText, recentTurns: visibleRecentTurns, continuity: continuityQuality });

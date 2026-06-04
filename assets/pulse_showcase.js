@@ -231,7 +231,7 @@
       if (saved && MODES[saved.mode]) state.mode = saved.mode;
       if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(-30);
       if (Array.isArray(saved.ledger)) state.ledger = saved.ledger.slice(0, 16);
-      if (saved.presence && typeof saved.presence === 'object') state.presence = saved.presence;
+      if (saved.presence && typeof saved.presence === 'object') state.presence = normalizePresenceState(saved.presence);
       if (saved.roomMood) state.roomMood = compact(saved.roomMood, 40) || state.roomMood;
       if (saved.responseMode) state.responseMode = compact(saved.responseMode, 40) || state.responseMode;
       if (Number.isFinite(Number(saved.tensionScore))) state.tensionScore = Math.max(0, Math.min(100, Number(saved.tensionScore)));
@@ -448,17 +448,49 @@
   function updatePresence(events, silentReactions) {
     var next = {};
     SPEAKER_IDS.forEach(function (id) {
-      next[id] = state.presence[id] || 'listening';
+      next[id] = normalizePresenceItem(state.presence[id], 'listening');
     });
     (silentReactions || []).forEach(function (item) {
       var id = safeSpeakerId(item.speakerId);
-      if (next[id]) next[id] = compact(item.visibleState || 'watching', 40) || 'watching';
+      if (next[id]) {
+        next[id] = {
+          visibleState: compact(item.visibleState || 'watching', 40) || 'watching',
+          reason: compact(item.reason || '', 140)
+        };
+      }
     });
     (events || []).forEach(function (item) {
       var id = safeSpeakerId(item.speakerId);
-      if (next[id]) next[id] = compact(item.visibleState || item.role || 'speaking', 40) || 'speaking';
+      if (next[id]) {
+        next[id] = {
+          visibleState: compact(item.visibleState || item.role || 'speaking', 40) || 'speaking',
+          reason: ''
+        };
+      }
     });
     state.presence = next;
+  }
+
+  function normalizePresenceItem(value, fallbackState) {
+    if (value && typeof value === 'object') {
+      return {
+        visibleState: compact(value.visibleState || fallbackState || 'listening', 40) || fallbackState || 'listening',
+        reason: compact(value.reason || '', 140)
+      };
+    }
+    return {
+      visibleState: compact(value || fallbackState || 'listening', 40) || fallbackState || 'listening',
+      reason: ''
+    };
+  }
+
+  function normalizePresenceState(value) {
+    var source = value && typeof value === 'object' ? value : {};
+    var next = {};
+    SPEAKER_IDS.forEach(function (id) {
+      next[id] = normalizePresenceItem(source[id], 'listening');
+    });
+    return next;
   }
 
   function updateLedgerFromPayload(payload) {
@@ -889,11 +921,14 @@
   function renderPresence(events, silentReactions) {
     if (events || silentReactions) updatePresence(events || [], silentReactions || []);
     el.presence.innerHTML = SPEAKER_IDS.map(function (id) {
-      var visibleState = compact(state.presence[id] || 'listening', 40);
+      var presence = normalizePresenceItem(state.presence[id], 'listening');
+      var visibleState = presence.visibleState;
+      var reason = compact(presence.reason || '', 140);
       return [
-        '<div class="presence-item presence-state-' + safeToken(visibleState, 'listening') + '">',
+        '<div class="presence-item presence-state-' + safeToken(visibleState, 'listening') + '" title="' + escapeHtml(reason || visibleState) + '">',
         '<span>' + speakerDot(id) + ' ' + escapeHtml(CHARACTER_NAMES[id]) + '</span>',
         '<span>' + escapeHtml(visibleState) + '</span>',
+        reason ? '<em>' + escapeHtml(reason) + '</em>' : '',
         '</div>'
       ].join('');
     }).join('');

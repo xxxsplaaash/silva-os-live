@@ -7,7 +7,12 @@ const FRONTEND_URL = String(
   'https://silva-os-live.vercel.app/pulse-showcase?embed=1&codex=browser-gauntlet'
 ).trim();
 const TURN_TIMEOUT_MS = Math.max(15000, Number(process.env.TURN_TIMEOUT_MS || 60000) || 60000);
-const TURN_DELAY_MS = Math.max(0, Number(process.env.BROWSER_GAUNTLET_TURN_DELAY_MS || 0) || 0);
+const IS_LOCAL_FRONTEND = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/i.test(FRONTEND_URL);
+const DEFAULT_TURN_DELAY_MS = IS_LOCAL_FRONTEND ? 0 : 25000;
+const TURN_DELAY_MS = Math.max(
+  0,
+  Number(process.env.BROWSER_GAUNTLET_TURN_DELAY_MS ?? DEFAULT_TURN_DELAY_MS) || 0
+);
 const LEGACY_TURN_RX = /\/api\/studio\/pulse(?:$|\?)/;
 const LEAK_RX = /socialCues|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|AIza[0-9A-Za-z_-]+|GEMINI_API_KEY|GOOGLE_API_KEY|PRIVATE KEY/i;
 const REJECTED_RX = /\b(objective is clear|not discussing|personal fitness routines|not the objective|focus is required|that's a solid goal|muscles huh|let'?s get you started|bodyweight basics|bodyweight exercises|eating enough protein|consistent effort|miracles overnight|track your lifts|measuring progress|just guessing|hydrate|workout buddy|don'?t overcomplicate it initially|just show up|show up and do the work|compound movements|multiple muscle groups|focused session|alternate between upper body and lower body|technically sound|poor form|fast track to injury|time constraint sharpens|current priorities|operational parameters|feedback is noted|perform usefulness|style guide|technical specs)\b/i;

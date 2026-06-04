@@ -355,6 +355,16 @@ body.is-pulse-embed .pulse-shell {
   color: var(--muted-2);
 }
 
+.presence-item em {
+  max-width: 220px;
+  color: var(--muted-2);
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 .presence-state-speaking,
 .presence-state-primary,
 .presence-state-active {

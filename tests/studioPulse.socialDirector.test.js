@@ -345,6 +345,32 @@ test('showcase impulse planner enforces caps and selected speakers before genera
   assert.ok(Array.isArray(body.silentReactions));
 });
 
+test('silent reactions preserve intentional silence reasons for visible presence', () => {
+  const input = buildRoomDirectorInput({
+    message: 'I need a sharper logo direction',
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+  assert.match(prompt, /short reason the character is intentionally quiet/);
+
+  const validation = validateDirectorOutput({
+    roomBeat: 'Leah and Grok keep this from becoming generic design filler.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Make the mark feel like a warning light, not a wellness badge.', visibleState: 'Speaking' },
+      { speakerId: 'grok', role: 'side', tone: 'dry', text: 'If the logo needs five adjectives to survive, the shape is unemployed.', visibleState: 'Tracking' }
+    ],
+    silentReactions: [
+      { speakerId: 'claudia', visibleState: 'Tracking next steps', reason: 'tracking structure without turning the exchange into a project plan' }
+    ],
+    stateUpdates: { notes: [] }
+  }, input);
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.equal(validation.output.silentReactions[0].reason, 'tracking structure without turning the exchange into a project plan');
+});
+
 test('showcase impulse planner routes design-brief scenarios with bounded speaker intent', () => {
   const fixtures = [
     {
@@ -910,6 +936,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: "Okay, that's a valid reaction. Let's stop the loop."
     },
     {
+      label: 'fair reaction',
+      issue: 'voice-lock:generic-warmth:vanya',
+      speaker: 'vanya',
+      text: "Yeah, that's a fair reaction. It feels like we're stuck on repeat."
+    },
+    {
       label: 'announced humor',
       issue: 'voice-lock:announced-humor:grok',
       speaker: 'grok',
@@ -926,6 +958,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       issue: 'voice-lock:project-manager-claudia:claudia',
       speaker: 'claudia',
       text: 'I will create a prioritized action-item checklist, define stakeholders, and align deliverables.'
+    },
+    {
+      label: 'third-person self-reference',
+      issue: 'voice-lock:self-third-person:claudia',
+      speaker: 'claudia',
+      text: "Focus on the three rounds Claudia outlined. That's your session."
     },
     {
       label: 'Wikipedia A.I.S.H.A',
@@ -960,6 +998,22 @@ test('social director quality validator rejects character voice-lock drift', () 
     assert.equal(validation.ok, false, item.label);
     assert.ok(validation.issues.includes(item.issue), `${item.label}: ${validation.issues.join(', ')}`);
   }
+});
+
+test('social director quality validator rejects too-thin live quality judgments', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Grok answers with a slogan.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'Useful is the direct answer. Fake is the dodge.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('product-speaker-flatness:thin-quality-judgment'));
 });
 
 test('social director quality validator rejects live generic fitness variants and movie refusal', () => {
@@ -3391,7 +3445,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/open floor/i.test(userText)) return 'Open floor: watch the next visible decision, then pick Heat if the room wants pressure or Spider-Verse if it needs voltage.';
       if (/movie|watch next|watch tonight/i.test(userText)) return 'Watch Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if the room wants bite.';
       if (/actual tension/i.test(userText)) return 'The tension is direct answers versus ceremony. The room gets worse when it sounds polished instead of useful.';
-      if (/useful or did it sound fake/i.test(userText)) return 'Partly useful, then too abstract. Answer the person, not the room concept.';
+      if (/useful or did it sound fake/i.test(userText)) return 'It had one useful piece, then went fake when it turned into room commentary. Keep the useful piece; cut the posture.';
       if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then stop adding commentary.';
       if (/repeating yourself/i.test(userText)) return 'Fair. No more repeat loop; plain answer, then we move.';
       if (/answer normally/i.test(userText)) return 'Today: pick one clean next move, do it plainly, and stop decorating the room.';

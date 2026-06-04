@@ -418,7 +418,9 @@ test('visible response quality rejects room self-review language from live repai
     'The weak point is the polished dodge. Useful beats impressive here.',
     'The constraint is useful. It removes theatrical planning.',
     'Do the first block before reopening the debate. Evidence beats another round of room theatre.',
-    'A repeated answer is a failed answer wearing a badge. Good.'
+    'A repeated answer is a failed answer wearing a badge. Good.',
+    "It feels like we're circling the drain on useful vs fake and the stress is the signal that we're not landing anywhere concrete.",
+    'The stress is a symptom of the dodge. The room needs to take a position, not just observe the tension.'
   ];
 
   for (const fixture of fixtures) {
@@ -429,4 +431,25 @@ test('visible response quality rejects room self-review language from live repai
 
     assert.ok(issueKeys(issues).includes('self-theater:meta-language'), fixture);
   }
+});
+
+test('visible response quality rejects support-bot softening from live frustration turns', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    visibleText: [
+      "Yeah, that's a fair reaction. It feels like we're stuck on repeat instead of moving forward.",
+      'The next move is one workout, one meal, one sleep window. That is the constraint.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:generic-warmth'));
+});
+
+test('visible response quality rejects too-thin quality judgments', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    visibleText: 'Useful is the direct answer. Fake is the dodge.'
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'));
 });
