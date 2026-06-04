@@ -377,7 +377,7 @@ async function submitReaction(result = {}, prior = {}) {
   const card = (Array.isArray(result.messageEvents) ? result.messageEvents : [])
     .find(item => String(item?.speakerId || '').trim() && String(item?.text || '').trim());
   assertOk(card, 'cannot submit gauntlet reaction without an assistant card');
-  const messageId = `gauntlet-reaction-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64)}`;
+  const messageId = `gauntlet-reaction-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64).trim()}`;
   const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/reaction`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
