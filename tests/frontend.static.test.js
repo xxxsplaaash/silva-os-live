@@ -1720,6 +1720,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /REACTION_TYPES = \['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'\]/);
   assert.match(script, /function submitReaction/);
+  assert.match(script, /if \(previousReaction\) state\.reactions\[safeMessageId\] = previousReaction;/);
+  assert.match(script, /else delete state\.reactions\[safeMessageId\];/);
   assert.match(script, /function submitExpand/);
   assert.match(script, /function toggleReference/);
   assert.match(script, /function removeReference/);

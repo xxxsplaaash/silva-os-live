@@ -1371,7 +1371,8 @@
       persistState();
       reportTurnState({ runtimePhase: 'final' });
     } catch (err) {
-      delete state.reactions[safeMessageId];
+      if (previousReaction) state.reactions[safeMessageId] = previousReaction;
+      else delete state.reactions[safeMessageId];
       renderMessages();
       persistState();
       reportError('reaction-failed', 'Reaction did not land.');
