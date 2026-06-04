@@ -11,6 +11,7 @@ const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
 const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
 const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
+const { socialFallbackFor } = require('../lib/studio/socialDirector/socialDirectorFallback');
 const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 const { evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
@@ -104,6 +105,14 @@ function assertCleanVisible(body) {
   const text = visibleText(body);
   assert.doesNotMatch(text, BANNED_RX);
   assert.doesNotMatch(text, RAW_INTERNAL_RX);
+}
+
+function fallbackVisibleText(output = {}) {
+  return [
+    output.roomBeat,
+    ...(Array.isArray(output.speakers) ? output.speakers.map(item => item.text) : []),
+    ...(Array.isArray(output.stateUpdates?.notes) ? output.stateUpdates.notes : [])
+  ].join('\n');
 }
 
 function mockAishaJson(output) {
@@ -1155,6 +1164,63 @@ test('visible response evaluator flags audit-level product failures', () => {
     userMessage: 'new topic: what movie should we watch tonight?',
     visibleText: 'Leah says Arrival if the room wants quiet pressure; Vanya pushes Spider-Verse if it needs voltage.'
   }).length, 0);
+});
+
+test('deterministic continuity fallback avoids repeated side-card copy across updates', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+    { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+    { speakerId: 'claudia', role: 'side', text: 'Current record first; prior record still visible. No quiet rewrite.' }
+  ];
+  const output = socialFallbackFor('My dashboard preference is obsidian with one red accent.', { recentTurns });
+  const issues = evaluateVisibleResponse({
+    userMessage: 'My dashboard preference is obsidian with one red accent.',
+    visibleText: fallbackVisibleText(output),
+    recentTurns
+  });
+
+  assert.equal(issues.some(item => item.family === 'repetition'), false);
+});
+
+test('deterministic continuity change fallback does not replay the previous ledger side note', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Recorded dashboard preference: obsidian with one red accent.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Updated dashboard preference: pale blue with no red accents. Prior record remains obsidian with one red accent.' },
+    { speakerId: 'claudia', role: 'side', text: 'So the room keeps both: the current preference and the superseded one. That is the point of the ledger.' }
+  ];
+  const output = socialFallbackFor('What was my old dashboard preference?', { recentTurns });
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    visibleText: fallbackVisibleText(output),
+    recentTurns,
+    continuity: { active: 1, superseded: 1 }
+  });
+
+  assert.equal(issues.some(item => item.family === 'repetition'), false);
+});
+
+test('deterministic continuity fallback answers old preference recall from visible history', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Recorded dashboard preference: obsidian with one red accent.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Updated dashboard preference: pale blue with no red accents. Prior record remains obsidian with one red accent.' }
+  ];
+  const output = socialFallbackFor('What was my old dashboard preference?', { recentTurns });
+  const text = fallbackVisibleText(output);
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    visibleText: text,
+    recentTurns,
+    continuity: { active: 1, superseded: 1 }
+  });
+
+  assert.match(text, /obsidian/i);
+  assert.match(text, /pale blue/i);
+  assert.equal(issues.length, 0);
 });
 
 test('social director quality validator rejects stale accepted answers for check-in and room tension', () => {

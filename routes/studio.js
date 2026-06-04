@@ -857,6 +857,13 @@ const PULSE_SHOWCASE_MODE_LABELS = Object.freeze({
 });
 const PULSE_SHOWCASE_MAX_USER_TEXT = 1500;
 const PULSE_SHOWCASE_SPEAKERS = Object.freeze(['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+const PULSE_SHOWCASE_SPEAKER_NAMES = Object.freeze({
+  aisha: 'Aisha Motsepe',
+  vanya: 'Vanya Khumalo',
+  leah: 'Leah Mokoena',
+  claudia: 'Claudia Naidoo',
+  grok: 'Grok / Gerhard'
+});
 const PULSE_SHOWCASE_SAFE_HOLD_MESSAGE = 'The room held that turn. Try again in a moment.';
 const PULSE_SHOWCASE_ALLOWED_ORIGINS = Object.freeze([
   'https://silva-os-live.vercel.app',
@@ -1568,7 +1575,7 @@ function sanitizeShowcaseMessages(items = []) {
       if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId)) return null;
       return {
         speakerId,
-        speakerName: safeShowcaseText(item?.speakerName || speakerId, 80),
+        speakerName: safeShowcaseText(item?.speakerName || PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId, 80),
         role: safeShowcaseText(item?.role || 'primary', 40) || 'primary',
         tone: safeShowcaseText(item?.tone || '', 80),
         text: safeShowcaseText(item?.text || '', 500),
