@@ -407,6 +407,39 @@ test('pulse showcase turn owner forwards sanitized message references without ma
   });
 });
 
+test('social director fallback uses referenced fitness card for short-session follow-up', async () => {
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'turn that into a 20 minute version',
+      references: [{
+        messageId: 'msg-vanya-fitness',
+        speakerId: 'vanya',
+        speakerName: 'Vanya Khumalo',
+        role: 'primary',
+        text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+      }],
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+      ]
+    },
+    callAishaEngine: async () => mockAishaContent('', {
+      aishaEngineConnected: false,
+      engineMode: 'unavailable',
+      fallbackReason: 'not-connected',
+      trace: { status: 'failed', reason: 'not-connected' }
+    })
+  });
+
+  const body = result.payload;
+  const text = visibleText(body);
+  assert.equal(result.statusCode, 200);
+  assert.equal(body.activeEngine, 'local-social-director');
+  assert.match(text, /\b(Twenty minutes|three rounds|squat|hinge|push|pull|core|forty seconds|twenty off)\b/i);
+  assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
+  assertCleanVisible(body);
+});
+
 test('showcase impulse planner enforces caps and selected speakers before generation', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
@@ -832,6 +865,28 @@ test('social director fallback treats exercise artifacts as fitness context afte
       assertCleanVisible(body);
     });
   });
+});
+
+test('social director fallback treats referenced exercise cards as fitness context', () => {
+  const body = {
+    references: [
+      {
+        speakerId: 'claudia',
+        speakerName: 'Claudia',
+        text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.'
+      }
+    ],
+    recentTurns: [
+      { speakerId: 'vanya', role: 'primary', text: 'Hey. The room is here; nobody has to earn a voice before speaking.' }
+    ]
+  };
+  const fallback = socialFallbackFor('turn that into a 20 minute version', body);
+  const text = fallbackVisibleText(fallback);
+
+  assert.match(text, /\bTwenty minutes is enough\b/i);
+  assert.match(text, /\bthree rounds\b/i);
+  assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
+  assertCleanVisible(fallback);
 });
 
 test('social director fallback changes shape again after the no-more-loop recovery', async () => {

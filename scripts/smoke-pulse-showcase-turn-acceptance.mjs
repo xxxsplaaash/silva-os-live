@@ -37,6 +37,7 @@ const SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
 
 const PROMPTS = [
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
+  { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'turn that into a 20 minute version', expectsFitness: true, referenceLastAssistant: true },
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'ok but I only have 20 minutes', expectsFitness: true },
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'WHERE DO I START', expectsFitness: true },
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'WHAT IS THE OBJECTIVE?', expectsFitness: true },

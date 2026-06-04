@@ -388,6 +388,18 @@ test('visible response quality rejects generic short-window fitness boilerplate'
   assert.ok(issues.some(item => item.family === 'generic-advice'));
 });
 
+test('visible response quality rejects ignored referenced fitness follow-up', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'turn that into a 20 minute version',
+    visibleText: [
+      'Hey. The room is here; nobody has to earn a voice before speaking.',
+      'Thank God. I was getting bored of pretending silence means absence.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('topic-ignored:referenced-fitness'));
+});
+
 test('visible response quality rejects chosen-exercises boilerplate from live gauntlet', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'WHERE DO I START',

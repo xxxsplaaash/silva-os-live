@@ -1758,6 +1758,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(turnGauntlet, /name the actual ask for today/);
   assert.match(turnGauntlet, /sustainable routine/);
   assert.match(turnGauntlet, /tracking your progress/);
+  assert.match(turnGauntlet, /turn that into a 20 minute version/);
   assert.match(script, /HELD_TURN_MESSAGE/);
   assert.match(script, /The room held that turn\. Try again in a moment\./);
   assert.match(script, /HELD_TURN_STATUSES/);
