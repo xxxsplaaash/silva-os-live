@@ -1381,16 +1381,46 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: 'I am an AI assistant that helps coordinate conversations and provide accurate information.'
     },
     {
+      label: 'AI capability A.I.S.H.A',
+      issue: 'voice-lock:wikipedia-aisha:aisha',
+      speaker: 'aisha',
+      text: 'I can process information quickly and help the group reach a clearer answer.'
+    },
+    {
+      label: 'soft therapy Vanya',
+      issue: 'voice-lock:therapy-voice:vanya',
+      speaker: 'vanya',
+      text: 'I understand how you feel, and it makes sense to feel overwhelmed right now.'
+    },
+    {
       label: 'hostile Leah',
       issue: 'voice-lock:hostile-leah:leah',
       speaker: 'leah',
       text: 'This is trash and whoever approved it has no taste.'
     },
     {
+      label: 'shaming Leah',
+      issue: 'voice-lock:hostile-leah:leah',
+      speaker: 'leah',
+      text: 'This is garbage and whoever made it should be embarrassed.'
+    },
+    {
+      label: 'timeline Claudia',
+      issue: 'voice-lock:project-manager-claudia:claudia',
+      speaker: 'claudia',
+      text: 'Let me break this down into actionable next steps with a timeline and deliverables.'
+    },
+    {
       label: 'insufferable Grok',
       issue: 'voice-lock:insufferable-grok:grok',
       speaker: 'grok',
       text: 'Obviously, as the only rational mind here, I will explain the flaw in tiny words.'
+    },
+    {
+      label: 'smug Grok',
+      issue: 'voice-lock:insufferable-grok:grok',
+      speaker: 'grok',
+      text: 'Well actually, the premise is flawed in a way only I seem capable of noticing.'
     }
   ];
 
@@ -2247,6 +2277,21 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(liveSignalStress.ok, false);
   assert.ok(liveSignalStress.issues.includes('frustration-ignored'));
   assert.ok(liveSignalStress.issues.includes('product-frustration-miss:stress-recovery'));
+
+  const thinLiveStress = validateDirectorOutput({
+    roomBeat: 'The room barely acknowledges stress.',
+    roomMood: 'warm',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Fair. This got too abstract.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(thinLiveStress.ok, false);
+  assert.ok(thinLiveStress.issues.includes('frustration-ignored'));
+  assert.ok(thinLiveStress.issues.includes('product-frustration-miss:stress-recovery'));
 
   const liveBurdenShiftStress = validateDirectorOutput({
     roomBeat: 'The room shifts effort back to the user after stress.',

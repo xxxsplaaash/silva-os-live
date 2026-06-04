@@ -765,6 +765,13 @@ test('visible response quality rejects stress answers that dodge into tension an
   });
 
   assert.ok(issueKeys(burdenShiftIssues).includes('frustration-miss:stress-recovery'));
+
+  const thinRecoveryIssues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: 'Fair. This got too abstract.'
+  });
+
+  assert.ok(issueKeys(thinRecoveryIssues).includes('frustration-miss:stress-recovery'));
 });
 
 test('visible response quality rejects stress answers that hide behind objective slogans', () => {
