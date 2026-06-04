@@ -726,6 +726,14 @@ function resolveQuestion(question, recent = []) {
   };
 }
 
+function recentQuestionsForResolution(recent = [], threadId = '') {
+  const items = Array.isArray(recent) ? recent : [];
+  const safeThreadId = String(threadId || '').trim();
+  if (!safeThreadId) return items;
+  const scoped = items.filter(item => String(item?.threadId || '').trim() === safeThreadId);
+  return scoped.length ? scoped : items;
+}
+
 function resolveStudioKeyChain(providerConfig) {
   const chain = [];
   const seen = new Set();
@@ -3658,7 +3666,7 @@ router.post('/pulse', async (req, res) => {
 
   const { system } = buildPulseSystemFromRequest(req);
   const providerConfig = mergeStudioProviderConfig(system.providerSettings || {}, requestProviderConfig || {});
-  const recent = system.recentQuestions || [];
+  const recent = recentQuestionsForResolution(system.recentQuestions || [], threadId);
   const resolution = resolveQuestion(question, recent);
   const requestedAttachments = Array.isArray(req.body?.attachments) ? req.body.attachments.filter(Boolean) : [];
   const explicitWorkflowIntent = String(req.body?.workflowIntent || '').trim();
