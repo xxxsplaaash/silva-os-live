@@ -306,6 +306,18 @@ test('visible response quality rejects generic short-window fitness boilerplate'
   assert.ok(issues.some(item => item.family === 'generic-advice'));
 });
 
+test('visible response quality rejects live support-bot fitness encouragement', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'LOL I WANNA GROW MY MUSCLES',
+    visibleText: [
+      'Three days a week is a solid start. Focus on bodyweight squats and incline push-ups for now.',
+      "That's a great goal. Remember to fuel yourself well and get enough sleep to support that growth."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('generic-advice:fitness'));
+});
+
 test('visible response quality rejects stale superseded visual attributes on style correction', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Actually my landing page style is white editorial with no red.',

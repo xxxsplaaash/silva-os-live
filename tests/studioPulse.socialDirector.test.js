@@ -1033,6 +1033,21 @@ test('social director quality validator rejects live generic fitness variants an
   assert.equal(fitness.ok, false);
   assert.ok(fitness.issues.includes('generic-advice-column'));
 
+  const liveFirstTurn = validateDirectorOutput({
+    roomBeat: 'Live first turn accepted support-bot fitness copy.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'Three days a week is a solid start. Focus on bodyweight squats and incline push-ups for now.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "That's a great goal. Remember to fuel yourself well and get enough sleep to support that growth." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
+
+  assert.equal(liveFirstTurn.ok, false);
+  assert.ok(liveFirstTurn.issues.includes('generic-advice-column'));
+
   const movie = validateDirectorOutput({
     roomBeat: 'Refuses a benign topic.',
     roomMood: 'focused',
