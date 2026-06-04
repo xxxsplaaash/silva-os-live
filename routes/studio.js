@@ -1920,7 +1920,12 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
   const bySpeaker = new Map();
   sanitizeShowcaseSilentReactions(silentReactions).forEach(item => {
     if (speaking.has(item.speakerId) || bySpeaker.has(item.speakerId)) return;
-    bySpeaker.set(item.speakerId, item);
+    const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[item.speakerId] || {};
+    bySpeaker.set(item.speakerId, {
+      speakerId: item.speakerId,
+      visibleState: item.visibleState || fallback.visibleState || 'Watching',
+      reason: item.reason || fallback.reason || 'intentionally quiet while another character carries the turn'
+    });
   });
   PULSE_SHOWCASE_SPEAKERS.forEach(speakerId => {
     if (speaking.has(speakerId) || bySpeaker.has(speakerId)) return;

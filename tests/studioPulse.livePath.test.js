@@ -284,7 +284,7 @@ test('pulse showcase public payload fills intentional silence for non-speaking c
     ],
     [
       { speakerId: 'vanya', visibleState: 'Reading', reason: 'should be dropped because Vanya spoke' },
-      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+      { speakerId: 'grok', visibleState: 'Tracking', reason: '' }
     ]
   );
 
