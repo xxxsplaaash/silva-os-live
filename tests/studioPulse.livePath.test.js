@@ -1961,6 +1961,112 @@ test('Studio Pulse showcase keeps connected runtime status when one turn is carr
   });
 });
 
+test('Studio Pulse showcase repairs continuity misses from server visible history without client recentTurns', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            assert.equal(Array.isArray(request.recentMessages) ? request.recentMessages.length : 0, 0);
+            const text = String(request.messageText || '');
+            let visibleText = 'The room is tracking that.';
+            if (/black glass with a single red pulse/i.test(text)) {
+              visibleText = 'Black glass with a single red pulse. Logged.';
+            } else if (/white editorial with no red/i.test(text)) {
+              visibleText = 'White editorial. No red.';
+            } else if (/what changed/i.test(text)) {
+              visibleText = 'What specifically has changed in your view? Anything concrete you have noticed?';
+            }
+
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'Pack 1 returns schema-valid continuity drift.',
+                  roomMood: 'focused',
+                  responseMode: 'single',
+                  speakers: [
+                    { speakerId: 'aisha', role: 'primary', tone: 'flat', text: visibleText, visibleState: 'Anchoring' }
+                  ],
+                  silentReactions: [],
+                  socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 4, speakerCues: [] },
+                  stateUpdates: { notes: [] }
+                })
+              }],
+              memorySummary: {
+                activeTruths: [],
+                supersededTruths: [],
+                memoryCandidates: [],
+                sessionId: request.sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.83
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const sessionId = 'showcase-visible-history-continuity-repair';
+        async function streamTurn(userText) {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+            body: JSON.stringify({ sessionId, mode: 'continuity_breaker', userText })
+          });
+          assert.equal(response.status, 200);
+          const events = parseSseEvents(await response.text());
+          return events.find(item => item.event === 'final').data;
+        }
+
+        await streamTurn('My landing page style is black glass with a single red pulse.');
+        await streamTurn('Actually my landing page style is white editorial with no red.');
+        const storedHistory = studioRouter.__getPulseShowcaseVisibleHistoryForTests(sessionId);
+        assert.ok(storedHistory.some(item => item.speakerId === 'user' && /black glass with a single red pulse/i.test(item.text)));
+        assert.ok(storedHistory.some(item => item.speakerId === 'user' && /white editorial with no red/i.test(item.text)));
+        const final = await streamTurn('What changed?');
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.match(text, /\bwhite editorial with no red\b/i);
+        assert.match(text, /\bblack glass with a single red pulse\b/i);
+        assert.doesNotMatch(text, /\bwhat specifically has changed|anything concrete you have noticed|operational flow seems stable\b/i);
+        assert.doesNotMatch(JSON.stringify(final), /test-room-provider-key|generatorPrompt|aishaDiagnostics/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase continuity uses Pack 1 memory without recentTurns', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
