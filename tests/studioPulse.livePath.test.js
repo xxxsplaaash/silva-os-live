@@ -1858,6 +1858,104 @@ test('Studio Pulse showcase last-mile gate repairs accepted continuity answers t
   });
 });
 
+test('Studio Pulse showcase last-mile gate repairs continuity labels that omit the prior value', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'A weak continuity answer names labels but loses the values.',
+                roomMood: 'focused',
+                responseMode: 'small_exchange',
+                speakers: [
+                  { speakerId: 'aisha', role: 'primary', tone: 'precise', text: "It's a clear update. The initial concept is now a prior record, not the active one.", visibleState: 'Anchoring' },
+                  { speakerId: 'claudia', role: 'side', tone: 'dry', text: 'Correct. The current record is white editorial with no red.', visibleState: 'Tracking next steps' },
+                  { speakerId: 'grok', role: 'closer', tone: 'dry', text: 'So the warning light is now off, but still visible in the rearview mirror.', visibleState: 'Tracking' }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 5, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-continuity-labels-without-values',
+            mode: 'continuity_breaker',
+            userText: 'What changed?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+              { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.qualityAccepted, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.ok(
+          ['continuity-value-missing', 'quality-rejected', 'product-continuity-miss:ledger-answer'].includes(final.qualityFailureCategory),
+          `unexpected quality failure category: ${final.qualityFailureCategory}`
+        );
+        assert.match(text, /\bChanged:\s*landing page style is white editorial with no red/i);
+        assert.match(text, /\bPrior record:\s*landing page style is black glass with a single red pulse/i);
+        assert.doesNotMatch(text, /\binitial concept\b|\brearview mirror\b/i);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|initial concept|rearview mirror/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase last-mile gate repairs old preference recall boilerplate', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

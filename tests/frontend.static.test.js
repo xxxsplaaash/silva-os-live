@@ -1869,6 +1869,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(turnGauntlet, /silence:/);
   assert.match(turnGauntlet, /ledger:/);
   assert.match(turnGauntlet, /reaction-effect:/);
+  assert.match(turnGauntlet, /expand-effect:/);
   assert.match(turnGauntlet, /social:/);
 });
 

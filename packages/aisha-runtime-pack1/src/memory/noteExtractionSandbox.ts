@@ -48,7 +48,7 @@ function isEphemeralChatter(text: string): boolean {
 }
 
 function hasStrongPreferenceSignal(text: string): boolean {
-  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is)\b/i.test(
+  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is|my [a-z0-9 _-]{2,80} style is|my [a-z0-9 _-]{2,80} aesthetic is)\b/i.test(
     text,
   );
 }
@@ -69,7 +69,7 @@ function hasStrongProfileSignal(text: string): boolean {
 }
 
 function looksPreferenceLike(text: string): boolean {
-  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
+  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|landing page|homepage|website|brand|design|style|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
     text,
   );
 }
@@ -231,6 +231,34 @@ export class SimpleNoteExtractionSandbox implements INoteExtractionSandbox {
               subjectKind: "user",
               sourceEpisodeIds: [episode.id],
               provenanceReason: "heuristic_slot_preference_pattern",
+            });
+            continue;
+          }
+        }
+
+        // ── Group A0b: Explicit slot style / aesthetic ──────────────────────
+        // Example: "My landing page style is black glass with a single red pulse."
+        // This is the same durable slot-mutation shape as a preference, but the
+        // user naturally names visual taste as "style" or "aesthetic".
+        const slotStyleMatch = text.match(
+          /\bmy\s+([a-z0-9 _-]{2,80}?)\s+(style|aesthetic)\s+is\s+(.+?)(?:[.!?]|$)/i,
+        );
+        if (slotStyleMatch) {
+          const slot = cleanBehavioralValue(slotStyleMatch[1]).toLowerCase();
+          const slotKind = slotStyleMatch[2].toLowerCase();
+          const cleaned = cleanExtractedValue(slotStyleMatch[3]);
+          if (slot.length > 0 && cleaned.length > 0) {
+            candidates.push({
+              subtype: "K_pref",
+              canonicalText: `User ${slot} ${slotKind}: ${cleaned}`,
+              normalizedValue: normalizeValue(`${slot} ${slotKind}: ${cleaned}`),
+              confidence: hedgePenalty(0.86),
+              extractionConfidenceRaw: 0.86,
+              status: "active",
+              provenanceChain: ["heuristic_slot_style_pattern"],
+              subjectKind: "user",
+              sourceEpisodeIds: [episode.id],
+              provenanceReason: "heuristic_slot_style_pattern",
             });
             continue;
           }

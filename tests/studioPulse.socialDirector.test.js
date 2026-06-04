@@ -813,7 +813,7 @@ test('social director fallback changes shape again after the no-more-loop recove
     await withStudioServer(async baseUrl => {
       const recentTurns = [
         { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
-        { speakerId: 'vanya', role: 'primary', text: 'Yeah, fair. No more loop: your next move is one simple week, not another speech about the objective.' },
+        { speakerId: 'vanya', role: 'primary', text: 'No more loop: your next move is one simple week, not another room speech.' },
         { speakerId: 'claudia', role: 'side', text: 'Pick three training days, write the exercises down, and add one tiny progression each week.' },
         { speakerId: 'grok', role: 'closer', text: 'If it cannot survive week one, shrink it until it can. Start boring enough to repeat.' }
       ];
@@ -3840,6 +3840,22 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       }
     });
   });
+  app.post('/api/studio/pulse-showcase/expand', (req, res) => {
+    const speakerId = String(req.body?.speakerId || '');
+    const messageId = String(req.body?.messageId || '');
+    res.json({
+      ok: true,
+      sessionId: 'script-test-session',
+      mode: 'social_hierarchy_lab',
+      messageId,
+      speakerId,
+      bullets: [
+        'Keep the starting move visible before the room gets theatrical.',
+        'Name the constraint, then make the smallest useful correction.',
+        'Stop after the point lands; extra polish is where the answer gets fake.'
+      ]
+    });
+  });
   app.post('/api/studio/pulse-showcase/turn-stream', (req, res) => {
     calls += 1;
     const accepted = calls <= 8;
@@ -3993,6 +4009,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.ok(summary.results.every(item => item.messageCount + item.silenceCount === 5));
     assert.ok(summary.results.some(item => item.prompt === 'What changed?' && /pale blue/.test(item.visiblePreview) && /obsidian/.test(item.visiblePreview)));
     assert.match(result.stderr, /reaction-effect: more_like speaker=vanya/);
+    assert.match(result.stderr, /expand-effect: speaker=vanya/);
+    assert.match(result.stderr, /Keep the starting move visible/);
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
   } finally {
     await new Promise(resolve => server.close(resolve));

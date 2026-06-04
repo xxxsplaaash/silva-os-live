@@ -1411,7 +1411,41 @@ function showcaseContinuityLabelIssue({
     .join('\n')).toLowerCase();
   const namesCurrent = /\b(changed:|current record|active record|current style|active style|current preference|active preference|current value|active value)\b/i.test(visible);
   const namesPrior = /\b(prior record|previous record|superseded record|old record|prior style|previous style|superseded style|prior preference|previous preference|superseded preference)\b/i.test(visible);
-  return namesCurrent && namesPrior ? '' : 'continuity-label-missing';
+  if (!namesCurrent || !namesPrior) return 'continuity-label-missing';
+
+  const activeCandidates = [
+    ...rows
+      .filter(item => String(item?.status || '').toLowerCase() === 'active')
+      .map(item => String(item?.text || '')),
+    recentClaims[recentClaims.length - 1] || ''
+  ].filter(Boolean);
+  const priorCandidates = [
+    ...rows
+      .filter(item => ['superseded', 'disputed'].includes(String(item?.status || '').toLowerCase()))
+      .map(item => String(item?.text || '')),
+    recentClaims.length >= 2 ? recentClaims[recentClaims.length - 2] : ''
+  ].filter(Boolean);
+  const containsClaimValue = (claim = '') => {
+    const tokens = String(claim || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]+/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter(word => word.length >= 3)
+      .filter(word => !new Set([
+        'user', 'your', 'mine', 'their', 'with', 'without', 'actually', 'preference',
+        'dashboard', 'landing', 'page', 'style', 'brand', 'color', 'record', 'current',
+        'active', 'prior', 'previous', 'superseded', 'changed', 'change', 'claim'
+      ]).has(word));
+    const unique = [...new Set(tokens)].slice(0, 5);
+    if (!unique.length) return true;
+    const required = unique.length >= 2 ? 2 : 1;
+    const hits = unique.filter(token => new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(visible)).length;
+    return hits >= required;
+  };
+  if (activeCandidates.length && !activeCandidates.some(containsClaimValue)) return 'continuity-value-missing';
+  if (priorCandidates.length && !priorCandidates.some(containsClaimValue)) return 'continuity-value-missing';
+  return '';
 }
 
 function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], continuity = {}, impulsePlan = null } = {}) {

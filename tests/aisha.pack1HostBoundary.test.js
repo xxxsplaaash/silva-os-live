@@ -329,7 +329,7 @@ test('Pack 1 host surfaces same-turn memory follow-up writes when store summary 
   assert.ok(response.memorySummary.supersededTruths.some(item => /obsidian/.test(item.canonicalText)));
 });
 
-test('Pack 1 extractor and retrieval prioritize durable dashboard slot preferences', () => {
+test('Pack 1 extractor and retrieval prioritize durable visual slot preferences', () => {
   const extractionSource = fs.readFileSync(
     path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'memory', 'noteExtractionSandbox.ts'),
     'utf8'
@@ -341,7 +341,10 @@ test('Pack 1 extractor and retrieval prioritize durable dashboard slot preferenc
   assert.match(extractionSource, /my \[a-z0-9 _-\]\{2,80\} preference is/);
   assert.match(extractionSource, /heuristic_slot_preference_pattern/);
   assert.match(extractionSource, /User \$\{slot\} preference: \$\{cleaned\}/);
+  assert.match(extractionSource, /my \[a-z0-9 _-\]\{2,80\} style is/);
+  assert.match(extractionSource, /heuristic_slot_style_pattern/);
+  assert.match(extractionSource, /User \$\{slot\} \$\{slotKind\}: \$\{cleaned\}/);
   assert.match(retrievalSource, /sessionAffinity/);
   assert.match(retrievalSource, /sessionEpisodeIds\.has\(id\)/);
-  assert.match(retrievalSource, /dashboard\|design\|aesthetic/);
+  assert.match(retrievalSource, /dashboard\|landing page\|homepage\|website\|brand\|design\|style\|aesthetic/);
 });

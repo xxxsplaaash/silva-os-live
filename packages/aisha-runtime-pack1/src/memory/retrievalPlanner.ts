@@ -91,7 +91,7 @@ function detectSubtypeIntent(turn: TurnRecord): {
   }
 
   if (
-    /\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
+    /\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|landing page|homepage|website|brand|design|style|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
       text,
     )
   ) {

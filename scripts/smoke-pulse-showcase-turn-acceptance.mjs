@@ -415,6 +415,47 @@ async function submitReaction(result = {}, prior = {}) {
   };
 }
 
+async function submitExpand(result = {}, prior = {}) {
+  const card = (Array.isArray(result.messageEvents) ? result.messageEvents : [])
+    .find(item => String(item?.speakerId || '').trim() && String(item?.text || '').trim());
+  assertOk(card, 'cannot submit gauntlet expansion without an assistant card');
+  const messageId = `gauntlet-expand-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64).trim()}`;
+  const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/expand`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sessionId: SESSION_ID,
+      mode: result.mode,
+      messageId,
+      speakerId: card.speakerId,
+      text: card.text,
+      roomState: {
+        roomMood: result.roomMood || prior.roomMood || 'focused',
+        responseMode: result.responseMode || prior.responseMode || 'single',
+        socialSignals: result.socialSignals || prior.socialSignals || undefined
+      }
+    })
+  });
+  const text = await response.text();
+  assertOk(!LEAK_RX.test(text), 'expand response leaked prompt/runtime internals or secret-like material');
+  assertOk(!/\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph|audience signal|local card|visible aside|room decision|project truth)\b/i.test(text), 'expand response leaked meta/policy language');
+  assertOk(response.ok, `expand failed HTTP ${response.status}: ${text.slice(0, 180)}`);
+  const payload = JSON.parse(text);
+  const bullets = Array.isArray(payload.bullets) ? payload.bullets.map(item => String(item || '').trim()).filter(Boolean) : [];
+  assertOk(payload.ok === true, 'expand payload was not ok');
+  assertOk(payload.speakerId === card.speakerId, `expand payload returned speaker ${payload.speakerId}, expected ${card.speakerId}`);
+  assertOk(bullets.length >= 3 && bullets.length <= 5, `expand returned ${bullets.length} bullets, expected 3-5`);
+  bullets.forEach((bullet, index) => {
+    assertOk(bullet.length <= 190, `expand bullet ${index + 1} was too long: ${bullet}`);
+    assertOk(!/\n/.test(bullet), `expand bullet ${index + 1} contained a newline`);
+  });
+  return {
+    messageId,
+    speakerId: card.speakerId,
+    bullets
+  };
+}
+
 async function assertFrontendVersion() {
   if (!CHECK_FRONTEND_VERSION) return null;
   const url = `${FRONTEND_URL}/assets/pulse_showcase.js`;
@@ -445,6 +486,7 @@ if (!ALLOW_LOCAL_FALLBACK) {
 const results = [];
 const groupState = new Map();
 let reactionProbe = null;
+let expandProbe = null;
 for (const prompt of PROMPTS) {
   const group = prompt.sessionGroup || 'main';
   const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set(), visibleLineKeys: new Set() };
@@ -468,6 +510,7 @@ for (const prompt of PROMPTS) {
     ...(result.silentReactions || []).map(item => `silence: ${item.speakerId} state=${item.visibleState || '-'} reason=${item.reason || '-'}`),
     ...(result.continuityLedger || []).map(item => `ledger: ${item.status || '-'} ${item.source || '-'} ${item.id || '-'}: ${item.text || ''}`),
     reactionProbe ? `reaction-effect: ${reactionProbe.reaction} speaker=${reactionProbe.speakerId} message=${reactionProbe.messageId} summary=${JSON.stringify(reactionProbe.reactionSummary || {})}` : '',
+    expandProbe ? `expand-effect: speaker=${expandProbe.speakerId} message=${expandProbe.messageId} bullets=${JSON.stringify(expandProbe.bullets || [])}` : '',
     `social: ${JSON.stringify(result.socialSignals || {})}`
   ].filter(Boolean).join('\n'));
   results.push({
@@ -502,6 +545,10 @@ for (const prompt of PROMPTS) {
     reactionProbe = await submitReaction(result, state.prior);
     console.error(`reaction-effect: ${reactionProbe.reaction} speaker=${reactionProbe.speakerId} message=${reactionProbe.messageId} summary=${JSON.stringify(reactionProbe.reactionSummary || {})}`);
     state.prior.socialSignals = reactionProbe.socialSignals;
+  }
+  if (!expandProbe && result.messageEvents.length) {
+    expandProbe = await submitExpand(result, state.prior);
+    console.error(`expand-effect: speaker=${expandProbe.speakerId} message=${expandProbe.messageId} bullets=${JSON.stringify(expandProbe.bullets || [])}`);
   }
   for (const event of result.messageEvents) {
     state.recentTurns.push({ speakerId: event.speakerId, role: event.role || 'message', text: event.text || '' });

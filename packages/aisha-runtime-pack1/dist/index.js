@@ -2758,7 +2758,7 @@ function isEphemeralChatter(text) {
   );
 }
 function hasStrongPreferenceSignal(text) {
-  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is)\b/i.test(
+  return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is|my [a-z0-9 _-]{2,80} style is|my [a-z0-9 _-]{2,80} aesthetic is)\b/i.test(
     text
   );
 }
@@ -2771,7 +2771,7 @@ function hasStrongProfileSignal(text) {
   return /\b(?:i am|i'm|i usually|i tend to|i always|i never)\b/i.test(text);
 }
 function looksPreferenceLike(text) {
-  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
+  return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|landing page|homepage|website|brand|design|style|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
     text
   );
 }
@@ -2871,6 +2871,29 @@ var SimpleNoteExtractionSandbox = class {
               subjectKind: "user",
               sourceEpisodeIds: [episode.id],
               provenanceReason: "heuristic_slot_preference_pattern"
+            });
+            continue;
+          }
+        }
+        const slotStyleMatch = text.match(
+          /\bmy\s+([a-z0-9 _-]{2,80}?)\s+(style|aesthetic)\s+is\s+(.+?)(?:[.!?]|$)/i
+        );
+        if (slotStyleMatch) {
+          const slot = cleanBehavioralValue(slotStyleMatch[1]).toLowerCase();
+          const slotKind = slotStyleMatch[2].toLowerCase();
+          const cleaned = cleanExtractedValue(slotStyleMatch[3]);
+          if (slot.length > 0 && cleaned.length > 0) {
+            candidates.push({
+              subtype: "K_pref",
+              canonicalText: `User ${slot} ${slotKind}: ${cleaned}`,
+              normalizedValue: normalizeValue(`${slot} ${slotKind}: ${cleaned}`),
+              confidence: hedgePenalty(0.86),
+              extractionConfidenceRaw: 0.86,
+              status: "active",
+              provenanceChain: ["heuristic_slot_style_pattern"],
+              subjectKind: "user",
+              sourceEpisodeIds: [episode.id],
+              provenanceReason: "heuristic_slot_style_pattern"
             });
             continue;
           }
@@ -3195,7 +3218,7 @@ function detectSubtypeIntent(turn) {
     pref += 1;
     profile += 1;
   }
-  if (/\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|design|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
+  if (/\b(drink|coffee|latte|tea|food|eat|meal|music|movie|movies|dashboard|landing page|homepage|website|brand|design|style|aesthetic|colour|color|accent|order|favorite|prefer|preference|like|love|hate)\b/.test(
     text
   )) {
     pref += 3;

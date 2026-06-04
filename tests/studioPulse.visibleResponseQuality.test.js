@@ -210,6 +210,23 @@ test('visible response quality rejects continuity answers that mention values wi
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects continuity labels that omit the prior value', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What changed?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+    ],
+    visibleText: [
+      "It's a clear update. The initial concept is now a prior record, not the active one.",
+      'Correct. The current record is white editorial with no red.',
+      'So the warning light is now off, but still visible in the rearview mirror.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
+});
+
 test('visible response quality rejects preference recall answers that ignore ledger evidence', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',
@@ -574,6 +591,24 @@ test('visible response quality rejects objective-language repetition recovery fr
   });
 
   assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
+test('visible response quality rejects softer objective-speech residue', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'WHERE DO I START',
+    visibleText: 'No more loop: your next move is one simple week, not another speech about the objective.'
+  });
+
+  assert.ok(issueKeys(issues).includes('false-objective:command-posture'));
+});
+
+test('visible response quality rejects stress answers that dodge into tension analysis', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: 'The next move is to name the actual tension, not the feeling of it.'
+  });
+
+  assert.ok(issueKeys(issues).includes('frustration-miss:stress-recovery'));
 });
 
 test('visible response quality rejects generic action-flick movie answers', () => {
