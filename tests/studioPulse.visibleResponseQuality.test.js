@@ -566,3 +566,21 @@ test('visible response quality rejects too-thin quality judgments', () => {
 
   assert.ok(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'));
 });
+
+test('visible response quality rejects live thin Grok quality check fallback', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    visibleText: 'Partly useful. Then it got too abstract and lost the person asking.'
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'));
+});
+
+test('visible response quality accepts concrete useful-versus-fake quality split', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    visibleText: 'Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.'
+  });
+
+  assert.equal(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'), false);
+});

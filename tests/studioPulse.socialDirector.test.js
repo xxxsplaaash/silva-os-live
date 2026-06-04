@@ -568,6 +568,12 @@ test('showcase impulse planner routes design-brief scenarios with bounded speake
       category: 'practical',
       maxSpeakers: 2,
       speakerOrder: ['leah', 'grok']
+    },
+    {
+      prompt: 'answer normally, what should I do today?',
+      category: 'practical',
+      maxSpeakers: 2,
+      speakerOrder: ['claudia', 'vanya']
     }
   ];
 
@@ -2459,7 +2465,7 @@ test('pulse showcase public façade caps repaired practical follow-up to impulse
       { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
     ];
 
-    for (const userText of ['ok but I only have 20 minutes', 'WHAT IS THE OBJECTIVE?', 'BRUH...']) {
+    for (const userText of ['ok but I only have 20 minutes', 'WHAT IS THE OBJECTIVE?', 'BRUH...', 'answer normally, what should I do today?']) {
       const parsed = studioRouter.__parsePulseShowcaseTurnRequestForTests({
         sessionId: `showcase-practical-cap-${userText.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
         mode: 'social_hierarchy_lab',
@@ -2476,7 +2482,7 @@ test('pulse showcase public façade caps repaired practical follow-up to impulse
       assert.equal(body.repairedByRuntime, true, userText);
       assert.ok(body.messageEvents.length <= 2, userText);
       assert.ok(body.messageEvents.every(item => ['vanya', 'claudia'].includes(item.speakerId)), userText);
-      assert.match(visibleText(body), /\b(Twenty minutes|three rounds|squat|push|pull|workout|training|week|reps|sleep|meal)\b/i, userText);
+      assert.match(visibleText(body), /\b(Twenty minutes|three rounds|squat|push|pull|workout|training|week|reps|sleep|meal|today|first move|next move|one clean move|main thing)\b/i, userText);
       assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && item.reason), userText);
       assertCleanVisible(body);
     }
