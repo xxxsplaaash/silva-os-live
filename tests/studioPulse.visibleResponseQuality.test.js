@@ -272,6 +272,21 @@ test('visible response quality rejects sterile roll-call monitoring voice', () =
   assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
 });
 
+test('visible response quality rejects live diagnostic roll-call voice', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'All systems nominal. Tracking current episode parameters.',
+      'Human temperature is stable, room is breathable.',
+      'Aesthetic standards are holding, no blandness detected.',
+      'Operational flow is clear; next steps are defined.',
+      'No immediate faults detected, but I am monitoring for emergent anomalies.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:roll-call'));
+});
+
 test('visible response quality rejects thin next-action non-answers', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'answer normally, what should I do today?',
@@ -464,7 +479,9 @@ test('visible response quality rejects support-bot softening from live frustrati
       'The next move is one workout, one meal, one sleep window. That is the constraint.'
     ].join('\n'),
     'Yeah, fair. No more loop: your next move is one simple week.',
-    'Fair. No fourth version. Clear space and start the first set.'
+    'Fair. No fourth version. Clear space and start the first set.',
+    'Fair. No more repeat loop. The room answers the turn in front of it.',
+    'Fair. If this feels dumb and stressful, pause the room.'
   ]) {
     const issues = evaluateVisibleResponse({
       userMessage: 'BRUH...',

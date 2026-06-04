@@ -1411,6 +1411,7 @@ function buildPulseShowcaseReactionPayload(body = {}) {
   if (!reaction) {
     return { error: { statusCode: 400, payload: { ok: false, error: 'unsupported-reaction' } } };
   }
+  const previousReaction = normalizePulseShowcaseReaction(body.previousReaction || body.previous || '');
   const mode = normalizePulseShowcaseMode(body.mode);
   const speakerId = PULSE_SHOWCASE_SPEAKERS.includes(String(body.speakerId || '').trim().toLowerCase())
     ? String(body.speakerId).trim().toLowerCase()
@@ -1418,15 +1419,24 @@ function buildPulseShowcaseReactionPayload(body = {}) {
   const messageId = safeShowcaseText(body.messageId || '', 96);
   const roomState = sanitizeShowcaseRoomState(body.roomState || {}, mode);
   const priorSummary = sanitizePulseShowcaseReactionSummary(roomState.socialSignals?.reactionSummary || {});
-  const counts = { ...priorSummary.counts, [reaction]: Math.min(50, (priorSummary.counts[reaction] || 0) + 1) };
+  const counts = { ...priorSummary.counts };
+  if (previousReaction && previousReaction !== reaction) {
+    counts[previousReaction] = Math.max(0, Math.min(50, (counts[previousReaction] || 0) - 1));
+  }
+  counts[reaction] = Math.min(50, (counts[reaction] || 0) + 1);
   const effect = pulseShowcaseReactionEffect(reaction);
+  const previousEffect = previousReaction && previousReaction !== reaction
+    ? pulseShowcaseReactionEffect(previousReaction)
+    : { status: 0 };
   const speakerAffinity = { ...priorSummary.speakerAffinity };
   if (speakerId) {
-    speakerAffinity[speakerId] = Math.max(-30, Math.min(30, Math.round(Number(speakerAffinity[speakerId] || 0) + effect.status)));
+    speakerAffinity[speakerId] = Math.max(-30, Math.min(30, Math.round(
+      Number(speakerAffinity[speakerId] || 0) - Number(previousEffect.status || 0) + effect.status
+    )));
   }
   const reactionSummary = sanitizePulseShowcaseReactionSummary({
     counts,
-    total: priorSummary.total + 1,
+    total: priorSummary.total + (previousReaction && previousReaction !== reaction ? 0 : 1),
     lastReaction: reaction,
     lastSpeakerId: speakerId,
     lastMessageId: messageId,

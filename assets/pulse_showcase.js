@@ -1252,6 +1252,8 @@
     var safeReaction = normalizeReaction(reaction);
     var safeMessageId = compact(messageId || '', 96);
     if (!safeReaction || !safeMessageId || state.busy) return;
+    var previousReaction = normalizeReaction(state.reactions[safeMessageId]);
+    if (previousReaction === safeReaction) return;
     state.reactions[safeMessageId] = safeReaction;
     renderMessages();
     persistState();
@@ -1263,6 +1265,7 @@
           mode: state.mode,
           messageId: safeMessageId,
           reaction: safeReaction,
+          previousReaction: previousReaction,
           speakerId: safeSpeakerId(speakerId),
           roomState: {
             roomMood: state.roomMood,

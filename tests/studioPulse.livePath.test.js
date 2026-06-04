@@ -251,6 +251,28 @@ test('pulse showcase reactions update session social signals without Pack 1 memo
   assert.ok(result.payload.socialSignals.socialMemory, 'social memory pacing remains session-local');
   assert.equal(result.payload.continuityLedger, undefined);
   assert.equal(result.payload.memorySummary, undefined);
+
+  const changed = studioRouter.__buildPulseShowcaseReactionPayloadForTests({
+    sessionId: 'reaction-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-vanya-1',
+    speakerId: 'vanya',
+    previousReaction: 'more_like',
+    reaction: 'less_like',
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: result.payload.reactionSummary
+      }
+    }
+  });
+
+  assert.equal(changed.statusCode, 200);
+  assert.equal(changed.payload.reactionSummary.counts.more_like, 0);
+  assert.equal(changed.payload.reactionSummary.counts.less_like, 1);
+  assert.equal(changed.payload.reactionSummary.total, 2);
+  assert.equal(changed.payload.reactionSummary.lastReaction, 'less_like');
 });
 
 test('Studio Pulse text provider can resolve the server-side Gemini vault', () => {

@@ -1423,6 +1423,17 @@ test('visible response evaluator flags audit-level product failures', () => {
     ].join('\n')
   }).includes('speaker-flatness'));
 
+  assert.ok(families({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'All systems nominal. Tracking current episode parameters.',
+      'Human temperature is stable, room is breathable.',
+      'Aesthetic standards are holding, no blandness detected.',
+      'Operational flow is clear; next steps are defined.',
+      'No immediate faults detected, but I am monitoring for emergent anomalies.'
+    ].join('\n')
+  }).includes('speaker-flatness'));
+
   assert.ok(!families({
     userMessage: 'BRUH...',
     visibleText: 'Yeah. Strip it down: one workout, one meal, one sleep window. Do push, pull, legs, or the closest safe versions. Log reps.'
@@ -3488,8 +3499,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/movie|watch next|watch tonight/i.test(userText)) return 'Watch Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if the room wants bite.';
       if (/actual tension/i.test(userText)) return 'The tension is direct answers versus ceremony. The room gets worse when it sounds polished instead of useful.';
       if (/useful or did it sound fake/i.test(userText)) return 'It had one useful piece, then went fake when it turned into room commentary. Keep the useful piece; cut the posture.';
-      if (/stressed/i.test(userText)) return 'Fair. If this feels dumb and stressful, reset the turn: one clean next move, then stop adding commentary.';
-      if (/repeating yourself/i.test(userText)) return 'Fair. No more repeat loop; plain answer, then we move.';
+      if (/stressed/i.test(userText)) return 'Stop the room noise. Pick one clean next move, do that first, then decide if the room earned another sentence.';
+      if (/repeating yourself/i.test(userText)) return 'New shape: one direct answer, one useful next move, then the room stops decorating it.';
       if (/answer normally/i.test(userText)) return 'Today: pick one clean next move, do it plainly, and stop decorating the room.';
       if (/planning tomorrow/i.test(userText)) return 'Tomorrow needs a first block, a second block, and one owner for the messiest next step.';
       if (/lunch/i.test(userText)) return 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.';
