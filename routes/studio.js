@@ -735,6 +735,24 @@ function recentQuestionsForResolution(recent = [], threadId = '') {
   return scoped.length ? scoped : items;
 }
 
+function recentQuestionsFromThreadMessages(messages = [], threadId = '') {
+  const safeThreadId = String(threadId || '').trim();
+  return (Array.isArray(messages) ? messages : [])
+    .filter(item => {
+      const speakerId = String(item?.speakerId || item?.speaker_id || '').trim().toLowerCase();
+      if (speakerId !== 'user') return false;
+      if (safeThreadId && String(item?.threadId || item?.thread_id || '').trim() !== safeThreadId) return false;
+      return String(item?.text || '').trim();
+    })
+    .slice()
+    .reverse()
+    .map(item => ({
+      q: String(item.text || '').trim(),
+      effectiveQuestion: String(item.text || '').trim(),
+      threadId: String(item.threadId || item.thread_id || safeThreadId || '').trim()
+    }));
+}
+
 function resolveStudioKeyChain(providerConfig) {
   const chain = [];
   const seen = new Set();
@@ -3725,8 +3743,8 @@ router.post('/pulse', async (req, res) => {
 
   const { system } = buildPulseSystemFromRequest(req);
   const providerConfig = mergeStudioProviderConfig(system.providerSettings || {}, requestProviderConfig || {});
-  const recent = recentQuestionsForResolution(system.recentQuestions || [], threadId);
-  const resolution = resolveQuestion(question, recent);
+  let recent = recentQuestionsForResolution(system.recentQuestions || [], threadId);
+  let resolution = resolveQuestion(question, recent);
   const requestedAttachments = Array.isArray(req.body?.attachments) ? req.body.attachments.filter(Boolean) : [];
   const explicitWorkflowIntent = String(req.body?.workflowIntent || '').trim();
   const requestedWorkflowDraftId = String(req.body?.workflowDraftId || '').trim();
@@ -3753,6 +3771,11 @@ router.post('/pulse', async (req, res) => {
     system.currentThread = workingThread;
     system.currentThreadMessages = workingThreadId ? getStudioPulseMessages(workingThreadId) : [];
     system.currentThreadSparkMessages = (system.currentThreadMessages || []).filter(item => String(item?.kind || '').toLowerCase() === 'spark');
+    recent = recentQuestionsForResolution([
+      ...recentQuestionsFromThreadMessages(system.currentThreadMessages || [], workingThreadId),
+      ...(system.recentQuestions || [])
+    ], workingThreadId || threadId);
+    resolution = resolveQuestion(question, recent);
   }
 
   function refreshWorkflowContext(nextWorkflowId = '') {
