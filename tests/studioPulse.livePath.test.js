@@ -1680,6 +1680,104 @@ test('Studio Pulse showcase last-mile gate repairs accepted continuity answers t
   });
 });
 
+test('Studio Pulse showcase keeps prior continuity claim when duplicate current turn would trim history', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'A weak continuity answer misses visible history.',
+                roomMood: 'focused',
+                responseMode: 'single',
+                speakers: [
+                  { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'I do not have a recorded change to cite yet. Make the claim first, then I can anchor the difference.', visibleState: 'Anchoring' }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 4, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-continuity-duplicate-current-trim',
+            mode: 'continuity_breaker',
+            userText: 'What changed?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+              { speakerId: 'aisha', role: 'primary', text: "Black glass with a red pulse. It's a clear aesthetic choice." },
+              { speakerId: 'leah', role: 'side', text: "Black glass is fine, but a single red pulse sounds like a heartbeat." },
+              { speakerId: 'vanya', role: 'side', text: 'Or a warning light. We need to ensure the pulse communicates urgency, not alarm.' },
+              { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+              { speakerId: 'aisha', role: 'primary', text: 'White editorial. No red.' },
+              { speakerId: 'leah', role: 'side', text: 'Editorial implies clean clarity without the pulse.' },
+              { speakerId: 'vanya', role: 'side', text: 'A clean slate. We can build from that.' },
+              { speakerId: 'user', role: 'user', text: 'What changed?' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.match(text, /\bwhite editorial with no red\b/i);
+        assert.match(text, /\bblack glass with a single red pulse\b/i);
+        assert.doesNotMatch(text, /\bdo not have a recorded change|claim first|anchor the difference\b/i);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase distinguishes connected Pack 1 turn rejection from unavailable runtime', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

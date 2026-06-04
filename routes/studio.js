@@ -1158,7 +1158,7 @@ function sanitizeShowcaseRecentTurns(items = []) {
       };
     })
     .filter(item => item.text || item.speakerId)
-    .slice(-8);
+    .slice(-18);
 }
 
 function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
@@ -1171,7 +1171,20 @@ function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
     if (last.speakerId !== 'user' || showcaseTurnTextKey(last.text) !== currentKey) break;
     output.pop();
   }
-  return output;
+  const continuityClaims = output.filter(item =>
+    item.speakerId === 'user'
+    && /\b(preference|style|color|dashboard|landing page|brand)\b/i.test(item.text)
+    && /\b(is|=)\b/i.test(item.text)
+  );
+  const seen = new Set();
+  return [...continuityClaims, ...output.slice(-8)]
+    .filter(item => {
+      const key = `${item.speakerId}:${item.role}:${showcaseTurnTextKey(item.text)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-12);
 }
 
 function sanitizeShowcaseIncomingSocialSignals(value = {}) {
