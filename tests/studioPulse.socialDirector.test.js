@@ -537,6 +537,32 @@ test('silent reactions preserve intentional silence reasons for visible presence
   assert.equal(validation.output.silentReactions[0].reason, 'tracking structure without turning the exchange into a project plan');
 });
 
+test('showcase fallback gives every quiet character an intentional silence reason', () => {
+  const fixtures = [
+    ['how is everyone?', {}],
+    ['I need a sharper logo direction', {}],
+    ['Grok, say something normal for once', {}],
+    ['ok but I only have 20 minutes', {
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
+      ]
+    }]
+  ];
+
+  for (const [prompt, body] of fixtures) {
+    const fallback = socialFallbackFor(prompt, body);
+    assert.ok(Array.isArray(fallback.silentReactions), prompt);
+    assert.ok(fallback.silentReactions.length >= 1, prompt);
+    for (const item of fallback.silentReactions) {
+      assert.ok(String(item.speakerId || '').trim(), prompt);
+      assert.ok(String(item.visibleState || '').trim(), `${prompt}: ${item.speakerId} missing visibleState`);
+      assert.ok(String(item.reason || '').trim(), `${prompt}: ${item.speakerId} missing reason`);
+      assert.doesNotMatch(item.reason, /\b(fallback|degraded|debug|schemaVersion|selectedSpeakers)\b/i, prompt);
+    }
+  }
+});
+
 test('showcase impulse planner routes design-brief scenarios with bounded speaker intent', () => {
   const fixtures = [
     {
