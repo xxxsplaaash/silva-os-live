@@ -1393,6 +1393,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: 'I understand how you feel, and it makes sense to feel overwhelmed right now.'
     },
     {
+      label: 'permission-slip therapy Vanya',
+      issue: 'voice-lock:therapy-voice:vanya',
+      speaker: 'vanya',
+      text: 'You are allowed to feel overwhelmed; give yourself permission to sit with that emotion.'
+    },
+    {
       label: 'hostile Leah',
       issue: 'voice-lock:hostile-leah:leah',
       speaker: 'leah',
@@ -1405,10 +1411,22 @@ test('social director quality validator rejects character voice-lock drift', () 
       text: 'This is garbage and whoever made it should be embarrassed.'
     },
     {
+      label: 'cruel Leah',
+      issue: 'voice-lock:hostile-leah:leah',
+      speaker: 'leah',
+      text: 'That idea is pathetic, lazy, and deserves to be laughed out of the room.'
+    },
+    {
       label: 'timeline Claudia',
       issue: 'voice-lock:project-manager-claudia:claudia',
       speaker: 'claudia',
       text: 'Let me break this down into actionable next steps with a timeline and deliverables.'
+    },
+    {
+      label: 'roadmap Claudia',
+      issue: 'voice-lock:project-manager-claudia:claudia',
+      speaker: 'claudia',
+      text: 'We need a roadmap, ownership matrix, and KPI checkpoint before this can move.'
     },
     {
       label: 'insufferable Grok',
@@ -1421,6 +1439,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       issue: 'voice-lock:insufferable-grok:grok',
       speaker: 'grok',
       text: 'Well actually, the premise is flawed in a way only I seem capable of noticing.'
+    },
+    {
+      label: 'hostile cynic Grok',
+      issue: 'voice-lock:insufferable-grok:grok',
+      speaker: 'grok',
+      text: 'Humanity has peaked in stupidity, and this room is doing field research.'
     }
   ];
 
