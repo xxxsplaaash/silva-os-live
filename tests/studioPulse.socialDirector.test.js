@@ -1177,6 +1177,11 @@ test('visible response evaluator flags audit-level product failures', () => {
   }).includes('practical-contradiction'));
 
   assert.ok(families({
+    userMessage: 'ok but I only have 20 minutes',
+    visibleText: 'Twenty minutes. That changes the structure. Focus on compound moves that hit multiple muscle groups. Prioritize form over speed.'
+  }).includes('generic-advice'));
+
+  assert.ok(families({
     userMessage: 'Actually my landing page style is white editorial with no red.',
     recentTurns: [
       { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' }

@@ -278,6 +278,19 @@ test('visible response quality rejects impossible practical timing math', () => 
   assert.ok(issueKeys(issues).includes('practical-contradiction:workout-timing'));
 });
 
+test('visible response quality rejects generic short-window fitness boilerplate', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'ok but I only have 20 minutes',
+    visibleText: [
+      'Twenty minutes. That changes the structure.',
+      'Okay, make it one short session. Focus on compound moves that hit multiple muscle groups.',
+      'Prioritize form over speed.'
+    ].join('\n')
+  });
+
+  assert.ok(issues.some(item => item.family === 'generic-advice'));
+});
+
 test('visible response quality rejects stale superseded visual attributes on style correction', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Actually my landing page style is white editorial with no red.',
