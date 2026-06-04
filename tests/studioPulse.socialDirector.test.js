@@ -15,6 +15,7 @@ const { socialFallbackFor } = require('../lib/studio/socialDirector/socialDirect
 const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 const { evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
 const { projectShowcaseSocialSignals } = require('../lib/studio/showcaseSocialSignals');
+const { publicCharacterBibles } = require('../lib/studio/socialDirector/characterBibles');
 
 const BANNED_RX = /\b(I hear|I will keep this human|degraded mode|fallback|I need the object|Give me the thing|Say the thing plainly|if that is the object|on that:|I agree with)\b/i;
 const RAW_INTERNAL_RX = /\b(exchangeContextV06|selectedSpeakers|addendumConstraint|relationshipSummaries|repairNeeded|trust:\s*\d|irritation:\s*\d|gravity:\s*\d|pulseReason|aishaDiagnostics|projectContext|activeSpeakerId)\b/i;
@@ -389,6 +390,28 @@ test('showcase impulse planner routes design-brief scenarios with bounded speake
   }
 });
 
+test('social director character bibles expose behavior-level voice locks to the prompt', () => {
+  const bibles = publicCharacterBibles();
+  for (const id of ['aisha', 'vanya', 'leah', 'claudia', 'grok']) {
+    assert.equal(typeof bibles[id].coreDrive, 'string', id);
+    assert.ok(bibles[id].coreDrive.length > 20, id);
+    assert.ok(Array.isArray(bibles[id].speaksWhen), id);
+    assert.ok(bibles[id].speaksWhen.length >= 3, id);
+    assert.ok(Array.isArray(bibles[id].staysSilentWhen), id);
+    assert.ok(bibles[id].staysSilentWhen.length >= 3, id);
+    assert.equal(typeof bibles[id].failureMode, 'string', id);
+    assert.equal(typeof bibles[id].signatureQuirk, 'string', id);
+  }
+
+  const input = buildRoomDirectorInput({ message: 'Grok, be honest: did that sound fake?' });
+  const prompt = buildRoomDirectorPrompt(input);
+  assert.match(prompt, /Turn noise into signal/);
+  assert.match(prompt, /Keep the room socially breathable/);
+  assert.match(prompt, /Expose the comfortable weak point/);
+  assert.match(prompt, /Find the shape underneath chaos/);
+  assert.match(prompt, /Challenge the premise and find the fault line/);
+});
+
 test('social director quality validator rejects the fitness refusal loop', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'Aisha holds the objective line.',
@@ -643,8 +666,9 @@ test('social director fallback lets social check-in beat stale fitness recovery'
       const text = visibleText(body);
 
       assert.equal(body.ok, true);
-      assert.equal(body.responseMode, 'open_floor');
-      assert.match(text, /\b(Aisha here|Vanya here|Leah here|Claudia here|Grok here)\b/i);
+      assert.equal(body.responseMode, 'small_exchange');
+      assert.match(text, /\b(room is awake|slightly restless|attendance|bland consensus|one clean move|specific)\b/i);
+      assert.doesNotMatch(text, /\b(Aisha here|Vanya here|Leah here|Claudia here|Grok here|socially operational)\b/i);
       assert.doesNotMatch(text, /\b(incline push-ups|first set|write the number down|workout|training week|log reps)\b/i);
       assertCleanVisible(body);
     });
@@ -863,6 +887,79 @@ test('social director quality validator rejects generic advice-column practical 
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('generic-advice-column'));
+});
+
+test('social director quality validator rejects character voice-lock drift', () => {
+  const cases = [
+    {
+      label: 'swappable voice',
+      issue: 'voice-lock:swappable-voice:aisha',
+      speaker: 'aisha',
+      text: 'I hear you, and I am here to support your journey with empathy and clarity.'
+    },
+    {
+      label: 'generic warmth',
+      issue: 'voice-lock:generic-warmth:vanya',
+      speaker: 'vanya',
+      text: 'That sounds really valid, and I appreciate you sharing that with the room.'
+    },
+    {
+      label: 'valid reaction',
+      issue: 'voice-lock:generic-warmth:vanya',
+      speaker: 'vanya',
+      text: "Okay, that's a valid reaction. Let's stop the loop."
+    },
+    {
+      label: 'announced humor',
+      issue: 'voice-lock:announced-humor:grok',
+      speaker: 'grok',
+      text: 'Here comes my sarcastic joke: this plan is so bad it needs a helmet.'
+    },
+    {
+      label: 'therapy voice',
+      issue: 'voice-lock:therapy-voice:vanya',
+      speaker: 'vanya',
+      text: 'It sounds like you are carrying a lot, and your feelings are valid in this safe space.'
+    },
+    {
+      label: 'project-manager Claudia',
+      issue: 'voice-lock:project-manager-claudia:claudia',
+      speaker: 'claudia',
+      text: 'I will create a prioritized action-item checklist, define stakeholders, and align deliverables.'
+    },
+    {
+      label: 'Wikipedia A.I.S.H.A',
+      issue: 'voice-lock:wikipedia-aisha:aisha',
+      speaker: 'aisha',
+      text: 'A.I.S.H.A is an artificial intelligence system designed to facilitate multi-agent conversational coordination.'
+    },
+    {
+      label: 'hostile Leah',
+      issue: 'voice-lock:hostile-leah:leah',
+      speaker: 'leah',
+      text: 'This is trash and whoever approved it has no taste.'
+    },
+    {
+      label: 'insufferable Grok',
+      issue: 'voice-lock:insufferable-grok:grok',
+      speaker: 'grok',
+      text: 'Obviously, as the only rational mind here, I will explain the flaw in tiny words.'
+    }
+  ];
+
+  for (const item of cases) {
+    const validation = validateDirectorOutput({
+      roomBeat: `${item.label} should not pass as character voice.`,
+      roomMood: 'focused',
+      responseMode: 'single',
+      speakers: [{ speakerId: item.speaker, role: 'primary', tone: 'flat', text: item.text }],
+      silentReactions: [],
+      stateUpdates: { notes: [] }
+    }, { userMessage: 'Give me a useful room answer.' });
+
+    assert.equal(validation.ok, false, item.label);
+    assert.ok(validation.issues.includes(item.issue), `${item.label}: ${validation.issues.join(', ')}`);
+  }
 });
 
 test('social director quality validator rejects live generic fitness variants and movie refusal', () => {
@@ -1665,6 +1762,21 @@ test('social director quality validator rejects food prompts that dodge before a
 
   assert.equal(dodgedLunch.ok, false);
   assert.ok(dodgedLunch.issues.includes('food-answer-dodged'));
+
+  const acceptedButGenericLunch = validateDirectorOutput({
+    roomBeat: 'The room answers lunch like an advice column after planning.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'For lunch, aim for something balanced. A quick salad with protein or a wrap should keep energy levels stable for the afternoon.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: "Good call. Don't forget to hydrate too, it makes a difference when you're deep in planning." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'quick help: what should I eat for lunch?' });
+
+  assert.equal(acceptedButGenericLunch.ok, false);
+  assert.ok(acceptedButGenericLunch.issues.includes('generic-advice-column'));
 });
 
 test('social director quality validator rejects generic planning command loops', () => {

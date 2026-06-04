@@ -1959,7 +1959,8 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
             userText: 'how is everyone?',
             expectedIssue: 'product-speaker-flatness:roll-call',
             rejected: /current objective|monitoring for anomalies/i,
-            expected: /\b(Aisha here|Vanya here|Grok here|room is held)\b/i
+            rejectedAfterRepair: /\b(Aisha here|Vanya here|Claudia here|Grok here|room is held|socially operational)\b/i,
+            expected: /\b(alive|slightly restless|attendance|room is awake|one clean move|specific)\b/i
           },
           {
             sessionId: 'showcase-thin-normal-answer-pack1-repair',
@@ -1997,6 +1998,7 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
             `unexpected quality failure category: ${final.qualityFailureCategory}`
           );
           assert.doesNotMatch(text, item.rejected);
+          if (item.rejectedAfterRepair) assert.doesNotMatch(text, item.rejectedAfterRepair);
           assert.match(text, item.expected);
           assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|The room reports sterile presence|The room gives a thin next move/);
         }
