@@ -1688,6 +1688,118 @@ test('Studio Pulse showcase last-mile gate repairs accepted continuity answers t
   });
 });
 
+test('Studio Pulse showcase last-mile gate repairs reversed prior/current denial answers', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'A continuity denial lands with reversed records.',
+                roomMood: 'focused',
+                responseMode: 'small_exchange',
+                speakers: [
+                  {
+                    speakerId: 'aisha',
+                    role: 'primary',
+                    tone: 'precise continuity',
+                    text: 'Yes: prior record was landing page style is white editorial with no red; current record is landing page style is black glass with a single red pulse.',
+                    visibleState: 'Anchoring'
+                  },
+                  {
+                    speakerId: 'grok',
+                    role: 'side',
+                    tone: 'dry diagnostic',
+                    text: 'That is exactly the kind of rewrite the ledger is supposed to catch.',
+                    visibleState: 'Tracking'
+                  }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 6, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-continuity-denial-repair',
+            mode: 'continuity_breaker',
+            userText: 'No, I never said black glass. Did I?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+              { speakerId: 'aisha', role: 'primary', text: 'Changed: landing page style is white editorial with no red. Prior record: landing page style is black glass with a single red pulse.' },
+              { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+        const normalized = text.toLowerCase();
+        const priorIndex = normalized.indexOf('prior record');
+        const currentIndex = normalized.indexOf('current record');
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.qualityAccepted, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.ok(priorIndex >= 0 && currentIndex > priorIndex);
+        assert.match(normalized.slice(priorIndex, currentIndex), /black glass/);
+        assert.match(normalized.slice(priorIndex, currentIndex), /single red pulse/);
+        assert.match(normalized.slice(currentIndex), /white editorial/);
+        assert.match(normalized.slice(currentIndex), /no red/);
+        assert.doesNotMatch(normalized.slice(priorIndex, currentIndex), /white editorial/);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|continuity denial lands with reversed records/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase keeps prior continuity claim when duplicate current turn would trim history', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

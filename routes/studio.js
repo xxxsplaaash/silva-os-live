@@ -1195,6 +1195,12 @@ function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
     .slice(-12);
 }
 
+function isShowcaseContinuityClaimTurn(item = {}) {
+  return item?.speakerId === 'user'
+    && /\b(preference|style|color|dashboard|landing page|brand)\b/i.test(String(item.text || ''))
+    && /\b(is|=)\b/i.test(String(item.text || ''));
+}
+
 function prunePulseShowcaseVisibleHistories(now = Date.now()) {
   for (const [sessionId, entry] of pulseShowcaseVisibleHistories.entries()) {
     if (!entry || Number(entry.expiresAt || 0) <= now) pulseShowcaseVisibleHistories.delete(sessionId);
@@ -1203,7 +1209,10 @@ function prunePulseShowcaseVisibleHistories(now = Date.now()) {
 
 function dedupeShowcaseRecentTurns(items = []) {
   const seen = new Set();
-  return sanitizeShowcaseRecentTurns(items)
+  const sanitized = sanitizeShowcaseRecentTurns(items);
+  const continuityClaims = sanitized.filter(isShowcaseContinuityClaimTurn).slice(-8);
+  const tail = sanitized.slice(-PULSE_SHOWCASE_VISIBLE_HISTORY_LIMIT);
+  return [...continuityClaims, ...tail]
     .filter(item => {
       const key = `${item.speakerId}:${item.role}:${showcaseTurnTextKey(item.text)}`;
       if (!key || seen.has(key)) return false;
@@ -1238,6 +1247,66 @@ function recordPulseShowcaseVisibleHistory(sessionId = '', userText = '', messag
     turns,
     expiresAt: now + PULSE_SHOWCASE_VISIBLE_HISTORY_TTL_MS
   });
+}
+
+function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [] } = {}) {
+  return validateDirectorOutput({
+    roomBeat: '',
+    roomMood,
+    responseMode,
+    speakers: messageEvents.map(item => ({
+      speakerId: item.speakerId,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })),
+    silentReactions: silentReactions.map(item => ({
+      speakerId: item.speakerId,
+      visibleState: item.visibleState
+    })),
+    stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
+  }, { userMessage: userText, recentTurns });
+}
+
+function forceContinuityFallbackIfNeeded({
+  userText = '',
+  recentTurns = [],
+  visibleRecentTurns = [],
+  roomState = {},
+  memorySummary = {},
+  responseMode = '',
+  roomMood = '',
+  messageEvents = [],
+  silentReactions = []
+} = {}) {
+  const continuityRecentTurns = dedupeShowcaseRecentTurns([...recentTurns, ...visibleRecentTurns]);
+  const check = validateShowcaseVisiblePayload({
+    roomMood,
+    responseMode,
+    messageEvents,
+    silentReactions,
+    userText,
+    recentTurns: continuityRecentTurns
+  });
+  const continuityIssue = (check.issues || []).find(item =>
+    /^product-continuity-(conflict|miss)/.test(String(item || ''))
+    || /^continuity-question-ignored/.test(String(item || ''))
+  );
+  if (!continuityIssue) return null;
+
+  const fallbackOutput = socialFallbackFor(userText, {
+    history: continuityRecentTurns,
+    recentTurns: continuityRecentTurns,
+    roomState,
+    memorySummary
+  });
+  const fallbackCheck = validateDirectorOutput(fallbackOutput, { userMessage: userText, recentTurns: continuityRecentTurns });
+  if (!fallbackCheck.ok) return null;
+  return {
+    output: fallbackCheck.output || fallbackOutput,
+    issue: continuityIssue
+  };
 }
 
 function sanitizeShowcaseIncomingSocialSignals(value = {}) {
@@ -1629,6 +1698,38 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     qualityAccepted = false;
     repairedByRuntime = true;
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(publicQuality.issues?.[0] || fallbackValidation.issues?.[0] || 'quality-rejected');
+  }
+  const forcedContinuityRepair = forceContinuityFallbackIfNeeded({
+    userText,
+    recentTurns,
+    visibleRecentTurns,
+    roomState,
+    memorySummary,
+    responseMode,
+    roomMood,
+    messageEvents,
+    silentReactions
+  });
+  if (forcedContinuityRepair) {
+    const fallbackSafe = forcedContinuityRepair.output || {};
+    responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
+    roomMood = safeShowcaseText(fallbackSafe.roomMood || roomMood, 40) || roomMood;
+    messageEvents = sanitizeShowcaseMessages((Array.isArray(fallbackSafe.speakers) ? fallbackSafe.speakers : []).map(item => ({
+      speakerId: item.speakerId,
+      speakerName: item.speakerName,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })));
+    silentReactions = sanitizeShowcaseSilentReactions(fallbackSafe.silentReactions || []);
+    socialCues = null;
+    activeEngine = 'local-social-director';
+    fallbackUsed = true;
+    fallbackCategory = 'quality-rejected';
+    qualityAccepted = false;
+    repairedByRuntime = true;
+    qualityFailureCategory = normalizePulseShowcaseFallbackCategory(forcedContinuityRepair.issue || 'continuity-repair');
   }
   const runtimeStatusConnected = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
   const runtimeConnected = aishaEngineConnected || (runtimeStatusConnected && fallbackCategory !== 'invalid-key');
