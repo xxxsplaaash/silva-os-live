@@ -415,6 +415,51 @@ test('pulse showcase turn forwards selected message references as local anchors 
   });
 });
 
+test('pulse showcase turn sends visible session history used by impulse planning', async () => {
+  await withAishaFlag('true', async () => {
+    const capturedRequests = [];
+    __setAishaRuntimeImporterForTests(async () => ({
+      processAishaRequest: async request => {
+        capturedRequests.push(request);
+        const userMessage = String(request.messageText || request.message || '');
+        const text = /20 minutes/i.test(userMessage)
+          ? 'Use the visible thread: twenty minutes means one short circuit, not a new chorus.'
+          : 'Start at home this week. Three short sessions; no heroic rebrand required.';
+        return showcaseAishaResponse(request, text);
+      }
+    }));
+
+    const first = await studioRouter.__buildPulseShowcaseTurnPayloadForTests({
+      sessionId: 'visible-history-impulse-session',
+      mode: 'social_hierarchy_lab',
+      userText: 'LOL I WANNA GROW MY MUSCLES',
+      recentTurns: [],
+      references: [],
+      roomState: { roomMood: 'focused', responseMode: 'single' }
+    });
+    assert.equal(first.payload.ok, true);
+
+    const second = await studioRouter.__buildPulseShowcaseTurnPayloadForTests({
+      sessionId: 'visible-history-impulse-session',
+      mode: 'social_hierarchy_lab',
+      userText: 'ok but I only have 20 minutes',
+      recentTurns: [],
+      references: [],
+      roomState: { roomMood: 'focused', responseMode: 'single' }
+    });
+    assert.equal(second.payload.ok, true);
+
+    const followupRequest = capturedRequests.find(request => /20 minutes/i.test(String(request.messageText || request.message || '')));
+    assert.ok(followupRequest, 'missing follow-up A.I.S.H.A request');
+    const visibleContext = (followupRequest.recentMessages || []).map(item => String(item.content || '')).join('\n');
+    const plan = followupRequest.projectContext?.socialDirectorV1?.impulsePlan || {};
+    assert.equal(plan.category, 'practical');
+    assert.equal(plan.maxSpeakers, 2);
+    assert.match(visibleContext, /GROW MY MUSCLES/i);
+    assert.match(visibleContext, /Start at home this week/i);
+  });
+});
+
 test('Studio Pulse text provider can resolve the server-side Gemini vault', () => {
   const source = read('routes/studio.js');
   assert.match(source, /geminiVaultKeyEntries/);

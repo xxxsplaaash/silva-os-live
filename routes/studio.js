@@ -2153,7 +2153,11 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     recentTurns: visibleRecentTurns
   }).impulsePlan;
   const result = await runSocialDirectorTurn({
-    body: directorBody,
+    body: {
+      ...directorBody,
+      history: visibleRecentTurns,
+      recentTurns: visibleRecentTurns
+    },
     callAishaEngine,
     runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
     includeMemorySummary: true
