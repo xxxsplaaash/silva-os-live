@@ -4191,7 +4191,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const isFitness = /\b(muscle|muscles|where do i start|objective|bruh)\b/i.test(userText);
     const text = (() => {
       if (/wanna grow/i.test(userText)) return 'Start this week: incline push-ups, backpack rows, split squats, and planks. Log reps; add one clean rep next time.';
-      if (/20 minutes/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes a planning session.';
+      if (/20 minute/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes a planning session.';
       if (/where do i start/i.test(userText)) return 'Begin with one short training day today. Pick three moves, write reps down, and repeat before changing the plan.';
       if (/what is the objective/i.test(userText)) return 'The objective is the muscle plan: repeatable training, food, sleep, and no sharp pain heroics.';
       if (/bruh/i.test(userText)) return 'No more loop. Keep week one boring enough to repeat, then add one small progression.';
@@ -4229,7 +4229,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       if (/stressed/i.test(userText)) return 'Claudia lowers the noise: one decision now, another only after the first is done.';
       if (/planning tomorrow/i.test(userText)) return 'Claudia gives tomorrow edges: first block, second block, messy owner.';
       if (/hungry|lunch|\beat\b|eating/i.test(userText)) return 'Claudia keeps it practical: light enough to move, concrete enough to stop guessing.';
-      if (/20 minutes/i.test(userText)) return 'Claudia keeps the clock honest: one small circuit, no extra menu, no fake productivity.';
+      if (/20 minute/i.test(userText)) return 'Claudia keeps the clock honest: one small circuit, no extra menu, no fake productivity.';
       if (/where do i start/i.test(userText)) return 'Claudia makes the first step visible: choose three moves before adding equipment, apps, or drama.';
       if (/what is the objective/i.test(userText)) return 'Claudia narrows it to the actual target: show up, track the work, recover, repeat.';
       if (/bruh/i.test(userText)) return 'Claudia changes shape: one blunt next move, then silence so the room stops chewing the same point.';
