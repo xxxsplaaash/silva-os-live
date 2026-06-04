@@ -35,9 +35,25 @@ function injectApiBase(source) {
   return source.replace(/<\/title>/i, `</title>\n${configScript}`);
 }
 
-function writeRuntimeHtml(relativePath) {
+function writeRuntimeHtml(relativePath, outputPath = relativePath) {
   const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-  fs.writeFileSync(path.join(outDir, relativePath), injectApiBase(source));
+  const target = path.join(outDir, outputPath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, injectApiBase(source));
+}
+
+function copyRuntimeFile(relativePath, outputPath = relativePath) {
+  const source = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(source)) return;
+  const target = path.join(outDir, outputPath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
+}
+
+function mirrorShowcaseIntoServedPublicRoot() {
+  writeRuntimeHtml('pulse-showcase.html', 'public/pulse-showcase.html');
+  copyRuntimeFile('assets/pulse_showcase.css', 'public/assets/pulse_showcase.css');
+  copyRuntimeFile('assets/pulse_showcase.js', 'public/assets/pulse_showcase.js');
 }
 
 function writeVercelConfig() {
@@ -75,6 +91,7 @@ writeRuntimeHtml('pulse-showcase.html');
 writeVercelConfig();
 copyIfExists('assets');
 copyIfExists('public');
+mirrorShowcaseIntoServedPublicRoot();
 copyIfExists('studio_pulse_v400.js');
 copyIfExists('studio_pulse_v395.js');
 copyIfExists('probe.html');

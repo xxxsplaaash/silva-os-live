@@ -9,7 +9,7 @@ const BACKEND_URL = String(
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
-const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.8.0');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.9.0');
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';

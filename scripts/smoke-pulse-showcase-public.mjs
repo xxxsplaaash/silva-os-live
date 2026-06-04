@@ -99,6 +99,8 @@ async function checkFrontend() {
   assert(cssRes.ok, `showcase CSS returned ${cssRes.status}`);
   assert(js.includes('/api/studio/pulse-showcase/turn-stream'), 'public JS missing turn-stream path');
   assert(js.includes('/api/studio/pulse-showcase/turn'), 'public JS missing non-stream fallback path');
+  assert(js.includes('/api/studio/pulse-showcase/reaction'), 'public JS missing reaction path');
+  assert(js.includes('/api/studio/pulse-showcase/expand'), 'public JS missing expand path');
   assert(!/api\/studio\/pulse['"`)]/.test(js), 'public JS still calls legacy /api/studio/pulse turn path');
   ['PULSE_READY', 'PULSE_HEIGHT', 'PULSE_STATUS', 'PULSE_TURN_STATE', 'PULSE_ERROR'].forEach((name) => {
     assert(js.includes(name), `${name} message missing from public JS`);
@@ -115,7 +117,9 @@ async function checkCorsPreflight() {
   const preflights = [
     ['/api/studio/pulse-showcase/status', 'https://silva-os-live.vercel.app', 'GET'],
     ['/api/studio/pulse-showcase/turn', 'https://silvastudios.co.za', 'POST'],
-    ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST']
+    ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST'],
+    ['/api/studio/pulse-showcase/reaction', 'https://silva-os-live.vercel.app', 'POST'],
+    ['/api/studio/pulse-showcase/expand', 'https://silva-os-live.vercel.app', 'POST']
   ];
 
   for (const [path, origin, method] of preflights) {

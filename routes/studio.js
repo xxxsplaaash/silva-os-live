@@ -1478,6 +1478,122 @@ function buildPulseShowcaseReactionPayload(body = {}) {
   };
 }
 
+function splitShowcaseExpansionClauses(text = '') {
+  const clean = safeShowcaseText(text, 520)
+    .replace(/\s*[-–—]\s*/g, '. ')
+    .replace(/\s*;\s*/g, '. ');
+  return clean
+    .split(/[.!?]+/)
+    .map(item => safeShowcaseText(item, 130))
+    .filter(item => item.length >= 8)
+    .slice(0, 3);
+}
+
+function uniqueShowcaseBullets(items = []) {
+  const seen = new Set();
+  return items
+    .map(item => safeShowcaseText(item, 170).replace(/^(?:[-•]\s*)+/, '').trim())
+    .filter(item => {
+      if (!item || item.length < 12) return false;
+      const key = item.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
+}
+
+function showcaseExpansionTemplates(speakerId = '', anchor = '', roomMood = '') {
+  const subject = anchor || 'that point';
+  const mood = roomMood ? `The ${roomMood} room matters here` : 'The room context matters here';
+  return {
+    aisha: [
+      `The useful part is the receipt: ${subject}.`,
+      'Cut the decorative version and keep the claim someone can verify.',
+      'If the standard is real, the next move needs evidence, not theatre.',
+      `${mood}; do not let softness blur the actual decision.`
+    ],
+    vanya: [
+      `The temperature is in ${subject}, not in a grand speech around it.`,
+      'Keep the human read, but do not turn it into therapy wallpaper.',
+      'If this lands well, it should feel clearer and less performative.',
+      `${mood}; the social move is to lower noise without lowering standards.`
+    ],
+    leah: [
+      `${subject} is the taste problem; the rest is styling around it.`,
+      'Make it sharper, less obedient, and less desperate to be liked.',
+      'The audience will forgive edge before they forgive bland confidence.',
+      `${mood}; do not sand the sentence until it sounds like a brochure.`
+    ],
+    claudia: [
+      `${subject} is the operational hinge, so name the owner and the next proof point.`,
+      'Keep the structure light: one decision, one constraint, one follow-through.',
+      'If it cannot be checked after the turn, it is just movement.',
+      `${mood}; the answer should reduce drift, not create a workstream for show.`
+    ],
+    grok: [
+      `${subject} is the boundary fault; start there instead of decorating the failure.`,
+      'The system either verifies the claim or admits it cannot. Secret third option: theatre.',
+      'Smallest real fix: remove the lie, then test the visible behavior.',
+      `${mood}; absurdity is acceptable only when the mechanism is honest.`
+    ]
+  }[speakerId] || [
+    `${subject} is the useful part.`,
+    'Keep the expansion short and tied to the original line.',
+    'Do not create new facts from a local card action.'
+  ];
+}
+
+function buildPulseShowcaseExpandPayload(body = {}) {
+  const sessionId = pulseShowcaseSessionId(body.sessionId || '');
+  const mode = normalizePulseShowcaseMode(body.mode);
+  const speakerId = PULSE_SHOWCASE_SPEAKERS.includes(String(body.speakerId || '').trim().toLowerCase())
+    ? String(body.speakerId).trim().toLowerCase()
+    : '';
+  if (!speakerId) {
+    return { error: { statusCode: 400, payload: { ok: false, error: 'unsupported-speaker' } } };
+  }
+  const messageId = safeShowcaseText(body.messageId || '', 96);
+  if (!messageId) {
+    return { error: { statusCode: 400, payload: { ok: false, error: 'missing-message-id' } } };
+  }
+  const text = safeShowcaseText(body.text || body.messageText || '', 700);
+  if (!text) {
+    return { error: { statusCode: 400, payload: { ok: false, error: 'missing-message-text' } } };
+  }
+  const roomState = sanitizeShowcaseRoomState(body.roomState || {}, mode);
+  const clauses = splitShowcaseExpansionClauses(text);
+  const anchor = clauses[0] || text;
+  const reactionSummary = sanitizePulseShowcaseReactionSummary(roomState.socialSignals?.reactionSummary || {});
+  const affinity = Number(reactionSummary.speakerAffinity?.[speakerId] || 0) || 0;
+  const reactionLine = affinity > 0
+    ? 'Audience signal says this voice is useful; sharpen the same lane, do not widen it.'
+    : affinity < 0
+      ? 'Audience signal says ease off; make the point cleaner, not louder.'
+      : '';
+  const bullets = uniqueShowcaseBullets([
+    ...showcaseExpansionTemplates(speakerId, anchor, roomState.roomMood),
+    ...clauses.slice(1).map(item => `Anchor detail: ${item}.`),
+    reactionLine
+  ]);
+  return {
+    statusCode: 200,
+    payload: {
+      ok: true,
+      sessionId,
+      mode,
+      messageId,
+      speakerId,
+      speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
+      bullets: bullets.length >= 3 ? bullets.slice(0, 5) : uniqueShowcaseBullets([
+        ...bullets,
+        'Stay local to this card; do not invent a new project truth.',
+        'The expansion is a visible aside, not a new room decision.'
+      ]).slice(0, 5)
+    }
+  };
+}
+
 function sanitizeShowcaseIncomingSocialMemory(value = {}) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const pairMoves = new Set(['challenge', 'defense', 'redirect', 'alliance', 'interruption', 'silence']);
@@ -3321,6 +3437,11 @@ router.options('/pulse-showcase/reaction', (req, res) => {
   res.status(204).end();
 });
 
+router.options('/pulse-showcase/expand', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  res.status(204).end();
+});
+
 router.get('/pulse-showcase/status', async (req, res) => {
   if (!guardPulseShowcaseOrigin(req, res)) return;
   const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
@@ -3468,6 +3589,13 @@ router.post('/pulse-showcase/turn-stream', async (req, res) => {
 router.post('/pulse-showcase/reaction', (req, res) => {
   if (!guardPulseShowcaseOrigin(req, res)) return;
   const result = buildPulseShowcaseReactionPayload(req.body || {});
+  if (result.error) return res.status(result.error.statusCode).json(result.error.payload);
+  res.status(result.statusCode || 200).json(result.payload);
+});
+
+router.post('/pulse-showcase/expand', (req, res) => {
+  if (!guardPulseShowcaseOrigin(req, res)) return;
+  const result = buildPulseShowcaseExpandPayload(req.body || {});
   if (result.error) return res.status(result.error.statusCode).json(result.error.payload);
   res.status(result.statusCode || 200).json(result.payload);
 });
@@ -5860,5 +5988,6 @@ router.post('/pulse/idle-tick', handlePulseIdle);
 router.__resetPulseShowcaseGuardForTests = __resetPulseShowcaseGuardForTests;
 router.__getPulseShowcaseVisibleHistoryForTests = __getPulseShowcaseVisibleHistoryForTests;
 router.__buildPulseShowcaseReactionPayloadForTests = buildPulseShowcaseReactionPayload;
+router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPayload;
 
 module.exports = router;

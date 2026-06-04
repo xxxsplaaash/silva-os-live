@@ -275,6 +275,45 @@ test('pulse showcase reactions update session social signals without Pack 1 memo
   assert.equal(changed.payload.reactionSummary.lastReaction, 'less_like');
 });
 
+test('pulse showcase expand returns brief local voice bullets without Pack 1 memory rows', () => {
+  assert.equal(typeof studioRouter.__buildPulseShowcaseExpandPayloadForTests, 'function');
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-grok-1',
+    speakerId: 'grok',
+    text: 'The failure is not the model. The boundary is lying about what it can verify.',
+    roomState: {
+      roomMood: 'sharp',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { useful: 1 },
+          total: 1,
+          speakerAffinity: { grok: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.ok, true);
+  assert.equal(result.payload.sessionId, 'expand-fixture-session');
+  assert.equal(result.payload.speakerId, 'grok');
+  assert.equal(result.payload.messageId, 'msg-grok-1');
+  assert.ok(Array.isArray(result.payload.bullets));
+  assert.ok(result.payload.bullets.length >= 3);
+  assert.ok(result.payload.bullets.length <= 5);
+  result.payload.bullets.forEach((bullet) => {
+    assert.equal(typeof bullet, 'string');
+    assert.ok(bullet.length >= 12);
+    assert.ok(bullet.length <= 170);
+    assert.doesNotMatch(bullet, /\b(Pack 1|memory|ledger|durable truth|as an ai|essay|paragraph)\b/i);
+  });
+  assert.equal(result.payload.continuityLedger, undefined);
+  assert.equal(result.payload.memorySummary, undefined);
+});
+
 test('Studio Pulse text provider can resolve the server-side Gemini vault', () => {
   const source = read('routes/studio.js');
   assert.match(source, /geminiVaultKeyEntries/);
@@ -612,6 +651,7 @@ test('Studio Pulse showcase guard allows trusted origins and no-origin smoke cal
       ['/api/studio/pulse-showcase/turn', 'https://silvastudios.co.za', 'POST'],
       ['/api/studio/pulse-showcase/turn-stream', 'https://www.silvastudios.co.za', 'POST'],
       ['/api/studio/pulse-showcase/reaction', 'https://silva-os-live.vercel.app', 'POST'],
+      ['/api/studio/pulse-showcase/expand', 'https://silva-os-live.vercel.app', 'POST'],
       ['/api/studio/pulse-showcase/turn-stream', 'http://127.0.0.1:3225', 'POST']
     ];
 

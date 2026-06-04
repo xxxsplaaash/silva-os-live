@@ -1694,6 +1694,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/turn-stream/);
   assert.match(script, /\/api\/studio\/pulse-showcase\/reaction/);
+  assert.match(script, /\/api\/studio\/pulse-showcase\/expand/);
   assert.doesNotMatch(script, /api\/studio\/pulse['"`\)]/);
   assert.match(script, /function parseSseBlock/);
   assert.match(script, /async function apiStream/);
@@ -1717,6 +1718,10 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /socialSignals/);
   assert.match(script, /REACTION_TYPES = \['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'\]/);
   assert.match(script, /function submitReaction/);
+  assert.match(script, /function submitExpand/);
+  assert.match(script, /Show more/);
+  assert.match(script, /expansions/);
+  assert.match(script, /expand-bullets/);
   assert.match(script, /reactionSummary/);
   assert.match(script, /function updateSocialSignals/);
   assert.match(script, /function handleStreamEvent/);
@@ -1724,7 +1729,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(payload\)/);
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(data \|\| \{\}\)/);
   assert.doesNotMatch(script, /state\.status = \{\s*activeEngine: payload\.activeEngine/);
-  assert.match(script, /SHOWCASE_VERSION = '1\.8\.0'/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.9\.0'/);
   assert.match(script, /var MAX_USER_TEXT = 1500/);
   assert.match(html, /maxlength="1500"/);
   assert.match(html, /0\/1500/);
@@ -1791,6 +1796,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(css, /\.social-memory-item/);
   assert.match(css, /\.pair-pressure-friction/);
   assert.match(css, /\.message-reactions/);
+  assert.match(css, /\.message-expand/);
+  assert.match(css, /\.expand-bullets/);
   assert.match(css, /\.reaction-button\.active/);
   assert.match(css, /\.interruption-pressure/);
   assert.match(css, /\.continuity-meter/);
@@ -1800,6 +1807,10 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.doesNotMatch(script, /rawPreview|Full payload|generatorPrompt|aishaDiagnostics|requestShapeSummary|processAishaRequestType|socialCues/);
   assert.doesNotMatch(combined, /As an AI|sentient|consciousness|Hello human|fake AGI/i);
   assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html'\)/);
+  assert.match(build, /mirrorShowcaseIntoServedPublicRoot/);
+  assert.match(build, /writeRuntimeHtml\('pulse-showcase\.html', 'public\/pulse-showcase\.html'\)/);
+  assert.match(build, /copyRuntimeFile\('assets\/pulse_showcase\.css', 'public\/assets\/pulse_showcase\.css'\)/);
+  assert.match(build, /copyRuntimeFile\('assets\/pulse_showcase\.js', 'public\/assets\/pulse_showcase\.js'\)/);
   assert.match(build, /function writeVercelConfig/);
   assert.match(build, /source: '\/pulse-showcase'/);
   assert.match(build, /destination: '\/pulse-showcase\.html'/);
@@ -1816,6 +1827,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(smoke, /frame-ancestors/i);
   assert.match(smoke, /\/api\/studio\/pulse-showcase\/turn-stream/);
   assert.match(smoke, /\/api\/studio\/pulse-showcase\/turn/);
+  assert.match(smoke, /\/api\/studio\/pulse-showcase\/expand/);
   assert.match(smoke, /PULSE_READY/);
   assert.match(smoke, /PULSE_HEIGHT/);
   assert.match(smoke, /PULSE_STATUS/);

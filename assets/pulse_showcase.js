@@ -27,7 +27,7 @@
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
   var MAX_USER_TEXT = 1500;
-  var SHOWCASE_VERSION = '1.8.0';
+  var SHOWCASE_VERSION = '1.9.0';
   var REACTION_TYPES = ['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'];
   var REACTION_LABELS = {
     sharp: 'Sharp',
@@ -51,6 +51,7 @@
     mode: 'social_hierarchy_lab',
     messages: [],
     reactions: {},
+    expansions: {},
     ledger: [],
     presence: {},
     roomMood: 'focused',
@@ -223,6 +224,7 @@
         mode: state.mode,
         messages: state.messages.slice(-30),
         reactions: state.reactions,
+        expansions: state.expansions,
         ledger: state.ledger.slice(0, 16),
         presence: state.presence,
         roomMood: state.roomMood,
@@ -243,6 +245,7 @@
       if (saved && MODES[saved.mode]) state.mode = saved.mode;
       if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(-30);
       if (saved.reactions && typeof saved.reactions === 'object') state.reactions = normalizeReactionState(saved.reactions);
+      if (saved.expansions && typeof saved.expansions === 'object') state.expansions = normalizeExpansionState(saved.expansions);
       if (Array.isArray(saved.ledger)) state.ledger = saved.ledger.slice(0, 16);
       if (saved.presence && typeof saved.presence === 'object') state.presence = normalizePresenceState(saved.presence);
       if (saved.roomMood) state.roomMood = compact(saved.roomMood, 40) || state.roomMood;
@@ -288,6 +291,25 @@
     Object.keys(source).slice(-80).forEach(function (messageId) {
       var reaction = normalizeReaction(source[messageId]);
       if (messageId && reaction) next[messageId] = reaction;
+    });
+    return next;
+  }
+
+  function normalizeExpansionState(value) {
+    var source = value && typeof value === 'object' ? value : {};
+    var next = {};
+    Object.keys(source).slice(-50).forEach(function (messageId) {
+      var safeId = compact(messageId, 96);
+      var item = source[messageId] && typeof source[messageId] === 'object' ? source[messageId] : {};
+      var bullets = Array.isArray(item.bullets)
+        ? item.bullets.map(function (bullet) { return compact(bullet, 170); }).filter(Boolean).slice(0, 5)
+        : [];
+      if (safeId && bullets.length) {
+        next[safeId] = {
+          speakerId: safeSpeakerId(item.speakerId),
+          bullets: bullets
+        };
+      }
     });
     return next;
   }
@@ -950,11 +972,22 @@
       var messageId = messageIdFor(message, index);
       message.id = messageId;
       var activeReaction = normalizeReaction(state.reactions[messageId]);
+      var expanded = state.expansions[messageId];
       var reactions = id === 'user' ? '' : [
         '<div class="message-reactions" role="group" aria-label="Message reactions">',
         REACTION_TYPES.map(function (reaction) {
           return '<button type="button" class="reaction-button ' + (activeReaction === reaction ? 'active' : '') + '" data-message-id="' + escapeHtml(messageId) + '" data-speaker-id="' + escapeHtml(speakerToken) + '" data-reaction="' + escapeHtml(reaction) + '">' + escapeHtml(REACTION_LABELS[reaction]) + '</button>';
         }).join(''),
+        '</div>'
+      ].join('');
+      var expand = id === 'user' ? '' : [
+        '<div class="message-expand">',
+        '<button type="button" class="expand-button" data-message-id="' + escapeHtml(messageId) + '" data-speaker-id="' + escapeHtml(speakerToken) + '">',
+        expanded ? 'Shown' : 'Show more',
+        '</button>',
+        expanded ? '<ul class="expand-bullets">' + expanded.bullets.map(function (bullet) {
+          return '<li>' + escapeHtml(bullet) + '</li>';
+        }).join('') + '</ul>' : '',
         '</div>'
       ].join('');
       return [
@@ -964,6 +997,7 @@
         '<div class="message-role">' + escapeHtml(message.role || '') + '</div>',
         '</div>',
         '<p class="message-text">' + escapeHtml(message.text || '') + '</p>',
+        expand,
         reactions,
         '</article>'
       ].join('');
@@ -1288,10 +1322,49 @@
     }
   }
 
+  async function submitExpand(messageId, speakerId) {
+    var safeMessageId = compact(messageId || '', 96);
+    var safeSpeaker = safeSpeakerId(speakerId);
+    if (!safeMessageId || !safeSpeaker || state.busy) return;
+    if (state.expansions[safeMessageId]) return;
+    var message = state.messages.find(function (item, index) {
+      return messageIdFor(item, index) === safeMessageId;
+    });
+    if (!message || safeSpeakerId(message.speakerId) !== safeSpeaker) return;
+    try {
+      var payload = await apiJson('/api/studio/pulse-showcase/expand', {
+        method: 'POST',
+        body: JSON.stringify({
+          sessionId: state.sessionId,
+          mode: state.mode,
+          messageId: safeMessageId,
+          speakerId: safeSpeaker,
+          text: message.text || '',
+          roomState: {
+            roomMood: state.roomMood,
+            responseMode: state.responseMode,
+            priorSpeaker: state.priorSpeaker || '',
+            socialSignals: state.socialSignals
+          }
+        })
+      });
+      state.expansions[safeMessageId] = {
+        speakerId: safeSpeaker,
+        bullets: Array.isArray(payload.bullets) ? payload.bullets.map(function (bullet) { return compact(bullet, 170); }).filter(Boolean).slice(0, 5) : []
+      };
+      renderMessages();
+      persistState();
+      reportHeight();
+    } catch (err) {
+      reportError('expand-failed', 'Expansion did not land.');
+    }
+  }
+
   function resetSession() {
     state.sessionId = makeSessionId();
     state.messages = [];
     state.reactions = {};
+    state.expansions = {};
     state.ledger = [];
     state.presence = {};
     state.roomMood = 'focused';
@@ -1357,9 +1430,15 @@
     $('reset-session').addEventListener('click', resetSession);
     el.form.addEventListener('submit', submitTurn);
     el.feed.addEventListener('click', function (event) {
-      var button = event.target && event.target.closest ? event.target.closest('.reaction-button') : null;
-      if (!button) return;
-      submitReaction(button.dataset.messageId, button.dataset.reaction, button.dataset.speakerId);
+      var reactionButton = event.target && event.target.closest ? event.target.closest('.reaction-button') : null;
+      if (reactionButton) {
+        submitReaction(reactionButton.dataset.messageId, reactionButton.dataset.reaction, reactionButton.dataset.speakerId);
+        return;
+      }
+      var expandButton = event.target && event.target.closest ? event.target.closest('.expand-button') : null;
+      if (expandButton) {
+        submitExpand(expandButton.dataset.messageId, expandButton.dataset.speakerId);
+      }
     });
     el.userText.addEventListener('input', function () {
       el.charCount.textContent = (el.userText.value || '').length + '/' + MAX_USER_TEXT;
