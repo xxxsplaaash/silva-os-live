@@ -228,6 +228,20 @@ test('visible response quality rejects old preference recall answers that only c
   }
 });
 
+test('visible response quality rejects old preference recall answers that omit the active record', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ],
+    visibleText: 'Obsidian with one red accent.',
+    continuity: { active: 1, superseded: 1 }
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
+});
+
 test('visible response quality accepts specific preference recall from memory', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'What dashboard preference did I give the room?',

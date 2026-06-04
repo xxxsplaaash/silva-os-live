@@ -1183,6 +1183,27 @@ test('deterministic continuity fallback avoids repeated side-card copy across up
   assert.equal(issues.some(item => item.family === 'repetition'), false);
 });
 
+test('deterministic continuity claim update ignores the current user turn when finding prior evidence', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+    { speakerId: 'aisha', role: 'primary', text: 'landing page style is black glass with a single red pulse. Noted.' },
+    { speakerId: 'claudia', role: 'side', text: 'Good. If that changes, the old version stays visible instead of being quietly erased.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' }
+  ];
+  const output = socialFallbackFor('Actually my landing page style is white editorial with no red.', { recentTurns });
+  const text = fallbackVisibleText(output);
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Actually my landing page style is white editorial with no red.',
+    visibleText: text,
+    recentTurns
+  });
+
+  assert.match(text, /\bUpdated:\s*landing page style is white editorial with no red\b/i);
+  assert.match(text, /\bPrior record remains landing page style is black glass with a single red pulse\b/i);
+  assert.doesNotMatch(text, /\bold version stays visible instead of being quietly erased\b/i);
+  assert.equal(issues.some(item => item.family === 'repetition'), false);
+});
+
 test('deterministic continuity change fallback does not replay the previous ledger side note', () => {
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },

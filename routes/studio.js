@@ -1256,7 +1256,16 @@ function recordPulseShowcaseVisibleHistory(sessionId = '', userText = '', messag
   });
 }
 
-function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [] } = {}) {
+function showcaseContinuityQualityContext(continuityProof = {}) {
+  const source = continuityProof && typeof continuityProof === 'object' ? continuityProof : {};
+  return {
+    active: Number(source.activeTruths || 0) || 0,
+    superseded: Number(source.supersededTruths || 0) || 0,
+    disputed: Number(source.disputedTruths || 0) || 0
+  };
+}
+
+function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], continuity = {} } = {}) {
   return validateDirectorOutput({
     roomBeat: '',
     roomMood,
@@ -1273,7 +1282,7 @@ function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', mess
       visibleState: item.visibleState
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns });
+  }, { userMessage: userText, recentTurns, continuity });
 }
 
 function forceContinuityFallbackIfNeeded({
@@ -1285,7 +1294,8 @@ function forceContinuityFallbackIfNeeded({
   responseMode = '',
   roomMood = '',
   messageEvents = [],
-  silentReactions = []
+  silentReactions = [],
+  continuityProof = {}
 } = {}) {
   const continuityRecentTurns = dedupeShowcaseRecentTurns([...recentTurns, ...visibleRecentTurns]);
   const check = validateShowcaseVisiblePayload({
@@ -1294,7 +1304,8 @@ function forceContinuityFallbackIfNeeded({
     messageEvents,
     silentReactions,
     userText,
-    recentTurns: continuityRecentTurns
+    recentTurns: continuityRecentTurns,
+    continuity: showcaseContinuityQualityContext(continuityProof)
   });
   const continuityIssue = (check.issues || []).find(item =>
     /^product-continuity-(conflict|miss)/.test(String(item || ''))
@@ -1308,7 +1319,11 @@ function forceContinuityFallbackIfNeeded({
     roomState,
     memorySummary
   });
-  const fallbackCheck = validateDirectorOutput(fallbackOutput, { userMessage: userText, recentTurns: continuityRecentTurns });
+  const fallbackCheck = validateDirectorOutput(fallbackOutput, {
+    userMessage: userText,
+    recentTurns: continuityRecentTurns,
+    continuity: showcaseContinuityQualityContext(continuityProof)
+  });
   if (!fallbackCheck.ok) return null;
   return {
     output: fallbackCheck.output || fallbackOutput,
@@ -1661,6 +1676,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     || (payload.aishaConnected === true && fallbackCategory === 'quality-rejected');
   let qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
   const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
+  const continuityQuality = showcaseContinuityQualityContext(continuityProof);
   const publicQuality = validateDirectorOutput({
     roomBeat: payload.roomBeat || '',
     roomMood,
@@ -1677,7 +1693,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       visibleState: item.visibleState
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns: visibleRecentTurns });
+  }, { userMessage: userText, recentTurns: visibleRecentTurns, continuity: continuityQuality });
   if (!publicQuality.ok) {
     const fallbackOutput = socialFallbackFor(userText, {
       history: visibleRecentTurns,
@@ -1685,7 +1701,11 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       roomState,
       memorySummary
     });
-    const fallbackValidation = validateDirectorOutput(fallbackOutput, { userMessage: userText, recentTurns: visibleRecentTurns });
+    const fallbackValidation = validateDirectorOutput(fallbackOutput, {
+      userMessage: userText,
+      recentTurns: visibleRecentTurns,
+      continuity: continuityQuality
+    });
     const fallbackSafe = fallbackValidation.output || fallbackOutput || {};
     responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
     roomMood = safeShowcaseText(fallbackSafe.roomMood || roomMood, 40) || roomMood;
@@ -1715,7 +1735,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     responseMode,
     roomMood,
     messageEvents,
-    silentReactions
+    silentReactions,
+    continuityProof
   });
   if (forcedContinuityRepair) {
     const fallbackSafe = forcedContinuityRepair.output || {};

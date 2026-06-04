@@ -1787,6 +1787,108 @@ test('Studio Pulse showcase last-mile gate repairs old preference recall boilerp
   });
 });
 
+test('Studio Pulse showcase repairs thin accepted old preference recall using Pack 1 evidence', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'A.I.S.H.A recalls the prior record too thinly.',
+                roomMood: 'focused',
+                responseMode: 'single',
+                speakers: [
+                  { speakerId: 'aisha', role: 'primary', tone: 'precise continuity', text: 'Obsidian with one red accent.', visibleState: 'Anchoring' }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 6, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [
+                {
+                  id: 'active-dashboard-preference',
+                  text: 'dashboard preference is pale blue with no red accents',
+                  status: 'active',
+                  supersededPriorText: 'dashboard preference is obsidian with one red accent'
+                }
+              ],
+              supersededTruths: [
+                {
+                  id: 'prior-dashboard-preference',
+                  text: 'dashboard preference is obsidian with one red accent',
+                  status: 'superseded'
+                }
+              ],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-old-preference-thin-pack1-repair',
+            mode: 'continuity_breaker',
+            userText: 'What was my old dashboard preference?'
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.qualityAccepted, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.qualityFailureCategory, 'product-continuity-miss:ledger-answer');
+        assert.match(text, /\bOld record:\s*dashboard preference is obsidian with one red accent/i);
+        assert.match(text, /\bCurrent record:\s*dashboard preference is pale blue with no red accents/i);
+        assert.deepEqual(final.continuityLedger.map(item => item.status).sort(), ['active', 'superseded']);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|A\\.I\\.S\\.H\\.A recalls the prior record too thinly/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase last-mile gate repairs reversed prior/current denial answers', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
