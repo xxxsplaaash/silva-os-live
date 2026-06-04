@@ -1963,6 +1963,26 @@ test('social director quality validator rejects fake design implementation promi
   assert.ok(implementationAlignment.issues.includes('operational-jargon'));
   assert.ok(implementationAlignment.issues.includes('product-self-theater:meta-language'));
 
+  const staleSupersededPreference = validateDirectorOutput({
+    roomBeat: 'The room accepts stale memory as the current preference.',
+    roomMood: 'focused',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'aisha', role: 'primary', tone: 'flat', text: 'The note states obsidian with one red accent. We will proceed with that.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'Actually my dashboard preference is pale blue with no red accents.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Obsidian with one red accent. Noted.' }
+    ]
+  });
+
+  assert.equal(staleSupersededPreference.ok, false);
+  assert.ok(staleSupersededPreference.issues.includes('product-continuity-conflict:superseded-current-turn'));
+
   const parameters = validateDirectorOutput({
     roomBeat: 'The room pretends the dashboard has been changed.',
     roomMood: 'focused',

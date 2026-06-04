@@ -170,3 +170,16 @@ test('visible response quality rejects continuity answers that ask what changed 
 
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
+
+test('visible response quality rejects accepted answers that defend a superseded preference', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'Actually my dashboard preference is pale blue with no red accents.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Obsidian with one red accent. Noted.' }
+    ],
+    visibleText: 'The note states obsidian with one red accent. We will proceed with that.'
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-conflict:superseded-current-turn'));
+});
