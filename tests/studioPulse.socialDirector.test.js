@@ -2232,6 +2232,22 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(fakeSoundingStress.ok, false);
   assert.ok(fakeSoundingStress.issues.includes('frustration-ignored'));
 
+  const liveSignalStress = validateDirectorOutput({
+    roomBeat: 'The room turns stress into signal analysis.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'soft', text: "It's understandable to feel that way when the goal is clarity, not just noise. Let's keep the signal clean." },
+      { speakerId: 'grok', role: 'side', tone: 'flat', text: 'The feeling is a symptom of the ask. The room needs a position, not a process explanation.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(liveSignalStress.ok, false);
+  assert.ok(liveSignalStress.issues.includes('frustration-ignored'));
+  assert.ok(liveSignalStress.issues.includes('product-frustration-miss:stress-recovery'));
+
   const liveSelfCritiqueLoop = validateDirectorOutput({
     roomBeat: 'The room performs usefulness instead of helping.',
     roomMood: 'focused',

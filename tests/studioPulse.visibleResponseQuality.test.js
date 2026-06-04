@@ -745,6 +745,16 @@ test('visible response quality rejects stress answers that dodge into tension an
   });
 
   assert.ok(issueKeys(issues).includes('frustration-miss:stress-recovery'));
+
+  const signalIssues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: [
+      "It's understandable to feel that way when the goal is clarity, not just noise. Let's keep the signal clean.",
+      'The feeling is a symptom of the ask. The room needs a position, not a process explanation.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(signalIssues).includes('frustration-miss:stress-recovery'));
 });
 
 test('visible response quality rejects stress answers that hide behind objective slogans', () => {
