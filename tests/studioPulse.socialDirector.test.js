@@ -672,6 +672,28 @@ test('showcase impulse planner treats referenced practical cards as cap-enforced
   assert.deepEqual(vanyaReference.impulsePlan.speakerOrder, ['vanya', 'claudia']);
 });
 
+test('showcase impulse planner keeps casual everyone check-ins out of all-five pile-ons', () => {
+  const checkin = buildRoomDirectorInput({
+    message: 'how is everyone in the room today?',
+    roomState: { roomMood: 'warm' }
+  });
+
+  assert.equal(checkin.impulsePlan.topicClass, 'banter');
+  assert.equal(checkin.impulsePlan.category, 'normal');
+  assert.equal(checkin.impulsePlan.maxSpeakers, 3);
+  assert.ok(checkin.impulsePlan.speakerOrder.length <= 3);
+  assert.notDeepEqual(checkin.impulsePlan.speakerOrder, ['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+
+  const explicit = buildRoomDirectorInput({
+    message: 'everyone come online',
+    roomState: { roomMood: 'warm' }
+  });
+
+  assert.equal(explicit.impulsePlan.topicClass, 'everyone');
+  assert.equal(explicit.impulsePlan.category, 'everyone');
+  assert.deepEqual(explicit.impulsePlan.speakerOrder, ['aisha', 'vanya', 'leah', 'claudia', 'grok']);
+});
+
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
   const input = buildRoomDirectorInput({
     message: 'I need a sharper logo direction',
