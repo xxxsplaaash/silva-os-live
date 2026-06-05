@@ -819,6 +819,16 @@ test('visible response quality rejects stress answers that dodge into tension an
   });
 
   assert.ok(issueKeys(thinRecoveryIssues).includes('frustration-miss:stress-recovery'));
+
+  const liveRoomTheatreIssues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: [
+      'Fair. No more room-theatre: do one small useful thing for ten minutes, then stop and check the result.',
+      'Today that means one block, one visible output, no essay about the process.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(liveRoomTheatreIssues).includes('self-theater:meta-language'));
 });
 
 test('visible response quality rejects stress answers that hide behind objective slogans', () => {
