@@ -1516,7 +1516,7 @@ function showcaseContinuityLabelIssue({
   return '';
 }
 
-function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], continuity = {}, impulsePlan = null } = {}) {
+function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', messageEvents = [], silentReactions = [], stateUpdates = {}, userText = '', recentTurns = [], references = [], continuity = {}, impulsePlan = null } = {}) {
   return validateDirectorOutput({
     roomBeat: '',
     roomMood,
@@ -1534,7 +1534,7 @@ function validateShowcaseVisiblePayload({ roomMood = '', responseMode = '', mess
       reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns, continuity, impulsePlan });
+  }, { userMessage: userText, recentTurns, references, continuity, impulsePlan });
 }
 
 function forceContinuityFallbackIfNeeded({
@@ -2298,7 +2298,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       reason: item.reason
     })),
     stateUpdates: { notes: Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [] }
-  }, { userMessage: userText, recentTurns: continuityRecentTurns, continuity: continuityQuality, impulsePlan: showcaseImpulsePlan });
+  }, { userMessage: userText, recentTurns: continuityRecentTurns, references, continuity: continuityQuality, impulsePlan: showcaseImpulsePlan });
   const continuityLabelIssue = showcaseContinuityLabelIssue({
     userText,
     messageEvents,
@@ -2317,6 +2317,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     const fallbackValidation = validateDirectorOutput(fallbackOutput, {
       userMessage: userText,
       recentTurns: continuityRecentTurns,
+      references,
       continuity: continuityQuality,
       impulsePlan: showcaseImpulsePlan
     });

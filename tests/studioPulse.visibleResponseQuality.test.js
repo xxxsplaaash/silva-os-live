@@ -41,6 +41,44 @@ test('blind attribution rejects valid-sounding lines that could belong to anyone
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
 });
 
+test('blind attribution rejects short generic filler that only works with a visible speaker label', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'vanya', text: 'Fair enough.' },
+    { speakerId: 'claudia', text: 'Good point.' },
+    { speakerId: 'grok', text: 'Makes sense.' },
+    { speakerId: 'leah', text: 'Okay.' }
+  ]);
+
+  assert.equal(attribution.ok, false);
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+});
+
+test('blind attribution rejects single weak voice-token filler as label-dependent', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'vanya', text: 'Fair enough.' },
+    { speakerId: 'vanya', text: 'Room breathes.' }
+  ]);
+
+  assert.equal(attribution.ok, false);
+  assert.equal(attribution.results[0].identifiable, false);
+  assert.equal(attribution.results[1].identifiable, false);
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+});
+
+test('blind attribution keeps public fallback movie, food, and design lines speaker-identifiable', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'grok', text: 'Protein helps later. Right now the question is whether the food lets you move without feeling heavy.' },
+    { speakerId: 'vanya', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
+    { speakerId: 'leah', text: 'One strong world, not wallpaper. Pick the one that matches the room temperature.' },
+    { speakerId: 'grok', text: 'Three clean options means the premise is solved. Arguing longer is just random taste noise.' },
+    { speakerId: 'claudia', text: 'Direction: make the hero quiet, the CTA obvious, and the red accent do one job. If it appears everywhere, it stops meaning anything.' },
+    { speakerId: 'vanya', text: 'That keeps it premium instead of generic SaaS. The room should feel intentional before it feels busy.' }
+  ]);
+
+  assert.equal(attribution.ok, true);
+  assert.deepEqual(attribution.results.map(item => item.speakerId), ['grok', 'vanya', 'leah', 'grok', 'claudia', 'vanya']);
+});
+
 test('blind attribution rejects confident borrowed-voice lines without using labels as evidence', () => {
   const attribution = evaluateBlindAttributionLines([
     { speakerId: 'vanya', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },

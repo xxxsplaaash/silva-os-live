@@ -97,6 +97,7 @@ function runNodeScript(args = {}, env = {}) {
 function visibleText(body = {}) {
   return [
     body.roomBeat,
+    ...(Array.isArray(body.speakers) ? body.speakers.map(item => item.text) : []),
     ...(Array.isArray(body.messageEvents) ? body.messageEvents.map(item => item.text) : []),
     ...(Array.isArray(body.silentReactions) ? body.silentReactions.map(item => item.visibleState) : [])
   ].join('\n');
@@ -438,6 +439,21 @@ test('social director fallback uses referenced fitness card for short-session fo
   assert.match(text, /\b(Twenty minutes|three rounds|squat|hinge|push|pull|core|forty seconds|twenty off)\b/i);
   assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
   assertCleanVisible(body);
+});
+
+test('social director fallback uses recent fitness cards for short-session follow-up when reference object is thin', () => {
+  const fallback = socialFallbackFor('turn that into a 20 minute version', {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+    ]
+  });
+  const text = visibleText(fallback);
+
+  assert.match(text, /\b(Twenty minutes|three rounds|squat|hinge|push|pull|core|forty seconds|twenty off)\b/i);
+  assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
+  assertCleanVisible(fallback);
 });
 
 test('showcase impulse planner enforces caps and selected speakers before generation', async () => {
@@ -792,13 +808,24 @@ test('showcase impulse planner classifies contradiction, banter, creative, and r
       category: 'practical',
       topicClass: 'reference-follow-up',
       speakerOrder: ['leah', 'grok']
+    },
+    {
+      prompt: 'turn that into a 20 minute version',
+      recentTurns: [
+        { speakerId: 'claudia', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' },
+        { speakerId: 'vanya', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' }
+      ],
+      category: 'practical',
+      topicClass: 'practical',
+      speakerOrder: ['claudia', 'vanya']
     }
   ];
 
   for (const fixture of fixtures) {
     const input = buildRoomDirectorInput({
       question: fixture.prompt,
-      references: fixture.references || []
+      references: fixture.references || [],
+      recentTurns: fixture.recentTurns || []
     });
     assert.equal(input.impulsePlan.category, fixture.category, fixture.prompt);
     assert.equal(input.impulsePlan.topicClass, fixture.topicClass, fixture.prompt);
@@ -1598,6 +1625,19 @@ test('social director quality validator rejects stale fitness answer after movie
   assert.ok(validation.issues.includes('stale-topic-answer:fitness'));
 });
 
+test('social director movie fallback chooses titles without punting mood selection back to the user', () => {
+  const output = socialFallbackFor('new topic: what movie should we watch tonight?', { recentTurns: [] });
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'new topic: what movie should we watch tonight?',
+    recentTurns: []
+  });
+  const text = fallbackVisibleText(output);
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.match(text, /\b(Arrival|Spider-Verse|The Menu)\b/);
+  assert.doesNotMatch(text, /\b(pick the mood first|what kind of movie|tell me what mood)\b/i);
+});
+
 test('social director quality validator rejects parameter-soup and dodged quality checks', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'Grok hides behind structure.',
@@ -1877,6 +1917,72 @@ test('social director quality validator rejects valid but unattributable charact
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
   assert.ok(validation.issues.includes('voice-lock:blind-attribution:claudia'));
+});
+
+test('social director quality validator rejects short generic filler that depends on speaker labels', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room answers with label-dependent filler.',
+    roomMood: 'soft',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Sounds good.' },
+      { speakerId: 'claudia', role: 'side', tone: 'direct', text: 'Good point.' },
+      { speakerId: 'grok', role: 'closer', tone: 'dry', text: 'Makes sense.' }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until the first move exists' }
+    ],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need help choosing a direction.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:claudia'));
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:grok'));
+});
+
+test('social director quality validator rejects weak single-marker filler as label-dependent', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room answers with a weak label-dependent agreement.',
+    roomMood: 'soft',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Room breathes.' }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until the first move exists' },
+      { speakerId: 'claudia', visibleState: 'Tracking', reason: 'waiting for a practical request before structuring the next move' },
+      { speakerId: 'grok', visibleState: 'Checking premise', reason: 'watching for a fake consensus line before interrupting' }
+    ],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I need help choosing a direction.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
+});
+
+test('social director quality validator rejects direct speaker-name cueing inside visible dialogue', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room lets the visible text lean on a script cue.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Grok, your premise is decorative failure wearing a clipboard.' },
+      { speakerId: 'grok', role: 'side', tone: 'dry', text: 'Leah, the premise still fails because performance is doing the job of proof.' }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'vanya', visibleState: 'Reading', reason: 'letting the challenge land before changing the room temperature' },
+      { speakerId: 'claudia', visibleState: 'Tracking', reason: 'waiting for a practical owner before structuring the next move' }
+    ],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'be honest, was that useful or fake?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:leah'));
+  assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:grok'));
 });
 
 test('social director quality validator rejects lines borrowed from another character voice', () => {
@@ -4456,7 +4562,7 @@ test('social director normalizes bounded social cues and ignores invalid speaker
     roomMood: 'sharp',
     responseMode: 'small_exchange',
     speakers: [
-      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'That idea is hiding behind politeness.' },
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'That idea is bland consensus hiding behind politeness.' },
       { speakerId: 'aisha', role: 'side', tone: 'precise', text: 'The prior claim is still on record.' }
     ],
     silentReactions: [{ speakerId: 'grok', visibleState: 'Tracking', reason: 'letting Leah and A.I.S.H.A hold the challenge' }],
