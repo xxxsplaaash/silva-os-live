@@ -1211,7 +1211,7 @@ test('social director fallback keeps start-here recovery lines character-attribu
         { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes of training, small enough to finish and real enough that you feel it tomorrow.' },
         { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' },
         { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
-        { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, new shape: stop asking for permission and run the clock. Two minutes warm, sixteen minutes work, two minutes notes.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity gets twenty minutes. Stop negotiating with the clock; make the training small enough to finish.' },
         { speakerId: 'claudia', role: 'side', text: 'Four moves: chair squat, incline push-up, backpack row, dead bug. Thirty seconds each, four rounds if the timer allows.' }
       ];
       const { body } = await postSocial(baseUrl, 'WHERE DO I START', { recentTurns });
@@ -1304,6 +1304,7 @@ test('social director fallback changes short-session shape after referenced 20-m
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
+  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
   assert.match(text, /\btwo minutes warm\b/i);
   assert.match(text, /\bchair squat\b/i);
   assert.doesNotMatch(text, /\bTwenty minutes is enough if you stop negotiating\b/i);
@@ -1322,7 +1323,7 @@ test('social director fallback changes short-session shape after generated focus
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\btwo minutes warm\b/i);
+  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
   assert.match(text, /\bchair squat\b/i);
   assert.doesNotMatch(text, /\bfocused session\b/i);
   assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);

@@ -91,12 +91,15 @@ test('blind attribution rejects confident borrowed-voice lines without using lab
 
 test('blind attribution rejects live short-session Vanya line that ties with Claudia', () => {
   const attribution = evaluateBlindAttributionLines([
-    { speakerId: 'vanya', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' }
+    { speakerId: 'vanya', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
+    { speakerId: 'vanya', text: 'Same twenty minutes, new shape: stop asking for permission and run the clock. Two minutes warm, sixteen minutes work, two minutes notes.' }
   ]);
 
   assert.equal(attribution.ok, false);
   assert.equal(attribution.results[0].identifiable, false);
+  assert.notEqual(attribution.results[1].speakerId, 'vanya');
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:wrong-attribution'));
 });
 
 test('visible response quality rejects fake build-reflection language on style turns', () => {
