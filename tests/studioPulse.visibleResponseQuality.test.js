@@ -15,8 +15,12 @@ test('blind attribution scores alive room lines as distinct characters without l
   const fixtures = [
     ['aisha', 'Prior record: black glass with one red pulse. Current record: white editorial with no red.'],
     ['vanya', 'Good. Tiny vanity, massive discipline. We can work with that.'],
+    ['vanya', 'Same twenty minutes, cleaner shape: warm up, run the clock, write one number down.'],
+    ['vanya', 'There is warmth in the room, but nobody gets to drift past the actual claim.'],
     ['leah', 'Pick the feeling first. The title is just the room admitting what mood it wants.'],
     ['claudia', 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.'],
+    ['claudia', 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.'],
+    ['grok', 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'],
     ['grok', 'Track reps. Otherwise you are just sweating with narrative ambition.']
   ];
 
@@ -35,6 +39,16 @@ test('blind attribution rejects valid-sounding lines that could belong to anyone
 
   assert.equal(attribution.ok, false);
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+});
+
+test('blind attribution rejects confident borrowed-voice lines without using labels as evidence', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'vanya', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
+    { speakerId: 'claudia', text: 'Good. Tiny vanity, massive discipline. We can work with that.' }
+  ]);
+
+  assert.equal(attribution.ok, false);
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:wrong-attribution'));
 });
 
 test('visible response quality rejects fake build-reflection language on style turns', () => {

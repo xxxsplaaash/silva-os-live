@@ -1478,7 +1478,7 @@ test('Studio Pulse showcase social cues cannot create continuity ledger rows', a
                 roomMood: 'playful',
                 responseMode: 'small_exchange',
                 speakers: [
-                  { speakerId: 'leah', role: 'primary', tone: 'dry', text: 'That is a redirect, not a receipt.' }
+                  { speakerId: 'leah', role: 'primary', tone: 'dry', text: 'Taste call: redirect, not truth. Bland consensus wants a cute pivot to look stylish.' }
                 ],
                 silentReactions: [
                   { speakerId: 'vanya', visibleState: 'Cooling', reason: 'cooling the room without adding a fact' }

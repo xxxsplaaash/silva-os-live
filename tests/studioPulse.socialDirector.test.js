@@ -766,6 +766,47 @@ test('showcase impulse planner routes design-brief scenarios with bounded speake
   }
 });
 
+test('showcase impulse planner classifies contradiction, banter, creative, and referenced follow-up turns', () => {
+  const fixtures = [
+    {
+      prompt: 'That contradicts what I said earlier about no red accents.',
+      category: 'practical',
+      topicClass: 'contradiction',
+      speakerOrder: ['aisha', 'grok']
+    },
+    {
+      prompt: 'lol this room is being dramatic again',
+      category: 'normal',
+      topicClass: 'banter',
+      speakerOrder: ['vanya', 'leah']
+    },
+    {
+      prompt: 'Write three caption options for this launch image.',
+      category: 'practical',
+      topicClass: 'creative',
+      speakerOrder: ['leah', 'grok']
+    },
+    {
+      prompt: 'make this sharper',
+      references: [{ speakerId: 'leah', text: 'Make the mark feel like a warning light, not a wellness badge.' }],
+      category: 'practical',
+      topicClass: 'reference-follow-up',
+      speakerOrder: ['leah', 'grok']
+    }
+  ];
+
+  for (const fixture of fixtures) {
+    const input = buildRoomDirectorInput({
+      question: fixture.prompt,
+      references: fixture.references || []
+    });
+    assert.equal(input.impulsePlan.category, fixture.category, fixture.prompt);
+    assert.equal(input.impulsePlan.topicClass, fixture.topicClass, fixture.prompt);
+    assert.deepEqual(input.impulsePlan.speakerOrder, fixture.speakerOrder, fixture.prompt);
+    assert.equal(input.impulsePlan.enforceSelectedSpeakers, fixture.category === 'practical', fixture.prompt);
+  }
+});
+
 test('showcase impulse planner decays reaction pressure and uses it as a bounded nudge', () => {
   const input = buildRoomDirectorInput({
     question: 'open floor: what is the room seeing here?',
@@ -1832,6 +1873,28 @@ test('social director quality validator rejects valid but unattributable charact
     ],
     stateUpdates: { notes: [] }
   }, { userMessage: 'I need help choosing a direction.' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
+  assert.ok(validation.issues.includes('voice-lock:blind-attribution:claudia'));
+});
+
+test('social director quality validator rejects lines borrowed from another character voice', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room swaps voice contracts while keeping plausible dialogue.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
+      { speakerId: 'claudia', role: 'side', tone: 'direct', text: 'Tiny vanity, massive discipline; we can work with that without turning the room into a task badge.' }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until the first move exists' },
+      { speakerId: 'grok', visibleState: 'Tracking failure', reason: 'watching for a premise fault before interrupting' }
+    ],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I wanna grow my muscles.' });
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
