@@ -1184,7 +1184,7 @@ test('social director fallback treats exercise artifacts as fitness context afte
         { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
         { speakerId: 'grok', role: 'closer', text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed; stupidity is optional.' },
         { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
-        { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: warm up, run the clock, leave while the body still trusts it.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
         { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' },
         { speakerId: 'grok', role: 'closer', text: 'The constraint is useful. It forces a session you can actually finish.' }
       ];
@@ -1208,7 +1208,7 @@ test('social director fallback keeps start-here recovery lines character-attribu
         { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
         { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
         { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
-        { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: warm up, run the clock, leave while the body still trusts it.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
         { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' },
         { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
         { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, new shape: stop asking for permission and run the clock. Two minutes warm, sixteen minutes work, two minutes notes.' },
@@ -1296,7 +1296,7 @@ test('social director fallback changes short-session shape after referenced 20-m
   const body = {
     recentTurns: [
       { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
-      { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: warm up, run the clock, leave while the body still trusts it.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
       { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off. Log one number so next week has a target.' }
     ]
   };

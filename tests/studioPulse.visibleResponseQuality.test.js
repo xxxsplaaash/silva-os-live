@@ -501,11 +501,11 @@ test('visible response quality rejects repeated short-session answer lines', () 
   const issues = evaluateVisibleResponse({
     userMessage: 'ok but I only have 20 minutes',
     recentTurns: [
-      { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: warm up, run the clock, leave while the body still trusts it.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
       { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' }
     ],
     visibleText: [
-      'Same twenty minutes, cleaner shape: warm up, run the clock, leave while the body still trusts it.',
+      'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.',
       'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.'
     ].join('\n')
   });
