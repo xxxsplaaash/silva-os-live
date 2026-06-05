@@ -1973,7 +1973,6 @@ function publicPulseShowcaseStatus(status = publicAishaRuntimeStatus({})) {
       engine: connected ? 'aisha-runtime-pack1' : 'local-room-intelligence'
     },
     persistence: {
-      mode: String(status.aishaPersistenceMode || defaultAishaPersistenceMode()).trim().toLowerCase() === 'postgres' ? 'postgres' : 'memory',
       connected: persistenceConnected,
       active: persistenceConnected && continuity.active === true
     },
@@ -2053,7 +2052,6 @@ function publicPulseShowcaseFinalStatus(payload = {}) {
       engine: connected ? 'aisha-runtime-pack1' : 'local-room-intelligence'
     },
     persistence: {
-      mode: defaultAishaPersistenceMode(),
       connected: payload.diagnostics?.persistenceConnected === true,
       active: payload.diagnostics?.persistenceConnected === true && continuity.active === true
     },

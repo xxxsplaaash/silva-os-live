@@ -37,7 +37,6 @@ function safeShowcaseStatus(status = {}) {
     activeEngine: String(status.activeEngine || ''),
     aishaEngineConnected: status.aishaEngineConnected === true,
     aishaEngineMode: String(status.aishaEngineMode || ''),
-    persistenceMode: String(status.persistence?.mode || ''),
     persistenceConnected: status.persistence?.connected === true
   };
 }
@@ -126,7 +125,7 @@ if (runtime.activeEngine !== 'aisha-runtime-pack1' || runtime.aishaEngineConnect
   console.error('Pack 1 runtime is not connected.');
   process.exit(1);
 }
-if (showcase.persistenceMode !== 'postgres' || showcase.persistenceConnected !== true) {
-  console.error('Pack 1 Postgres persistence is not connected.');
+if (showcase.persistenceConnected !== true) {
+  console.error('Pack 1 persistence is not connected.');
   process.exit(1);
 }

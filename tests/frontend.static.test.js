@@ -1709,6 +1709,8 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /PULSE_STATUS/);
   assert.match(script, /PULSE_TURN_STATE/);
   assert.match(script, /PULSE_ERROR/);
+  assert.doesNotMatch(script, /persistenceMode/);
+  assert.doesNotMatch(script, /status\.persistence\.mode/);
   assert.match(script, /PULSE_SET_MODE/);
   assert.match(script, /PULSE_RESET/);
   assert.match(script, /trustedParentOrigin/);

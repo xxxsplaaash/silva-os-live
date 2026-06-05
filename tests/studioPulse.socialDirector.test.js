@@ -5095,7 +5095,7 @@ test('provider readiness proof script reports safe credential signals only', asy
       activeEngine: 'aisha-runtime-pack1',
       aishaEngineConnected: true,
       aishaEngineMode: 'production',
-      persistence: { mode: 'postgres', connected: true, active: false }
+      persistence: { connected: true, active: false }
     });
   });
   const server = http.createServer(app);
@@ -5336,7 +5336,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       activeEngine: 'aisha-runtime-pack1',
       aishaEngineConnected: true,
       aishaEngineMode: 'production',
-      persistence: { mode: 'postgres', connected: true, active: true },
+      persistence: { connected: true, active: true },
       modes: ['social_hierarchy_lab', 'continuity_breaker'],
       maxUserTextLength: 1500
     },

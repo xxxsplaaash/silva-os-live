@@ -137,7 +137,6 @@ assert_live_persistence_status() {
     const engineMode = status.engineMode || status.aishaEngineMode;
     if (status.activeEngine !== "aisha-runtime-pack1") failures.push(`activeEngine=${status.activeEngine}`);
     if (engineMode !== "production") failures.push(`engineMode=${engineMode}`);
-    if (showcase.persistence?.mode !== "postgres") failures.push(`persistence.mode=${showcase.persistence?.mode}`);
     if (showcase.persistence?.connected !== true) failures.push(`persistence.connected=${showcase.persistence?.connected}`);
     if (failures.length) {
       console.error(`A.I.S.H.A Postgres status proof failed: ${failures.join(", ")}`);

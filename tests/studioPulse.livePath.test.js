@@ -762,11 +762,11 @@ test('Studio Pulse showcase status reports public Pack 1 and persistence shape',
         assert.equal(status.activeEngine, 'aisha-runtime-pack1');
         assert.equal(status.aishaEngineConnected, true);
         assert.equal(status.aishaEngineMode, 'production');
-        assert.deepEqual(status.persistence, { mode: 'postgres', connected: true, active: false });
+        assert.deepEqual(status.persistence, { connected: true, active: false });
         assert.deepEqual(status.modeLabels, { social_hierarchy_lab: 'Room', continuity_breaker: 'Continuity' });
         assert.equal(status.runtime.connected, true);
         assert.equal(status.continuity.active, false);
-        assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza/);
+        assert.doesNotMatch(JSON.stringify(status), /test-room-provider-key|AIza|postgres|in-memory/);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

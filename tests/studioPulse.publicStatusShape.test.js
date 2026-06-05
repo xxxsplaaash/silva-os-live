@@ -59,3 +59,24 @@ test('public A.I.S.H.A status reports local fallback without exposing backend de
   assert.equal(typeof status.updatedAt, 'string');
   assert.doesNotMatch(JSON.stringify(status), /runtimeCredential|aishaPersistence|in-memory|trace|missing-credentials/i);
 });
+
+test('public showcase status strips persistence backend mode while keeping connection signal', () => {
+  const status = studioRouter.__test.publicPulseShowcaseStatus({
+    aishaEngineConnected: true,
+    aishaEngineMode: 'production',
+    aishaPersistenceMode: 'postgres',
+    aishaPersistenceBackend: 'postgres',
+    aishaPersistenceConnected: true,
+    aishaPersistenceFailureReason: 'postgres password rejected',
+    aishaTraceStatus: 'accepted',
+    runtimeCredentialSource: 'Mock Gemini'
+  });
+
+  assert.equal(status.ok, true);
+  assert.equal(status.activeEngine, 'aisha-runtime-pack1');
+  assert.equal(status.aishaEngineConnected, true);
+  assert.deepEqual(status.persistence, { connected: true, active: false });
+  assert.equal(Object.prototype.hasOwnProperty.call(status.persistence, 'mode'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(status.persistence, 'backend'), false);
+  assert.doesNotMatch(JSON.stringify(status), /postgres|in-memory|unavailable|password|runtimeCredential|Mock Gemini|trace/i);
+});

@@ -170,7 +170,7 @@ function createServer(state) {
         activeEngine: 'aisha-runtime-pack1',
         aishaEngineConnected: true,
         aishaEngineMode: 'production',
-        persistence: { mode: 'postgres', connected: true },
+        persistence: { connected: true },
         modes: ['social_hierarchy_lab', 'continuity_breaker'],
         maxUserTextLength: 1500
       });

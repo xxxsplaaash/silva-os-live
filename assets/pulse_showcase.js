@@ -659,13 +659,6 @@
     return false;
   }
 
-  function persistenceMode(source) {
-    var data = source || {};
-    if (data.persistence && data.persistence.mode) return compact(data.persistence.mode, 32);
-    if (data.aishaPersistenceMode) return compact(data.aishaPersistenceMode, 32);
-    return isPersistenceConnected(data) ? 'postgres' : 'unknown';
-  }
-
   function mergeGlobalStatusFromTurn(data) {
     var source = data && typeof data === 'object' ? data : {};
     var prior = state.status && typeof state.status === 'object' ? state.status : {};
@@ -683,7 +676,6 @@
       activeEngine: nextEngine || priorEngine || (runtimeConnected ? 'aisha-runtime-pack1' : 'local-room-intelligence'),
       aishaEngineConnected: runtimeConnected,
       persistence: {
-        mode: (prior.persistence && prior.persistence.mode) || (source.persistence && source.persistence.mode) || persistenceMode(source) || 'postgres',
         connected: persistenceConnected,
         active: Boolean((source.persistence && source.persistence.active) || (prior.persistence && prior.persistence.active))
       },
@@ -729,7 +721,6 @@
       activeEngine: compact(status.activeEngine || 'checking', 80),
       aishaEngineConnected: status.aishaEngineConnected === true,
       persistenceConnected: isPersistenceConnected(status),
-      persistenceMode: persistenceMode(status),
       continuityActive: status.continuity && status.continuity.active === true,
       continuityRows: status.continuity ? Number(status.continuity.pack1Rows || 0) || 0 : 0,
       statusKnown: status.ok === true
@@ -801,7 +792,7 @@
     el.engineValue.textContent = friendlyEngineName(status.activeEngine);
     var persistenceState = status.persistence && status.persistence.connected ? 'Persistence connected' : 'pending';
     el.persistenceValue.textContent = status.persistence
-      ? (status.persistence.mode + (persistenceState === 'Persistence connected' ? (status.persistence.active ? ' active' : ' connected') : ' pending'))
+      ? (persistenceState === 'Persistence connected' ? (status.persistence.active ? 'Memory active' : 'Memory connected') : 'Memory pending')
       : '--';
     var turn = state.turnRuntime || defaultTurnRuntime();
     var turnConnected = connected || turn.runtimeConnected === true;
@@ -1127,7 +1118,7 @@
       state.status = {
         activeEngine: 'local-room-intelligence',
         aishaEngineConnected: false,
-        persistence: { mode: 'memory', connected: false }
+        persistence: { connected: false }
       };
       renderStatus();
       reportStatus();

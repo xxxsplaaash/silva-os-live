@@ -27,7 +27,7 @@ Studio Pulse posts only safe operational state. It never posts user text, prompt
 |---|---|---|
 | `PULSE_READY` | iframe to Wix | `height`, `mode`, `statusKnown`, `embed` |
 | `PULSE_HEIGHT` | iframe to Wix | `height`, `mode`, `embed` |
-| `PULSE_STATUS` | iframe to Wix | `activeEngine`, `aishaEngineConnected`, `persistenceConnected`, `persistenceMode` |
+| `PULSE_STATUS` | iframe to Wix | `activeEngine`, `aishaEngineConnected`, `persistenceConnected` |
 | `PULSE_TURN_STATE` | iframe to Wix | `runtimePhase`, `acceptedByPack1`, `fallbackCategory`, `activeEngine`, `persistenceConnected`, `roomMood`, `responseMode`, `tension`, `continuityPressure`, `roomMove` |
 | `PULSE_ERROR` | iframe to Wix | safe `category`, safe display `message` |
 
