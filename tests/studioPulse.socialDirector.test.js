@@ -1993,10 +1993,10 @@ test('social director quality validator rejects self-label cues inside otherwise
     roomMood: 'sharp',
     responseMode: 'small_exchange',
     speakers: [
-      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'Grok: the premise is fake; track proof, not theatre.' }
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'Grok: the premise is fake; track proof, not theatre.' },
+      { speakerId: 'aisha', role: 'side', tone: 'exact', text: 'A.I.S.H.A: current record first, prior record second.' }
     ],
     silentReactions: [
-      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
       { speakerId: 'vanya', visibleState: 'Reading', reason: 'letting the challenge land before changing the room temperature' },
       { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until it has a useful edge' },
       { speakerId: 'claudia', visibleState: 'Tracking', reason: 'waiting for a practical owner before structuring the next move' }
@@ -2006,6 +2006,7 @@ test('social director quality validator rejects self-label cues inside otherwise
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:grok'));
+  assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:aisha'));
 });
 
 test('social director quality validator rejects lines borrowed from another character voice', () => {
