@@ -248,6 +248,20 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function transientFetchErrorLabel(error) {
+  const cause = error?.cause || {};
+  const code = String(cause.code || error?.code || '').trim();
+  const name = String(error?.name || '').trim();
+  const message = String(error?.message || '').trim();
+  const combined = `${name} ${code} ${message}`.trim();
+  if (name === 'AbortError' || /timed out|timeout/i.test(message)) return combined || 'timeout';
+  if (/\b(ENOTFOUND|EAI_AGAIN|ECONNRESET|ECONNREFUSED|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET)\b/i.test(combined)) {
+    return combined;
+  }
+  if (/fetch failed/i.test(message) && code) return combined;
+  return '';
+}
+
 function sseTextFor(events = []) {
   return events
     .map(item => `event: ${item.event}\ndata: ${JSON.stringify(item.data)}\n\n`)
@@ -377,6 +391,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   for (let attempt = 1; attempt <= GAUNTLET_RETRY_LIMIT; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new Error(`turn timed out after ${TURN_TIMEOUT_MS}ms`)), TURN_TIMEOUT_MS);
+    let transportError = null;
     try {
       response = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
         method: 'POST',
@@ -385,9 +400,19 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
         signal: controller.signal
       });
       text = await response.text();
+    } catch (error) {
+      transportError = error;
     } finally {
       clearTimeout(timeout);
     }
+    const transientLabel = transportError ? transientFetchErrorLabel(transportError) : '';
+    if (transientLabel) {
+      if (attempt >= GAUNTLET_RETRY_LIMIT) throw transportError;
+      console.error(`turn transport failed (${transientLabel}); waiting ${GAUNTLET_RETRY_DELAY_MS}ms before retry ${attempt + 1}/${GAUNTLET_RETRY_LIMIT}`);
+      await sleep(GAUNTLET_RETRY_DELAY_MS);
+      continue;
+    }
+    if (transportError) throw transportError;
     if (![409, 429, 503].includes(response.status) || attempt >= GAUNTLET_RETRY_LIMIT) break;
     assertOk(!LEAK_RX.test(text), 'guard response leaked prompt/runtime internals or secret-like material');
     console.error(`guard returned HTTP ${response.status}; waiting ${GAUNTLET_RETRY_DELAY_MS}ms before retry ${attempt + 1}/${GAUNTLET_RETRY_LIMIT}`);

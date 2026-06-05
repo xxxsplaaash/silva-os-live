@@ -1600,6 +1600,54 @@ test('public shell does not contain secret literals from the environment', () =>
   }
 });
 
+test('public operational endpoints are shaped by allowlist without internal readiness leaks', () => {
+  const server = fs.readFileSync(SERVER, 'utf8');
+  const studio = fs.readFileSync(STUDIO_ROUTE, 'utf8');
+
+  const healthStart = server.indexOf("app.get('/health'");
+  const healthEnd = server.indexOf("app.use('/api/prompts'", healthStart);
+  assert.ok(healthStart >= 0 && healthEnd > healthStart, 'health route not found');
+  const healthRoute = server.slice(healthStart, healthEnd);
+  assert.match(healthRoute, /ok:\s*true/);
+  assert.match(healthRoute, /status:\s*'operational'/);
+  assert.match(healthRoute, /timestamp:\s*new Date\(\)\.toISOString\(\)/);
+  assert.doesNotMatch(healthRoute, /\b(providers?|database|postgres|sqlite|credential|apiKey|GEMINI|AISHA|persistence|trace|diagnostics|fallbackReason|model)\b/i);
+
+  const statusStart = studio.indexOf('function publicAishaStatus');
+  const statusEnd = studio.indexOf('function normalizePulseShowcaseFallbackCategory', statusStart);
+  assert.ok(statusStart >= 0 && statusEnd > statusStart, 'publicAishaStatus function not found');
+  const statusFn = studio.slice(statusStart, statusEnd);
+  for (const field of [
+    'ok',
+    'aishaConnected',
+    'aishaEngineConnected',
+    'activeEngine',
+    'engineMode',
+    'aishaEngineMode',
+    'updatedAt'
+  ]) {
+    assert.match(statusFn, new RegExp(`\\b${field}\\b`), `${field} should remain public`);
+  }
+  for (const field of [
+    'runtimeCredentialProvided',
+    'runtimeCredentialLength',
+    'runtimeCredentialSource',
+    'aishaPersistenceMode',
+    'aishaPersistenceBackend',
+    'aishaPersistenceFailureReason',
+    'aishaTraceStatus',
+    'aishaTraceFailureReason',
+    'fallbackReason',
+    'diagnostics',
+    'provider',
+    'model',
+    'prompt',
+    'apiKey'
+  ]) {
+    assert.doesNotMatch(statusFn, new RegExp(`\\b${field}\\b`), `${field} must not be returned by publicAishaStatus`);
+  }
+});
+
 test('Studio Pulse Room Intelligence v0 is wired without becoming a global OS layer', () => {
   const studio = fs.readFileSync(STUDIO_PULSE, 'utf8');
   const route = fs.readFileSync(STUDIO_ROUTE, 'utf8');
