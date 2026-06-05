@@ -1987,6 +1987,27 @@ test('social director quality validator rejects direct speaker-name cueing insid
   assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:grok'));
 });
 
+test('social director quality validator rejects self-label cues inside otherwise attributable dialogue', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room lets a speaker label do visible voice work.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'Grok: the premise is fake; track proof, not theatre.' }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'vanya', visibleState: 'Reading', reason: 'letting the challenge land before changing the room temperature' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until it has a useful edge' },
+      { speakerId: 'claudia', visibleState: 'Tracking', reason: 'waiting for a practical owner before structuring the next move' }
+    ],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:speaker-name-cue:grok'));
+});
+
 test('social director quality validator rejects lines borrowed from another character voice', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The room swaps voice contracts while keeping plausible dialogue.',

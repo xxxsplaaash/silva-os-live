@@ -82,7 +82,8 @@ test('blind attribution keeps public fallback movie, food, and design lines spea
 test('blind attribution rejects confident borrowed-voice lines without using labels as evidence', () => {
   const attribution = evaluateBlindAttributionLines([
     { speakerId: 'vanya', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
-    { speakerId: 'claudia', text: 'Good. Tiny vanity, massive discipline. We can work with that.' }
+    { speakerId: 'claudia', text: 'Good. Tiny vanity, massive discipline. We can work with that.' },
+    { speakerId: 'grok', text: 'That is exactly the kind of rewrite the ledger is supposed to catch.' }
   ]);
 
   assert.equal(attribution.ok, false);
