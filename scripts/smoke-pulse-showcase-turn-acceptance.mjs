@@ -1,19 +1,25 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
+const {
+  evaluateBlindAttributionLines,
+  evaluateVisibleResponse
+} = require('../lib/studio/socialDirector/visibleResponseQuality');
+const { validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 
 const BACKEND_URL = String(
   process.env.BACKEND_URL ||
   'https://silva-backend-799875816242.us-central1.run.app'
 ).trim().replace(/\/+$/, '');
 const FRONTEND_URL = String(process.env.FRONTEND_URL || 'https://silva-os-live.vercel.app').trim().replace(/\/+$/, '');
-const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.10.0');
+const EXPECTED_SHOWCASE_VERSION = String(process.env.EXPECTED_SHOWCASE_VERSION || '1.11.0');
 const CHECK_FRONTEND_VERSION = process.env.CHECK_FRONTEND_VERSION !== '0';
 const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Date.now().toString(36)}`);
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const ALLOW_LOCAL_FALLBACK = process.env.ALLOW_LOCAL_FALLBACK === '1';
+const GAUNTLET_FIXTURE_FILE = String(process.env.GAUNTLET_FIXTURE_FILE || '').trim();
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const IS_LOCAL_BACKEND = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/i.test(BACKEND_URL);
 const DEFAULT_GAUNTLET_TURN_DELAY_MS = IS_LOCAL_BACKEND ? 0 : 25000;
@@ -34,6 +40,9 @@ const GAUNTLET_REJECTED_VISIBLE_RX = /\b(quick salad or a sandwich|salad or a sa
 const VAGUE_FOOD_RX = /\b(simple fuel stop|something easily digestible|something digestible|whatever is fastest|no time for gourmet|grab whatever)\b/i;
 const WEAK_NORMAL_RX = /\b(the ask is to move forward|name one thing you need to do next|identify the core problem|core problem you need solved)\b/i;
 const SPEAKER_IDS = ['aisha', 'vanya', 'leah', 'claudia', 'grok'];
+const fixtureTransport = GAUNTLET_FIXTURE_FILE
+  ? JSON.parse(readFileSync(GAUNTLET_FIXTURE_FILE, 'utf8'))
+  : null;
 
 const PROMPTS = [
   { sessionGroup: 'fitness-pivot', mode: 'social_hierarchy_lab', userText: 'LOL I WANNA GROW MY MUSCLES', expectsFitness: true },
@@ -79,7 +88,7 @@ function responderCapForPrompt(prompt = {}) {
   if (/\b(stressed|stress|dumb|frustrated|annoyed|this sucks|bruh|bro|wtf|sad|scared|worried|overwhelmed|panic|anxious|grief|grieving|loss|died|funeral)\b/.test(text)) {
     return { min: 1, max: 2, reason: 'emotional/heavy' };
   }
-  if (/\b(muscles?|fitness|workout|gym|training|train|lunch|dinner|snack|hungry|eat|food|meal|plan|planning|schedule|tomorrow|logo|design|landing page|website|build|bug|provider|timeout|python|pdf|script|code|parser|parse|movie|film|watch|netflix|series|show|social media|instagram|tiktok|caption|post|disagreement|disagree)\b/.test(text)) {
+  if (/\b(muscles?|fitness|workout|gym|training|train|lunch|dinner|snack|hungry|eat|food|meal|plan|planning|schedule|tomorrow|logo|design|landing page|website|build|bug|provider|timeout|python|pdf|script|code|parser|parse|movie|film|watch|netflix|series|show|social media|instagram|tiktok|caption|post|disagreement|disagree|what changed|what was changed|what did i change|never said|did i say|did i ever say|previous|prior|old|superseded|record|preference|style|color|dashboard)\b/.test(text)) {
     return { min: 1, max: 2, reason: 'practical' };
   }
   return { min: 2, max: 3, reason: 'normal' };
@@ -114,6 +123,30 @@ function assertIntentionalSilence(prompt = {}, final = {}) {
     assertOk(String(reaction.visibleState || '').trim(), `missing silent visibleState for ${speakerId} after "${prompt.userText}"`);
     assertOk(String(reaction.reason || '').trim(), `missing intentional silence reason for ${speakerId} after "${prompt.userText}"`);
   }
+}
+
+function assertPublicDirectorQuality(prompt = {}, final = {}, recentTurns = []) {
+  const continuityProof = final.continuityProof || final.continuity || {};
+  const validation = validateDirectorOutput({
+    roomBeat: final.roomBeat || 'Public showcase turn.',
+    roomMood: final.roomMood || 'focused',
+    responseMode: final.responseMode || 'single',
+    speakers: Array.isArray(final.messageEvents) ? final.messageEvents : [],
+    silentReactions: Array.isArray(final.silentReactions) ? final.silentReactions : [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: prompt.userText || '',
+    recentTurns,
+    continuity: {
+      active: continuityProof.activeTruths || 0,
+      superseded: continuityProof.supersededTruths || 0,
+      disputed: continuityProof.disputedTruths || 0
+    }
+  });
+  assertOk(
+    validation.ok,
+    `public message cards failed director validator: ${validation.issues.join(', ')}\n${visibleText(final)}`
+  );
 }
 
 function parseSseEvents(text = '') {
@@ -215,6 +248,100 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function sseTextFor(events = []) {
+  return events
+    .map(item => `event: ${item.event}\ndata: ${JSON.stringify(item.data)}\n\n`)
+    .join('');
+}
+
+async function gauntletFetch(url, options = {}) {
+  if (!fixtureTransport) return fetch(url, options);
+  const pathname = new URL(String(url)).pathname;
+  const requestBody = (() => {
+    if (!options.body) return {};
+    try {
+      return JSON.parse(String(options.body));
+    } catch {
+      return {};
+    }
+  })();
+  if (pathname.endsWith('/api/studio/pulse-showcase/status')) {
+    return new Response(JSON.stringify(fixtureTransport.status || { ok: true }), {
+      status: fixtureTransport.statusCode || 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+  if (pathname.endsWith('/api/studio/pulse-showcase/turn-stream')) {
+    const next = Array.isArray(fixtureTransport.turnStreams)
+      ? fixtureTransport.turnStreams.shift()
+      : null;
+    assertOk(next, 'fixture transport ran out of turn-stream responses');
+    const events = Array.isArray(next.events)
+      ? next.events
+      : [
+        { event: 'runtime_status', data: next.runtimeStatus || { ok: true, activeEngine: next.final?.activeEngine || 'aisha-runtime-pack1', aishaEngineConnected: true } },
+        { event: 'final', data: next.final || next }
+      ];
+    return new Response(sseTextFor(events), {
+      status: next.statusCode || 200,
+      headers: { 'content-type': 'text/event-stream; charset=utf-8' }
+    });
+  }
+  if (pathname.endsWith('/api/studio/pulse-showcase/reaction')) {
+    const base = fixtureTransport.reaction || { ok: true };
+    const reactionSummary = base.reactionSummary || {};
+    const socialSignals = base.socialSignals || {};
+    const socialReactionSummary = socialSignals.reactionSummary || reactionSummary;
+    const payload = {
+      ...base,
+      reaction: requestBody.reaction || base.reaction,
+      speakerId: requestBody.speakerId || base.speakerId,
+      messageId: requestBody.messageId || base.messageId,
+      reactionSummary: {
+        ...reactionSummary,
+        lastReaction: requestBody.reaction || reactionSummary.lastReaction,
+        lastSpeakerId: requestBody.speakerId || reactionSummary.lastSpeakerId,
+        lastMessageId: requestBody.messageId || reactionSummary.lastMessageId
+      },
+      socialSignals: {
+        ...socialSignals,
+        reactionSummary: {
+          ...socialReactionSummary,
+          lastReaction: requestBody.reaction || socialReactionSummary.lastReaction,
+          lastSpeakerId: requestBody.speakerId || socialReactionSummary.lastSpeakerId,
+          lastMessageId: requestBody.messageId || socialReactionSummary.lastMessageId
+        }
+      }
+    };
+    return new Response(JSON.stringify(payload), {
+      status: fixtureTransport.reactionStatusCode || 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+  if (pathname.endsWith('/api/studio/pulse-showcase/expand')) {
+    const base = fixtureTransport.expand || { ok: true, bullets: [] };
+    const payload = {
+      ...base,
+      speakerId: requestBody.speakerId || base.speakerId,
+      messageId: requestBody.messageId || base.messageId
+    };
+    return new Response(JSON.stringify(payload), {
+      status: fixtureTransport.expandStatusCode || 200,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+  if (/\/assets\/pulse_showcase\.js$/.test(pathname)) {
+    return new Response(String(fixtureTransport.frontendJs || `const SHOWCASE_VERSION = '${EXPECTED_SHOWCASE_VERSION}';`), {
+      status: fixtureTransport.frontendStatusCode || 200,
+      headers: { 'content-type': 'application/javascript' }
+    });
+  }
+  return new Response(JSON.stringify({ ok: false, error: `Unhandled fixture URL: ${url}` }), {
+    status: 404,
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
 function sessionIdFor(group = 'main') {
   return `${SESSION_ID}-${String(group || 'main').replace(/[^a-z0-9-]/gi, '-')}`;
 }
@@ -251,7 +378,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(new Error(`turn timed out after ${TURN_TIMEOUT_MS}ms`)), TURN_TIMEOUT_MS);
     try {
-      response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
+      response = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
         body: JSON.stringify(body),
@@ -276,6 +403,7 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   assertOk(final.ok === true, 'final payload was not ok');
   assertSpeakerCap(prompt, final);
   assertIntentionalSilence(prompt, final);
+  assertPublicDirectorQuality(prompt, final, recentTurns);
   const visible = visibleText(final);
   assertOk(!REJECTED_VISIBLE_RX.test(visible) && !GAUNTLET_REJECTED_VISIBLE_RX.test(visible) && !LIVE_REJECTED_VISIBLE_RX.test(visible), `visible answer still contains rejected boilerplate: ${visible}`);
   const continuityProof = final.continuityProof || final.continuity || {};
@@ -290,6 +418,11 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     }
   });
   assertOk(!qualityIssues.length, `visible answer failed product quality gates: ${qualityIssues.map(item => `${item.family}:${item.category}`).join(', ')}\n${visible}`);
+  const attribution = evaluateBlindAttributionLines(final.messageEvents || []);
+  assertOk(
+    attribution.ok,
+    `visible answer failed blind attribution gate: ${attribution.issues.map(item => `${item.family}:${item.category}`).join(', ')}\n${visible}`
+  );
   if (prompt.expectsFitness) {
     assertOk(!FITNESS_REFUSAL_RX.test(visible), `fitness transcript refused the user intent: ${visible}`);
     assertOk(FITNESS_ANSWER_RX.test(visible), `fitness transcript did not answer the muscle-building context: ${visible}`);
@@ -394,7 +527,7 @@ async function submitReaction(result = {}, prior = {}) {
     .find(item => String(item?.speakerId || '').trim() && String(item?.text || '').trim());
   assertOk(card, 'cannot submit gauntlet reaction without an assistant card');
   const messageId = `gauntlet-reaction-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64).trim()}`;
-  const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/reaction`, {
+  const response = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/reaction`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
@@ -433,7 +566,7 @@ async function submitExpand(result = {}, prior = {}) {
     .find(item => String(item?.speakerId || '').trim() && String(item?.text || '').trim());
   assertOk(card, 'cannot submit gauntlet expansion without an assistant card');
   const messageId = `gauntlet-expand-${visibleKey(`${result.prompt}-${card.speakerId}-${card.text}`).slice(0, 64).trim()}`;
-  const response = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/expand`, {
+  const response = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/expand`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
@@ -472,7 +605,7 @@ async function submitExpand(result = {}, prior = {}) {
 async function assertFrontendVersion() {
   if (!CHECK_FRONTEND_VERSION) return null;
   const url = `${FRONTEND_URL}/assets/pulse_showcase.js`;
-  const response = await fetch(url, { headers: { accept: 'application/javascript,text/plain,*/*' } });
+  const response = await gauntletFetch(url, { headers: { accept: 'application/javascript,text/plain,*/*' } });
   const text = await response.text();
   assertOk(response.ok, `frontend JS failed HTTP ${response.status}: ${text.slice(0, 160)}`);
   assertOk(!LEAK_RX.test(text), 'frontend JS leaked prompt/runtime internals or secret-like material');
@@ -483,7 +616,7 @@ async function assertFrontendVersion() {
 }
 
 const frontend = await assertFrontendVersion();
-const statusResponse = await fetch(`${BACKEND_URL}/api/studio/pulse-showcase/status?refresh=1`, {
+const statusResponse = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/status?refresh=1`, {
   headers: { accept: 'application/json' }
 });
 const statusText = await statusResponse.text();
@@ -530,6 +663,7 @@ for (const prompt of PROMPTS) {
     prompt: result.prompt,
     mode: result.mode,
     classification: result.classification,
+    runtimeLabel: `${result.classification}:${result.activeEngine || 'unknown'}:${result.fallbackCategory || result.qualityFailureCategory || 'clean'}`,
     activeEngine: result.activeEngine,
     aishaEngineConnected: result.aishaEngineConnected,
     runtimeConnected: result.runtimeConnected,
@@ -546,6 +680,24 @@ for (const prompt of PROMPTS) {
     referenceCount: result.references.length,
     silenceCount: result.silentReactions.length,
     socialSignals: result.socialSignals,
+    cards: (result.messageEvents || []).map(item => ({
+      speakerId: item.speakerId || '',
+      speakerName: item.speakerName || item.speakerId || '',
+      role: item.role || 'message',
+      visibleState: item.visibleState || '',
+      text: item.text || ''
+    })),
+    silence: (result.silentReactions || []).map(item => ({
+      speakerId: item.speakerId || '',
+      visibleState: item.visibleState || '',
+      reason: item.reason || ''
+    })),
+    ledgerRows: (result.continuityLedger || []).map(item => ({
+      status: item.status || '',
+      source: item.source || '',
+      id: item.id || '',
+      text: item.text || ''
+    })),
     visiblePreview: result.visibleText.slice(0, 360)
   });
   state.prior = {
@@ -589,6 +741,17 @@ const summary = {
     repaired: results.filter(item => item.classification === 'repaired' || item.classification === 'connected-unaccepted').length,
     fallback: results.filter(item => item.classification === 'fallback').length
   },
+  reactionEffect: reactionProbe ? {
+    reaction: reactionProbe.reaction,
+    speakerId: reactionProbe.speakerId,
+    messageId: reactionProbe.messageId,
+    reactionSummary: reactionProbe.reactionSummary
+  } : null,
+  expandEffect: expandProbe ? {
+    speakerId: expandProbe.speakerId,
+    messageId: expandProbe.messageId,
+    bullets: expandProbe.bullets
+  } : null,
   results
 };
 

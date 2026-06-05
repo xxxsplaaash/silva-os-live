@@ -1740,7 +1740,7 @@ test('public Studio Pulse showcase ships as a slim iframe-safe page', () => {
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(payload\)/);
   assert.match(script, /state\.status = mergeGlobalStatusFromTurn\(data \|\| \{\}\)/);
   assert.doesNotMatch(script, /state\.status = \{\s*activeEngine: payload\.activeEngine/);
-  assert.match(script, /SHOWCASE_VERSION = '1\.10\.0'/);
+  assert.match(script, /SHOWCASE_VERSION = '1\.11\.0'/);
   assert.match(script, /var MAX_USER_TEXT = 1500/);
   assert.match(html, /maxlength="1500"/);
   assert.match(html, /0\/1500/);

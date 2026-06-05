@@ -374,44 +374,41 @@ test('pulse showcase turn forwards selected message references as local anchors 
       }
     }));
 
-    await withStudioServer(async baseUrl => {
-      const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'reference-route-session',
-          mode: 'social_hierarchy_lab',
-          userText: 'Use the referenced card and make the next move sharper.',
-          references: [
-            {
-              messageId: 'msg-leah-1',
-              speakerId: 'leah',
-              speakerName: 'Leah Mokoena',
-              role: 'primary',
-              text: 'Make the mark feel like a warning light, not a wellness badge.'
-            },
-            {
-              messageId: 'bad-ref',
-              speakerId: 'ghost',
-              text: 'This should be ignored.'
-            }
-          ],
-          roomState: { roomMood: 'sharp', responseMode: 'single' }
-        })
-      });
-      assert.equal(response.status, 200);
-      const body = await response.json();
-      assert.equal(body.ok, true);
-      assert.ok(capturedRequest);
-      const references = capturedRequest.projectContext?.socialDirectorV1?.references || [];
-      assert.equal(references.length, 1);
-      assert.equal(references[0].speakerId, 'leah');
-      assert.match(references[0].text, /warning light/);
-      assert.match(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /warning light/);
-      assert.doesNotMatch(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /This should be ignored/);
-      assert.equal(body.continuityLedger.length, 0);
-      assert.doesNotMatch(JSON.stringify(body), /ghost|This should be ignored|generatorPrompt|socialCues|aishaDiagnostics/);
+    const parsed = studioRouter.__parsePulseShowcaseTurnRequestForTests({
+      sessionId: 'reference-route-session',
+      mode: 'social_hierarchy_lab',
+      userText: 'Use the referenced card and make the next move sharper.',
+      references: [
+        {
+          messageId: 'msg-leah-1',
+          speakerId: 'leah',
+          speakerName: 'Leah Mokoena',
+          role: 'primary',
+          text: 'Make the mark feel like a warning light, not a wellness badge.'
+        },
+        {
+          messageId: 'bad-ref',
+          speakerId: 'ghost',
+          text: 'This should be ignored.'
+        }
+      ],
+      roomState: { roomMood: 'sharp', responseMode: 'single' }
     });
+    assert.equal(parsed.error, undefined);
+
+    const result = await studioRouter.__buildPulseShowcaseTurnPayloadForTests(parsed);
+    assert.equal(result.statusCode, 200);
+    const body = result.payload;
+    assert.equal(body.ok, true);
+    assert.ok(capturedRequest);
+    const references = capturedRequest.projectContext?.socialDirectorV1?.references || [];
+    assert.equal(references.length, 1);
+    assert.equal(references[0].speakerId, 'leah');
+    assert.match(references[0].text, /warning light/);
+    assert.match(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /warning light/);
+    assert.doesNotMatch(capturedRequest.projectContext.socialDirectorV1.generatorPrompt, /This should be ignored/);
+    assert.equal(body.continuityLedger.length, 0);
+    assert.doesNotMatch(JSON.stringify(body), /ghost|This should be ignored|generatorPrompt|socialCues|aishaDiagnostics/);
   });
 });
 
@@ -1732,7 +1729,14 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
         assert.equal(final.activeEngine, 'aisha-runtime-pack1');
         assert.equal(final.acceptedByPack1, true);
         assert.equal(final.qualityAccepted, true);
-        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.repairedByRuntime, true, JSON.stringify({
+          activeEngine: final.activeEngine,
+          acceptedByPack1: final.acceptedByPack1,
+          repairedByRuntime: final.repairedByRuntime,
+          fallbackCategory: final.fallbackCategory,
+          qualityFailureCategory: final.qualityFailureCategory,
+          diagnostics: final.diagnostics
+        }));
         assert.equal(final.qualityFailureCategory, '');
         assert.equal(final.diagnostics.qualityAccepted, true);
         assert.equal(final.diagnostics.repairedByRuntime, true);
@@ -1918,7 +1922,14 @@ test('Studio Pulse showcase last-mile gate repairs accepted continuity answers t
         assert.equal(final.activeEngine, 'local-social-director');
         assert.equal(final.acceptedByPack1, false);
         assert.equal(final.qualityAccepted, false);
-        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.repairedByRuntime, true, JSON.stringify({
+          activeEngine: final.activeEngine,
+          acceptedByPack1: final.acceptedByPack1,
+          repairedByRuntime: final.repairedByRuntime,
+          fallbackCategory: final.fallbackCategory,
+          qualityFailureCategory: final.qualityFailureCategory,
+          diagnostics: final.diagnostics
+        }));
         assert.equal(final.qualityFailureCategory, 'quality-rejected');
         assert.match(text, /pale blue with no red accents/i);
         assert.match(text, /obsidian with one red accent/i);
@@ -2013,12 +2024,20 @@ test('Studio Pulse showcase last-mile gate repairs continuity labels that omit t
         assert.equal(final.activeEngine, 'local-social-director');
         assert.equal(final.acceptedByPack1, false);
         assert.equal(final.qualityAccepted, false);
-        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.repairedByRuntime, true, JSON.stringify({
+          activeEngine: final.activeEngine,
+          acceptedByPack1: final.acceptedByPack1,
+          repairedByRuntime: final.repairedByRuntime,
+          fallbackCategory: final.fallbackCategory,
+          qualityFailureCategory: final.qualityFailureCategory,
+          diagnostics: final.diagnostics
+        }, null, 2));
         assert.ok(
-          ['continuity-value-missing', 'quality-rejected', 'product-continuity-miss:ledger-answer'].includes(final.qualityFailureCategory),
+          ['continuity-value-missing', 'quality-rejected', 'product-continuity-miss:ledger-answer'].includes(final.qualityFailureCategory)
+            || /^voice-lock:blind-attribution:/.test(final.qualityFailureCategory),
           `unexpected quality failure category: ${final.qualityFailureCategory}`
         );
-        assert.match(text, /\bChanged:\s*landing page style is white editorial with no red/i);
+        assert.match(text, /\bCurrent record:\s*landing page style is white editorial with no red/i);
         assert.match(text, /\bPrior record:\s*landing page style is black glass with a single red pulse/i);
         assert.doesNotMatch(text, /\binitial concept\b|\brearview mirror\b/i);
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|initial concept|rearview mirror/);
@@ -2112,7 +2131,15 @@ test('Studio Pulse showcase last-mile gate repairs old preference recall boilerp
         assert.equal(final.activeEngine, 'local-social-director');
         assert.equal(final.acceptedByPack1, false);
         assert.equal(final.qualityAccepted, false);
-        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.repairedByRuntime, true, JSON.stringify({
+          activeEngine: final.activeEngine,
+          acceptedByPack1: final.acceptedByPack1,
+          repairedByRuntime: final.repairedByRuntime,
+          fallbackCategory: final.fallbackCategory,
+          qualityFailureCategory: final.qualityFailureCategory,
+          diagnostics: final.diagnostics,
+          text
+        }, null, 2));
         assert.match(text, /obsidian with one red accent/i);
         assert.match(text, /pale blue with no red accents/i);
         assert.match(text, /\bOld record:\s*dashboard preference is obsidian with one red accent/i);
@@ -2347,7 +2374,9 @@ test('Studio Pulse showcase repairs flat accepted social and normal-answer outpu
           assert.equal(final.qualityAccepted, false);
           assert.equal(final.repairedByRuntime, true);
           assert.ok(
-            final.qualityFailureCategory === item.expectedIssue || final.qualityFailureCategory === 'quality-rejected',
+            final.qualityFailureCategory === item.expectedIssue
+              || final.qualityFailureCategory === 'quality-rejected'
+              || /^voice-lock:blind-attribution:/.test(final.qualityFailureCategory),
             `unexpected quality failure category: ${final.qualityFailureCategory}`
           );
           assert.doesNotMatch(text, item.rejected);
@@ -2993,7 +3022,7 @@ test('Studio Pulse showcase repairs continuity misses from server visible histor
         assert.equal(final.repairedByRuntime, true);
         assert.match(text, /\bwhite editorial with no red\b/i);
         assert.match(text, /\bblack glass with a single red pulse\b/i);
-        assert.match(text, /\bChanged: .*white editorial with no red\b/i);
+        assert.match(text, /\bCurrent record: .*white editorial with no red\b/i);
         assert.match(text, /\bPrior record: .*black glass with a single red pulse\b/i);
         assert.doesNotMatch(text, /\bwhat specifically has changed|anything concrete you have noticed|operational flow seems stable|remaining question|initial claim|the correction is\b/i);
         assert.doesNotMatch(JSON.stringify(final), /test-room-provider-key|generatorPrompt|aishaDiagnostics/);
@@ -3002,6 +3031,48 @@ test('Studio Pulse showcase repairs continuity misses from server visible histor
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;
       else process.env.GEMINI_API_KEY = originalGemini;
     }
+  });
+});
+
+test('Studio Pulse showcase preserves local visible continuity ledger across no-recentTurns follow-up', async () => {
+  await withAishaFlag('false', async () => {
+    const sessionId = 'showcase-visible-session-ledger-carryover';
+    const first = await studioRouter.__buildPulseShowcaseTurnPayloadForTests({
+      sessionId,
+      mode: 'continuity_breaker',
+      userText: 'My landing page style is black glass with a single red pulse.',
+      recentTurns: [],
+      references: [],
+      roomState: { roomMood: 'focused', responseMode: 'single' }
+    });
+    assert.equal(first.payload.ok, true);
+
+    const second = await studioRouter.__buildPulseShowcaseTurnPayloadForTests({
+      sessionId,
+      mode: 'continuity_breaker',
+      userText: 'Actually my landing page style is white editorial with no red.',
+      recentTurns: [],
+      references: [],
+      roomState: { roomMood: 'focused', responseMode: 'single' }
+    });
+    assert.equal(second.payload.ok, true);
+    assert.ok(second.payload.continuityLedger.some(item => item.source === 'showcase-session' && item.status === 'active' && /white editorial with no red/i.test(item.text)));
+    assert.ok(second.payload.continuityLedger.some(item => item.source === 'showcase-session' && item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text)));
+
+    const followup = await studioRouter.__buildPulseShowcaseTurnPayloadForTests({
+      sessionId,
+      mode: 'continuity_breaker',
+      userText: 'What changed?',
+      recentTurns: [],
+      references: [],
+      roomState: { roomMood: 'focused', responseMode: 'single' }
+    });
+
+    assert.equal(followup.payload.ok, true);
+    assert.ok(followup.payload.continuityLedger.some(item => item.source === 'showcase-session' && item.status === 'active' && /white editorial with no red/i.test(item.text)));
+    assert.ok(followup.payload.continuityLedger.some(item => item.source === 'showcase-session' && item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text)));
+    assert.match(visibleText(followup.payload.messageEvents), /\bwhite editorial with no red\b/i);
+    assert.match(visibleText(followup.payload.messageEvents), /\bblack glass with a single red pulse\b/i);
   });
 });
 

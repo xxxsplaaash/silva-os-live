@@ -1,11 +1,41 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
+const {
+  blindAttributionForLine,
+  evaluateBlindAttributionLines,
+  evaluateVisibleResponse
+} = require('../lib/studio/socialDirector/visibleResponseQuality');
 
 function issueKeys(issues) {
   return issues.map(item => `${item.family}:${item.category}`);
 }
+
+test('blind attribution scores alive room lines as distinct characters without labels', () => {
+  const fixtures = [
+    ['aisha', 'Prior record: black glass with one red pulse. Current record: white editorial with no red.'],
+    ['vanya', 'Good. Tiny vanity, massive discipline. We can work with that.'],
+    ['leah', 'Pick the feeling first. The title is just the room admitting what mood it wants.'],
+    ['claudia', 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.'],
+    ['grok', 'Track reps. Otherwise you are just sweating with narrative ambition.']
+  ];
+
+  for (const [speakerId, text] of fixtures) {
+    const attribution = blindAttributionForLine(text);
+    assert.equal(attribution.identifiable, true, text);
+    assert.equal(attribution.speakerId, speakerId, `${text}: ${JSON.stringify(attribution.scores)}`);
+  }
+});
+
+test('blind attribution rejects valid-sounding lines that could belong to anyone', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'vanya', text: 'That is a helpful direction. We should move forward with a clear and balanced response.' },
+    { speakerId: 'claudia', text: 'This is a good starting point. Focus on the basics and keep improving over time.' }
+  ]);
+
+  assert.equal(attribution.ok, false);
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+});
 
 test('visible response quality rejects fake build-reflection language on style turns', () => {
   const issues = evaluateVisibleResponse({
@@ -972,4 +1002,29 @@ test('visible response quality rejects live design-direction punts', () => {
   });
 
   assert.ok(issueKeys(landingIssues).includes('design-answer-punted:direction'));
+});
+
+test('visible response quality rejects room-product narration inside visible character dialogue', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'how is everyone?',
+    visibleText: [
+      'The public room is live; continuity, status, and contradictions surface as the exchange lands.',
+      'The room will carry the continuity while the characters respond dynamically.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('self-theater:meta-language'));
+});
+
+test('visible response quality accepts alive practical room dialogue without generic advice voice', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'I wanna grow my muscles.',
+    visibleText: [
+      'Good. Tiny vanity, massive discipline. We can work with that.',
+      'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.',
+      'Track reps. Otherwise you are just sweating with narrative ambition.'
+    ].join('\n')
+  });
+
+  assert.deepEqual(issueKeys(issues), []);
 });

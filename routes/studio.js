@@ -1066,6 +1066,11 @@ function hitPulseShowcaseBucket(map, key, limit, windowMs, now = Date.now()) {
   return bucket.count <= limit;
 }
 
+function pulseShowcaseGauntletBypassEnabled() {
+  return process.env.NODE_ENV !== 'production'
+    && String(process.env.PULSE_SHOWCASE_GAUNTLET_BYPASS || '').trim() === '1';
+}
+
 function guardPulseShowcaseOrigin(req, res, requestId = pulseShowcaseRequestId()) {
   applyPulseShowcaseCors(req, res);
   const origin = pulseShowcaseOrigin(req);
@@ -1090,20 +1095,21 @@ function guardPulseShowcaseTurn(req, res, parsed = {}, options = {}) {
   prunePulseShowcaseBuckets(now);
   const sessionId = parsed.sessionId || pulseShowcaseSessionId('');
   const ip = pulseShowcaseClientIp(req);
-  const sessionAllowed = hitPulseShowcaseBucket(
-    pulseShowcaseSessionBuckets,
-    sessionId,
-    PULSE_SHOWCASE_SESSION_TURN_LIMIT,
-    PULSE_SHOWCASE_SESSION_WINDOW_MS,
-    now
-  );
-  const ipAllowed = hitPulseShowcaseBucket(
-    pulseShowcaseIpBuckets,
-    ip,
-    PULSE_SHOWCASE_IP_TURN_LIMIT,
-    PULSE_SHOWCASE_IP_WINDOW_MS,
-    now
-  );
+  const bypassRateLimit = pulseShowcaseGauntletBypassEnabled();
+  const sessionAllowed = bypassRateLimit || hitPulseShowcaseBucket(
+      pulseShowcaseSessionBuckets,
+      sessionId,
+      PULSE_SHOWCASE_SESSION_TURN_LIMIT,
+      PULSE_SHOWCASE_SESSION_WINDOW_MS,
+      now
+    );
+  const ipAllowed = bypassRateLimit || hitPulseShowcaseBucket(
+      pulseShowcaseIpBuckets,
+      ip,
+      PULSE_SHOWCASE_IP_TURN_LIMIT,
+      PULSE_SHOWCASE_IP_WINDOW_MS,
+      now
+    );
   if (!sessionAllowed || !ipAllowed) {
     logPulseShowcaseTurnTelemetry({
       requestId,
@@ -1337,14 +1343,14 @@ function sanitizePulseShowcaseLedgerRows(rows = []) {
     .map(item => {
       const text = safeShowcaseText(item?.text || item?.canonicalText || item?.claimText || item?.normalizedValue || '', 240);
       const source = safeShowcaseText(item?.source || '', 40);
-      if (!text || source !== 'pack1-memory') return null;
+      if (!text || !['pack1-memory', 'showcase-session'].includes(source)) return null;
       const rawStatus = String(item?.status || '').trim().toLowerCase();
       const status = ['active', 'superseded', 'disputed'].includes(rawStatus) ? rawStatus : 'active';
-      const id = safeShowcaseText(item?.id || item?.noteId || item?.claimId || `pack1-memory-${status}-${text}`, 140);
-      const key = `${status}:${text.toLowerCase()}`;
+      const id = safeShowcaseText(item?.id || item?.noteId || item?.claimId || `${source}-${status}-${text}`, 140);
+      const key = `${source}:${status}:${text.toLowerCase()}`;
       if (seen.has(key)) return null;
       seen.add(key);
-      return { id, text, status, source: 'pack1-memory' };
+      return { id, text, status, source };
     })
     .filter(Boolean)
     .slice(0, 12);
@@ -1377,10 +1383,10 @@ function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
     if (seen.has(key)) return;
     seen.add(key);
     rows.push({
-      id: safeShowcaseText(item.id || `pack1-memory-${normalizedStatus}-${text}`, 140),
+      id: safeShowcaseText(item.id || `${item.source || 'pack1-memory'}-${normalizedStatus}-${text}`, 140),
       text,
       status: normalizedStatus,
-      source: 'pack1-memory'
+      source: ['pack1-memory', 'showcase-session'].includes(item.source) ? item.source : 'pack1-memory'
     });
   };
 
@@ -1989,6 +1995,18 @@ function normalizePulseShowcaseFallbackCategory(value = '') {
     .slice(0, 80);
 }
 
+function isRootRuntimeFallbackCategory(value = '') {
+  return [
+    'aisha-unavailable',
+    'invalid-key',
+    'quota-exceeded',
+    'rate-limited',
+    'generation-timeout',
+    'json-parse-failed',
+    'schema-invalid'
+  ].includes(normalizePulseShowcaseFallbackCategory(value));
+}
+
 function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({})) {
   return {
     ...publicPulseShowcaseStatus(status),
@@ -2106,14 +2124,17 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
   const hasCurrentPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasCurrentPack1MemoryRows) {
     sanitizePulseShowcaseLedgerRows(priorPack1Rows)
-      .forEach(item => add(item, item.status || 'active', 'pack1-memory'));
+      .forEach(item => add(item, item.status || 'active', item.source === 'showcase-session' ? 'showcase-session' : 'pack1-memory'));
     pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
   const hasPack1MemoryRows = pack1Rows.some(item => item.source === 'pack1-memory');
   if (!hasPack1MemoryRows) {
     (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
       .filter(isShowcaseSessionLedgerNote)
-      .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
+      .forEach((note, index) => {
+        const status = /\b(prior|previous|superseded)\s+record\b/i.test(String(note || '')) ? 'superseded' : 'active';
+        add({ id: `showcase-note-${index}`, text: note, status }, status, 'showcase-session');
+      });
     pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
 
@@ -2218,11 +2239,12 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     history: visibleRecentTurns,
     recentTurns: visibleRecentTurns
   }).impulsePlan;
+  const socialDirectorRecentTurns = mode === 'continuity_breaker' ? recentTurns : visibleRecentTurns;
   const result = await runSocialDirectorTurn({
     body: {
       ...directorBody,
-      history: visibleRecentTurns,
-      recentTurns: visibleRecentTurns
+      history: socialDirectorRecentTurns,
+      recentTurns: socialDirectorRecentTurns
     },
     callAishaEngine,
     runtimeOptions: resolveSocialDirectorRuntimeOptions({}),
@@ -2244,6 +2266,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   recordPulseShowcasePack1Ledger(sessionId, continuityLedger);
   let activeEngine = safeRuntimeStatusText(payload.activeEngine || publicPulseShowcaseStatus(status).activeEngine) || 'local-room-intelligence';
   const aishaEngineConnected = payload.aishaConnected === true;
+  const runtimeStatusConnectedNow = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
   const traceStatus = safeRuntimeStatusText(debug.aishaTraceStatus || '');
   let fallbackUsed = payload.validation?.fallbackUsed === true || activeEngine !== 'aisha-runtime-pack1';
   let fallbackCategory = fallbackUsed
@@ -2252,7 +2275,9 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let qualityAccepted = payload.qualityAccepted === true && fallbackUsed !== true;
   let repairedByRuntime = payload.repairedByRuntime === true
     || debug.repaired === true
-    || (payload.aishaConnected === true && fallbackCategory === 'quality-rejected');
+    || ((payload.aishaConnected === true || runtimeStatusConnectedNow)
+      && fallbackUsed === true
+      && !['aisha-unavailable', 'invalid-key', 'quota-exceeded', 'rate-limited'].includes(fallbackCategory));
   let qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || debug.qualityFailureCategory || (fallbackUsed ? fallbackCategory : ''));
   const continuityQuality = showcaseContinuityQualityContext(continuityProof, continuityLedger);
   const continuityRecentTurns = dedupeShowcaseRecentTurns([...recentTurns, ...visibleRecentTurns]);
@@ -2310,7 +2335,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
-    fallbackCategory = 'quality-rejected';
+    fallbackCategory = isRootRuntimeFallbackCategory(fallbackCategory) ? fallbackCategory : 'quality-rejected';
     qualityAccepted = false;
     repairedByRuntime = true;
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(continuityLabelIssue || publicQuality.issues?.[0] || fallbackValidation.issues?.[0] || 'quality-rejected');
@@ -2345,13 +2370,12 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
-    fallbackCategory = 'quality-rejected';
+    fallbackCategory = isRootRuntimeFallbackCategory(fallbackCategory) ? fallbackCategory : 'quality-rejected';
     qualityAccepted = false;
     repairedByRuntime = true;
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(forcedContinuityRepair.issue || 'continuity-repair');
   }
-  const runtimeStatusConnected = status.aishaEngineConnected === true && publicPulseShowcaseStatus(status).activeEngine === 'aisha-runtime-pack1';
-  const runtimeConnected = aishaEngineConnected || (runtimeStatusConnected && fallbackCategory !== 'invalid-key');
+  const runtimeConnected = aishaEngineConnected || (runtimeStatusConnectedNow && fallbackCategory !== 'invalid-key');
   const diagnostics = {
     fallbackUsed,
     traceStatus,

@@ -27,7 +27,7 @@
   var HELD_TURN_MESSAGE = 'The room held that turn. Try again in a moment.';
   var HELD_TURN_STATUSES = [403, 409, 429, 503];
   var MAX_USER_TEXT = 1500;
-  var SHOWCASE_VERSION = '1.10.0';
+  var SHOWCASE_VERSION = '1.11.0';
   var REACTION_TYPES = ['sharp', 'funny', 'useful', 'too_much', 'more_like', 'less_like'];
   var REACTION_LABELS = {
     sharp: 'Sharp',
