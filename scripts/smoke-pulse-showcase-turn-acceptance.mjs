@@ -151,6 +151,11 @@ function visibleText(final = {}) {
     .join('\n');
 }
 
+function ledgerHasStatusText(final = {}, status = '', pattern = /$a/) {
+  return (Array.isArray(final.continuityLedger) ? final.continuityLedger : [])
+    .some(item => String(item?.status || '').toLowerCase() === status && pattern.test(String(item?.text || '')));
+}
+
 function visibleKey(value = '') {
   return String(value || '')
     .toLowerCase()
@@ -329,6 +334,8 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   }
   if (prompt.expectsStyleChange) {
     assertOk(/\b(black glass|single red pulse|white editorial|no red|changed|prior|previous|record|superseded)\b/i.test(visible), `style continuity prompt missed active/prior visual claims: ${visible}`);
+    assertOk(ledgerHasStatusText(final, 'active', /white editorial|no red/i), `style continuity ledger missed active white/no-red row: ${JSON.stringify(final.continuityLedger || [])}`);
+    assertOk(ledgerHasStatusText(final, 'superseded', /black glass|single red pulse/i) || ledgerHasStatusText(final, 'disputed', /black glass|single red pulse/i), `style continuity ledger missed prior black-glass/red-pulse row: ${JSON.stringify(final.continuityLedger || [])}`);
   }
   if (prompt.expectsStyleDenial) {
     const normalizedVisible = visible.toLowerCase().replace(/\s+/g, ' ');
@@ -344,10 +351,14 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
   if (prompt.expectsChange) {
     assertOk(CHANGE_ANSWER_RX.test(visible), `continuity change prompt did not cite changed ledger evidence: ${visible}`);
     assertOk(/pale blue/i.test(visible) && /obsidian/i.test(visible), `continuity change prompt missed active/prior values: ${visible}`);
+    assertOk(ledgerHasStatusText(final, 'active', /pale blue/i), `dashboard continuity ledger missed active pale-blue row: ${JSON.stringify(final.continuityLedger || [])}`);
+    assertOk(ledgerHasStatusText(final, 'superseded', /obsidian/i) || ledgerHasStatusText(final, 'disputed', /obsidian/i), `dashboard continuity ledger missed prior obsidian row: ${JSON.stringify(final.continuityLedger || [])}`);
   }
   if (prompt.expectsPriorPreference) {
     assertOk(/\b(prior|previous|old|original|earlier|superseded|changed from|used to|it was)\b/i.test(visible), `old preference prompt did not label the prior record: ${visible}`);
     assertOk(/obsidian/i.test(visible) && /pale blue/i.test(visible), `old preference prompt missed active/prior values: ${visible}`);
+    assertOk(ledgerHasStatusText(final, 'active', /pale blue/i), `old preference ledger missed active pale-blue row: ${JSON.stringify(final.continuityLedger || [])}`);
+    assertOk(ledgerHasStatusText(final, 'superseded', /obsidian/i) || ledgerHasStatusText(final, 'disputed', /obsidian/i), `old preference ledger missed prior obsidian row: ${JSON.stringify(final.continuityLedger || [])}`);
   }
   const fallbackCategory = String(final.fallbackCategory || final.diagnostics?.fallbackCategory || '');
   return {

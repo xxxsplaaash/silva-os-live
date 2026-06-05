@@ -4617,6 +4617,31 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const sideSpeakerId = /movie|watch next|watch tonight|open floor|logo|landing page direction|how is everyone|actual tension/i.test(userText)
       ? 'leah'
       : 'claudia';
+    const continuityLedger = (() => {
+      if (/black glass/i.test(userText) && !/never said/i.test(userText)) {
+        return [
+          { id: 'mock-style-black-glass', text: 'User landing page style: black glass with a single red pulse', status: 'active', source: 'pack1-memory' }
+        ];
+      }
+      if (/white editorial|never said black glass/i.test(userText) || (/what changed/i.test(userText) && /black glass/i.test(recentText))) {
+        return [
+          { id: 'mock-style-white-editorial', text: 'User landing page style: white editorial with no red', status: 'active', source: 'pack1-memory' },
+          { id: 'mock-style-black-glass-prior', text: 'User landing page style: black glass with a single red pulse', status: 'superseded', source: 'pack1-memory' }
+        ];
+      }
+      if (/obsidian/i.test(userText)) {
+        return [
+          { id: 'mock-dashboard-obsidian', text: 'User dashboard preference: obsidian with one red accent', status: 'active', source: 'pack1-memory' }
+        ];
+      }
+      if (/pale blue|old dashboard preference/i.test(userText) || /what changed/i.test(userText)) {
+        return [
+          { id: 'mock-dashboard-pale-blue', text: 'User dashboard preference: pale blue with no red accents', status: 'active', source: 'pack1-memory' },
+          { id: 'mock-dashboard-obsidian-prior', text: 'User dashboard preference: obsidian with one red accent', status: 'superseded', source: 'pack1-memory' }
+        ];
+      }
+      return [];
+    })();
     const messageEvents = [{
       speakerId: 'vanya',
       speakerName: 'Vanya',
@@ -4652,7 +4677,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       responseMode: 'single',
       messageEvents,
       silentReactions,
-      continuityLedger: [],
+      continuityLedger,
       socialSignals: { tension: 18, continuityPressure: 0, hierarchy: [], alliances: [], interruptions: [], roomMove: 'observe', statusEvents: [], socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: [], interruptionPressure: 0 } },
       acceptedByPack1: accepted,
       qualityAccepted: accepted,

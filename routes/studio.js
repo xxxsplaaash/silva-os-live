@@ -1350,6 +1350,68 @@ function sanitizePulseShowcaseLedgerRows(rows = []) {
     .slice(0, 12);
 }
 
+function pulseShowcaseLedgerSlot(text = '') {
+  const normalized = safeShowcaseText(text, 240)
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return '';
+  const colonMatch = normalized.match(/^(?:user\s+)?(.+?\s+(?:preference|style|aesthetic))\s*:/i);
+  if (colonMatch?.[1]) return colonMatch[1].trim();
+  const isMatch = normalized.match(/^(?:user\s+)?(.+?\s+(?:preference|style|aesthetic))\s+is\s+/i);
+  if (isMatch?.[1]) return isMatch[1].trim();
+  return '';
+}
+
+function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
+  const rows = sanitizePulseShowcaseLedgerRows(currentRows);
+  const prior = sanitizePulseShowcaseLedgerRows(priorRows);
+  const seen = new Set(rows.map(item => `${item.status}:${item.text.toLowerCase()}`));
+  const add = (item = {}, status = item.status || 'active') => {
+    const text = safeShowcaseText(item.text || '', 240);
+    if (!text) return;
+    const normalizedStatus = ['active', 'superseded', 'disputed'].includes(String(status || '').toLowerCase())
+      ? String(status || '').toLowerCase()
+      : 'active';
+    const key = `${normalizedStatus}:${text.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    rows.push({
+      id: safeShowcaseText(item.id || `pack1-memory-${normalizedStatus}-${text}`, 140),
+      text,
+      status: normalizedStatus,
+      source: 'pack1-memory'
+    });
+  };
+
+  const currentActiveSlots = rows
+    .filter(item => item.status === 'active')
+    .map(item => ({ item, slot: pulseShowcaseLedgerSlot(item.text) }))
+    .filter(entry => entry.slot);
+
+  for (const item of prior) {
+    if (item.status === 'superseded' || item.status === 'disputed') {
+      add(item, item.status);
+      continue;
+    }
+    if (item.status !== 'active') continue;
+    const priorSlot = pulseShowcaseLedgerSlot(item.text);
+    if (!priorSlot) continue;
+    const changedActive = currentActiveSlots.some(entry =>
+      entry.slot === priorSlot &&
+      safeShowcaseText(entry.item.text || '', 240).toLowerCase() !== safeShowcaseText(item.text || '', 240).toLowerCase()
+    );
+    if (changedActive) {
+      add({
+        ...item,
+        id: `${item.id || 'prior-pack1-memory'}-superseded`
+      }, 'superseded');
+    }
+  }
+
+  return rows.slice(0, 12);
+}
+
 function pulseShowcaseSessionPack1Ledger(sessionId = '') {
   prunePulseShowcaseVisibleHistories();
   return sanitizePulseShowcaseLedgerRows(pulseShowcasePack1Ledgers.get(pulseShowcaseSessionId(sessionId))?.rows || []);
@@ -2040,19 +2102,22 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
     });
   (Array.isArray(memorySummary.supersededTruths) ? memorySummary.supersededTruths : [])
     .forEach(item => add(item, 'superseded', 'pack1-memory'));
+  let pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   const hasCurrentPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasCurrentPack1MemoryRows) {
     sanitizePulseShowcaseLedgerRows(priorPack1Rows)
       .forEach(item => add(item, item.status || 'active', 'pack1-memory'));
+    pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
-  const hasPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
+  const hasPack1MemoryRows = pack1Rows.some(item => item.source === 'pack1-memory');
   if (!hasPack1MemoryRows) {
     (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
       .filter(isShowcaseSessionLedgerNote)
       .forEach((note, index) => add({ id: `showcase-note-${index}`, text: note, status: 'active' }, 'active', 'showcase-session'));
+    pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
 
-  return rows.slice(0, 12);
+  return (pack1Rows.length ? pack1Rows : rows).slice(0, 12);
 }
 
 function sanitizeShowcaseMessages(items = []) {
