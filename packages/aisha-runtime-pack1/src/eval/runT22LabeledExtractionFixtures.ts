@@ -12,6 +12,8 @@ import {
   T22_k_boundary_is_immediately_active,
   T22_stacked_hedges_compound_correctly,
   T22_avoidance_signal_is_provisional,
+  T22_utterance_history_denial_is_not_profile_memory,
+  T22_assistant_attributed_preference_is_not_profile_memory,
 } from "./t22LabeledExtractionFixtures";
 
 const FIXTURES = [
@@ -24,6 +26,8 @@ const FIXTURES = [
   { id: "T22_k_boundary_is_immediately_active", fn: T22_k_boundary_is_immediately_active },
   { id: "T22_stacked_hedges_compound_correctly", fn: T22_stacked_hedges_compound_correctly },
   { id: "T22_avoidance_signal_is_provisional", fn: T22_avoidance_signal_is_provisional },
+  { id: "T22_utterance_history_denial_is_not_profile_memory", fn: T22_utterance_history_denial_is_not_profile_memory },
+  { id: "T22_assistant_attributed_preference_is_not_profile_memory", fn: T22_assistant_attributed_preference_is_not_profile_memory },
 ];
 
 async function main() {

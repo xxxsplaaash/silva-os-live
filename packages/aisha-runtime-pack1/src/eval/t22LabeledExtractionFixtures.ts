@@ -11,6 +11,8 @@
  *   6. Marks stable profiles as provisional on cold start
  *   7. Emits K_boundary with active status and high confidence immediately
  *   8. Combination hedge penalties stack correctly
+ *   9. Suppresses utterance-history denial challenges from profile extraction
+ *  10. Suppresses assistant-attributed preference claims from profile extraction
  *
  * All deterministic. No live LLM. No Date.now() assertions.
  */
@@ -247,4 +249,32 @@ export async function T22_avoidance_signal_is_provisional() {
   assert.strictEqual(c.status, "provisional");
   assert.ok(c.normalizedValue?.startsWith("avoids"), "Avoidance must normalize with 'avoids' prefix");
   assert.ok(c.confidence >= 0.65, `Avoidance base confidence >= 0.65. Got: ${c.confidence}`);
+}
+
+// ─── T22_utterance_history_denial_is_not_profile_memory ─────────────────────
+
+export async function T22_utterance_history_denial_is_not_profile_memory() {
+  const sandbox = new SimpleNoteExtractionSandbox();
+  const turns = [makeTurn("t1", "I never said obsidian.")];
+  const ep = makeEpisode(["t1"]);
+
+  const gate = sandbox.heuristicGate(ep, turns);
+  const candidates = await sandbox.extract(ep, turns);
+
+  assert.strictEqual(gate.pass, false, "Utterance-history denial must not pass the memory extraction gate");
+  assert.deepStrictEqual(candidates, [], "Utterance-history denial must not create K_profile memory");
+}
+
+// ─── T22_assistant_attributed_preference_is_not_profile_memory ──────────────
+
+export async function T22_assistant_attributed_preference_is_not_profile_memory() {
+  const sandbox = new SimpleNoteExtractionSandbox();
+  const turns = [makeTurn("t1", "You said my dashboard preference is obsidian.")];
+  const ep = makeEpisode(["t1"]);
+
+  const gate = sandbox.heuristicGate(ep, turns);
+  const candidates = await sandbox.extract(ep, turns);
+
+  assert.strictEqual(gate.pass, false, "Assistant-attributed preference must not pass the memory extraction gate");
+  assert.deepStrictEqual(candidates, [], "Assistant-attributed preference must not create K_pref memory");
 }

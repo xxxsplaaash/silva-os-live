@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "eval:t22": "esbuild src/eval/runT22LabeledExtractionFixtures.ts --bundle --platform=node --format=esm --outfile=/tmp/aisha-runtime-pack1-t22.mjs && node /tmp/aisha-runtime-pack1-t22.mjs",
     "smoke:production": "node -e \"import('./dist/index.js').then(m => console.log(typeof m.processAishaRequest))\""
   },
   "dependencies": {

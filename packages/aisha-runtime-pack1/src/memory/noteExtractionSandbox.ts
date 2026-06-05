@@ -48,6 +48,7 @@ function isEphemeralChatter(text: string): boolean {
 }
 
 function hasStrongPreferenceSignal(text: string): boolean {
+  if (isUtteranceHistoryChallenge(text)) return false;
   return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is|my [a-z0-9 _-]{2,80} style is|my [a-z0-9 _-]{2,80} aesthetic is)\b/i.test(
     text,
   );
@@ -65,7 +66,14 @@ function hasImpliedPreferenceSignal(text: string): boolean {
 }
 
 function hasStrongProfileSignal(text: string): boolean {
+  if (isUtteranceHistoryChallenge(text)) return false;
   return /\b(?:i am|i'm|i usually|i tend to|i always|i never)\b/i.test(text);
+}
+
+function isUtteranceHistoryChallenge(text: string): boolean {
+  return /\b(?:i\s+(?:never|didn't|did not)\s+(?:say|said|claim|claimed|tell|told)|did\s+i\s+(?:ever\s+)?(?:say|claim|tell)|what\s+did\s+i\s+(?:say|claim|tell)\s+before|you\s+(?:said|claimed|told\s+me)\s+(?:i\s+(?:said|claimed|told|prefer|like|love|hate)|my\s+[a-z0-9 _-]{2,80}\s+(?:preference|style|aesthetic)\s+is))\b/i.test(
+    text,
+  );
 }
 
 function looksPreferenceLike(text: string): boolean {
@@ -165,6 +173,10 @@ export class SimpleNoteExtractionSandbox implements INoteExtractionSandbox {
         .filter(Boolean);
 
       for (const text of sentences) {
+        if (isUtteranceHistoryChallenge(text)) {
+          continue;
+        }
+
         // ── Pack 2.6: Deterministic hedge / temporality post-filter ───────────
         // These flags are evaluated per-sentence and used to penalise confidence.
         // Aspiration/intention receives the largest penalty (−0.40) to ensure

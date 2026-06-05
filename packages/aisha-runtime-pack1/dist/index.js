@@ -2758,6 +2758,7 @@ function isEphemeralChatter(text) {
   );
 }
 function hasStrongPreferenceSignal(text) {
+  if (isUtteranceHistoryChallenge(text)) return false;
   return /\b(?:i like|i love|i prefer|i only drink|i always drink|i never drink|i hate|i don't like|i do not like|my [a-z0-9 _-]{2,80} preference is|my [a-z0-9 _-]{2,80} style is|my [a-z0-9 _-]{2,80} aesthetic is)\b/i.test(
     text
   );
@@ -2768,7 +2769,13 @@ function hasImpliedPreferenceSignal(text) {
   );
 }
 function hasStrongProfileSignal(text) {
+  if (isUtteranceHistoryChallenge(text)) return false;
   return /\b(?:i am|i'm|i usually|i tend to|i always|i never)\b/i.test(text);
+}
+function isUtteranceHistoryChallenge(text) {
+  return /\b(?:i\s+(?:never|didn't|did not)\s+(?:say|said|claim|claimed|tell|told)|did\s+i\s+(?:ever\s+)?(?:say|claim|tell)|what\s+did\s+i\s+(?:say|claim|tell)\s+before|you\s+(?:said|claimed|told\s+me)\s+(?:i\s+(?:said|claimed|told|prefer|like|love|hate)|my\s+[a-z0-9 _-]{2,80}\s+(?:preference|style|aesthetic)\s+is))\b/i.test(
+    text
+  );
 }
 function looksPreferenceLike(text) {
   return /\b(?:drink|eat|coffee|latte|tea|food|music|movie|movies|dashboard|landing page|homepage|website|brand|design|style|aesthetic|colour|color|accent|prefer|preference|like|love|hate)\b/i.test(
@@ -2820,6 +2827,9 @@ var SimpleNoteExtractionSandbox = class {
     for (const turn of userTurns) {
       const sentences = turn.rawText.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
       for (const text of sentences) {
+        if (isUtteranceHistoryChallenge(text)) {
+          continue;
+        }
         const isTemporary = /\b(right now|just for now|at the moment|for now)\b/i.test(text);
         const isConditional = /\b(if |in case|unless|depending on|when it rains)\b/i.test(text);
         const isAmbivalent = /\b(might|maybe|probably|perhaps|guess|suppose)\b/i.test(text);
