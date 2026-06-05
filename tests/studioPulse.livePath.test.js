@@ -1068,7 +1068,7 @@ test('Studio Pulse showcase turn validates input, normalizes mode, and maps memo
                     { speakerId: 'leah', role: 'side', tone: 'dry', text: 'That is taste with a spine. Keep it.' }
                   ],
                   silentReactions: [
-                    { speakerId: 'grok', visibleState: 'Tracking' }
+                    { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for contradiction before entering' }
                   ],
                   stateUpdates: { notes: ['obsidian dashboard preference noted'] },
                   socialCues: {
@@ -1319,8 +1319,8 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
                   { speakerId: 'aisha', role: 'primary', tone: 'precise', text: 'That supersedes the dashboard preference already on record.' }
                 ],
                 silentReactions: [
-                  { speakerId: 'grok', visibleState: 'Tracking' },
-                  { speakerId: 'claudia', visibleState: 'Tracking' }
+                  { speakerId: 'grok', visibleState: 'Tracking', reason: 'checking the contradiction before speaking' },
+                  { speakerId: 'claudia', visibleState: 'Tracking', reason: 'holding structure while A.I.S.H.A anchors the record' }
                 ],
                 stateUpdates: {
                   notes: [
@@ -1484,7 +1484,7 @@ test('Studio Pulse showcase social cues cannot create continuity ledger rows', a
                   { speakerId: 'leah', role: 'primary', tone: 'dry', text: 'That is a redirect, not a receipt.' }
                 ],
                 silentReactions: [
-                  { speakerId: 'vanya', visibleState: 'Cooling' }
+                  { speakerId: 'vanya', visibleState: 'Cooling', reason: 'cooling the room without adding a fact' }
                 ],
                 stateUpdates: { notes: [] },
                 socialCues: {
@@ -1665,7 +1665,10 @@ test('Studio Pulse showcase repairs Pack 1 fitness refusal before claiming accep
                   text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
                 }
               ],
-              silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }, { speakerId: 'grok', visibleState: 'Tracking' }],
+              silentReactions: [
+                { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity until a correction is needed' },
+                { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for sloppy fitness claims before interrupting' }
+              ],
               stateUpdates: { notes: ['Beginner muscle-building guidance.'] },
               socialCues: {
                 roomMove: 'redirect',

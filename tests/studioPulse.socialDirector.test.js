@@ -252,7 +252,7 @@ test('mocked A.I.S.H.A JSON is accepted when valid', async () => {
           { speakerId: 'vanya', role: 'primary', tone: 'warm with bite', text: 'The room is awake. Nobody needs a task badge to talk.' },
           { speakerId: 'grok', role: 'side', tone: 'dry', text: 'I have filed a mild objection to the word vibe, but yes.' }
         ],
-        silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+        silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity until the room needs a correction' }],
         socialCues: {
           roomMove: 'redirect',
           tensionDelta: -2,
@@ -664,6 +664,23 @@ test('silent reactions preserve intentional silence reasons for visible presence
 
   assert.equal(validation.ok, true, validation.issues.join(', '));
   assert.equal(validation.output.silentReactions[0].reason, 'tracking structure without turning the exchange into a project plan');
+
+  const missingReason = validateDirectorOutput({
+    roomBeat: 'Leah and Grok keep this from becoming generic design filler.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Make the mark feel like a warning light, not a wellness badge.', visibleState: 'Speaking' },
+      { speakerId: 'grok', role: 'side', tone: 'dry', text: 'If the logo needs five adjectives to survive, the shape is unemployed.', visibleState: 'Tracking' }
+    ],
+    silentReactions: [
+      { speakerId: 'claudia', visibleState: 'Tracking next steps' }
+    ],
+    stateUpdates: { notes: [] }
+  }, input);
+
+  assert.equal(missingReason.ok, false);
+  assert.ok(missingReason.issues.includes('silent-reaction-missing-reason:claudia'));
 });
 
 test('showcase fallback gives every quiet character an intentional silence reason', () => {
@@ -842,7 +859,7 @@ test('social director quality validator accepts useful short fitness guidance in
         text: 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'
       }
     ],
-    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity while practical voices answer' }],
     stateUpdates: { notes: ['Beginner muscle-building guidance.'] }
   }, { userMessage: 'LOL I WANNA GROW MY MUSCLES' });
 
@@ -1391,6 +1408,12 @@ test('social director quality validator rejects character voice-lock drift', () 
       issue: 'voice-lock:therapy-voice:vanya',
       speaker: 'vanya',
       text: 'I understand how you feel, and it makes sense to feel overwhelmed right now.'
+    },
+    {
+      label: 'support-bot Vanya from live gauntlet',
+      issue: 'voice-lock:therapy-voice:vanya',
+      speaker: 'vanya',
+      text: "It's okay to feel that way. Let's just get one thing done, then we can see where we are."
     },
     {
       label: 'permission-slip therapy Vanya',
@@ -2010,6 +2033,16 @@ test('visible response evaluator flags audit-level product failures', () => {
     visibleText: 'The ask is to move forward. Name one thing you need to do next, and do it.'
   }).includes('weak-next-move'));
 
+  const normalAcceptedMiss = families({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      'Pick one thing. Today, focus on getting one hour of focused work done on a single project.',
+      "It's okay to feel that way. Let's just get one thing done, then we can see where we are."
+    ].join('\n')
+  });
+  assert.ok(normalAcceptedMiss.includes('weak-next-move'));
+  assert.ok(normalAcceptedMiss.includes('speaker-flatness'));
+
   assert.ok(families({
     userMessage: 'ok but I only have 20 minutes',
     visibleText: 'Twenty minutes. Three compound moves, one per ten minutes.'
@@ -2432,6 +2465,23 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.equal(softerLiveRepeatComplaint.ok, false);
   assert.ok(softerLiveRepeatComplaint.issues.includes('frustration-ignored'));
   assert.ok(softerLiveRepeatComplaint.issues.includes('product-frustration-miss:repeat-complaint'));
+
+  const liveLoopClearRepeatComplaint = validateDirectorOutput({
+    roomBeat: 'The room admits a loop but still gives meta reset talk.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: "The loop is clear. Let's reset." },
+      { speakerId: 'leah', role: 'side', tone: 'flat', text: 'Repeating is just another way to dodge. The energy thins when we refuse to land the point.' },
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: "The user is stressed. Let's pick one topic and give a single, actionable step for it." }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'you keep repeating yourself' });
+
+  assert.equal(liveLoopClearRepeatComplaint.ok, false);
+  assert.ok(liveLoopClearRepeatComplaint.issues.includes('frustration-ignored'));
+  assert.ok(liveLoopClearRepeatComplaint.issues.includes('product-frustration-miss:repeat-complaint'));
 
   const bruhPlanSermon = validateDirectorOutput({
     roomBeat: 'The room doubles down instead of reading frustration.',
@@ -3873,7 +3923,7 @@ test('social director normalizes bounded social cues and ignores invalid speaker
       { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'That idea is hiding behind politeness.' },
       { speakerId: 'aisha', role: 'side', tone: 'precise', text: 'The prior claim is still on record.' }
     ],
-    silentReactions: [{ speakerId: 'grok', visibleState: 'Tracking' }],
+    silentReactions: [{ speakerId: 'grok', visibleState: 'Tracking', reason: 'letting Leah and A.I.S.H.A hold the challenge' }],
     socialCues: {
       roomMove: 'challenge',
       tensionDelta: 99,
@@ -3914,7 +3964,7 @@ test('visible social language is not rejected as internal scalar diagnostics', (
     speakers: [
       { speakerId: 'vanya', role: 'primary', tone: 'measured', text: 'There is warmth in the room, but nobody gets to drift past the actual claim.' }
     ],
-    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+    silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the claim as Vanya adjusts tone' }],
     stateUpdates: { notes: [] }
   }, { userMessage: 'Can this be warmer?' });
 
@@ -4062,7 +4112,7 @@ test('social director defaults to fast structured model without changing main Pu
             roomMood: 'playful',
             responseMode: 'single',
             speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'The room is open without turning into a queue.' }],
-            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity while Vanya keeps the room brief' }],
             stateUpdates: { notes: [] }
           });
         }
@@ -4122,7 +4172,7 @@ test('SOCIAL_DIRECTOR_MODEL is passed only to the social director route', async 
             roomMood: 'playful',
             responseMode: 'single',
             speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'The room is awake without turning this into a task queue.' }],
-            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+            silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity while Vanya opens the room' }],
             stateUpdates: { notes: [] }
           });
         }
@@ -4179,7 +4229,7 @@ test('mocked A.I.S.H.A fenced JSON is parsed and accepted', async () => {
         roomMood: 'playful',
         responseMode: 'single',
         speakers: [{ speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Girl, I am here. The room can stop acting surprised.' }],
-        silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+        silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity while Leah answers directly' }],
         stateUpdates: { notes: [] }
       })}\n\`\`\``)
     }));
@@ -4214,7 +4264,7 @@ test('invalid A.I.S.H.A output gets one repair attempt before fallback', async (
           roomMood: 'playful',
           responseMode: 'single',
           speakers: [{ speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Open floor can be social. Say less and let the room breathe.' }],
-          silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring' }],
+          silentReactions: [{ speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding continuity while Vanya repairs the open floor' }],
           stateUpdates: { notes: [] }
         });
       }

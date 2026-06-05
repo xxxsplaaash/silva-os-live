@@ -707,6 +707,17 @@ test('visible response quality rejects question-bounce repetition recovery from 
   });
 
   assert.ok(issueKeys(softerIssues).includes('frustration-miss:repeat-complaint'));
+
+  const liveLoopClearIssues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      "The loop is clear. Let's reset.",
+      'Repeating is just another way to dodge. The energy thins when we refuse to land the point.',
+      "The user is stressed. Let's pick one topic and give a single, actionable step for it."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(liveLoopClearIssues).includes('frustration-miss:repeat-complaint'));
 });
 
 test('visible response quality rejects normal-answer question bounce from live gauntlet', () => {
@@ -731,6 +742,17 @@ test('visible response quality rejects bland accepted practical answers from liv
   });
 
   assert.ok(issueKeys(todayIssues).includes('weak-next-move:normal-answer'));
+
+  const acceptedNormalMiss = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      'Pick one thing. Today, focus on getting one hour of focused work done on a single project.',
+      "It's okay to feel that way. Let's just get one thing done, then we can see where we are."
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(acceptedNormalMiss).includes('weak-next-move:normal-answer'));
+  assert.ok(issueKeys(acceptedNormalMiss).includes('speaker-flatness:generic-warmth'));
 
   const planningIssues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',
