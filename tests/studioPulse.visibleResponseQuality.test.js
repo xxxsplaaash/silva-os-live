@@ -89,6 +89,16 @@ test('blind attribution rejects confident borrowed-voice lines without using lab
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:wrong-attribution'));
 });
 
+test('blind attribution rejects live short-session Vanya line that ties with Claudia', () => {
+  const attribution = evaluateBlindAttributionLines([
+    { speakerId: 'vanya', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' }
+  ]);
+
+  assert.equal(attribution.ok, false);
+  assert.equal(attribution.results[0].identifiable, false);
+  assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
+});
+
 test('visible response quality rejects fake build-reflection language on style turns', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'My landing page style is black glass with a single red pulse.',
@@ -501,11 +511,11 @@ test('visible response quality rejects repeated short-session answer lines', () 
   const issues = evaluateVisibleResponse({
     userMessage: 'ok but I only have 20 minutes',
     recentTurns: [
-      { speakerId: 'vanya', role: 'primary', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes of training, small enough to finish and real enough that you feel it tomorrow.' },
       { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' }
     ],
     visibleText: [
-      'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.',
+      'Tiny vanity, clean discipline. Twenty minutes of training, small enough to finish and real enough that you feel it tomorrow.',
       'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.'
     ].join('\n')
   });
