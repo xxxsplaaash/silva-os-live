@@ -3663,7 +3663,7 @@ test('social director fallback recovers repetition complaints and planning pivot
 
       const stress = await postSocial(baseUrl, 'I am stressed and this is starting to feel dumb.', { recentTurns });
       const stressText = visibleText(stress.body);
-      assert.match(stressText, /\b(ten minutes|drink water|clear one surface|smallest next task|set a timer)\b/i);
+      assert.match(stressText, /\b(human temperature first|water|clear one surface|smallest next task|set a timer)\b/i);
       assert.doesNotMatch(stressText, /\b(room-theatre|room theater|essay about the process|objective is|name the actual problem)\b/i);
 
       const planning = await postSocial(baseUrl, 'new topic: I need help planning tomorrow', { recentTurns });
