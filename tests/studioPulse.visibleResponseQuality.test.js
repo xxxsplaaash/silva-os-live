@@ -18,6 +18,7 @@ test('blind attribution scores alive room lines as distinct characters without l
     ['vanya', 'Same twenty minutes, cleaner shape: warm up, run the clock, write one number down.'],
     ['vanya', 'There is warmth in the room, but nobody gets to drift past the actual claim.'],
     ['leah', 'Pick the feeling first. The title is just the room admitting what mood it wants.'],
+    ['leah', 'The cultural fault line is pretending vague effort deserves a badge.'],
     ['claudia', 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.'],
     ['claudia', 'For lunch, eat something boring enough to work: rice and chicken, eggs and toast, a sandwich, or leftovers with water.'],
     ['grok', 'Sharp joint pain means swap the move, not prove a point. Soreness is allowed.'],
@@ -69,7 +70,7 @@ test('blind attribution keeps public fallback movie, food, and design lines spea
   const attribution = evaluateBlindAttributionLines([
     { speakerId: 'grok', text: 'Protein helps later. Right now the question is whether the food lets you move without feeling heavy.' },
     { speakerId: 'vanya', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
-    { speakerId: 'leah', text: 'One strong world, not wallpaper. Pick the one that matches the room temperature.' },
+    { speakerId: 'leah', text: 'One strong world, not wallpaper. Pick the feeling first; the title just admits the mood.' },
     { speakerId: 'grok', text: 'Three clean options means the premise is solved. Arguing longer is just random taste noise.' },
     { speakerId: 'claudia', text: 'Direction: make the hero quiet, the CTA obvious, and the red accent do one job. If it appears everywhere, it stops meaning anything.' },
     { speakerId: 'vanya', text: 'That keeps it premium instead of generic SaaS. The room should feel intentional before it feels busy.' }
@@ -667,6 +668,33 @@ test('visible response quality rejects invented project specifics on generic pla
       'I have the project timelines. We need to allocate resources for the Q3 deliverables and confirm the client meeting slots.',
       'And what is the human temperature on those meetings?'
     ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
+test('visible response quality rejects live thin referenced fitness compression', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'turn that into a 20 minute version',
+    visibleText: 'Tiny vanity, clean discipline. Twenty minutes of training, small enough to finish and real enough that you feel it tomorrow.'
+  });
+
+  assert.ok(issueKeys(issues).includes('topic-ignored:referenced-fitness'));
+});
+
+test('visible response quality rejects repeated room-temperature self-theater', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: 'Fair catch. Room temperature says the loop got loud; I am cutting the speeches and letting one useful move land.'
+  });
+
+  assert.ok(issueKeys(issues).includes('self-theater:temperature-language'));
+});
+
+test('visible response quality rejects live generic planning build invention', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: 'Make it real for tomorrow: first decision, main build, cleanup. Put the riskiest block first and write the handoff before lunch.'
   });
 
   assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));

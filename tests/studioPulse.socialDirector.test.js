@@ -654,6 +654,22 @@ test('showcase impulse planner treats referenced practical cards as cap-enforced
   assert.equal(input.impulsePlan.maxSpeakers, 2);
   assert.equal(input.impulsePlan.enforceSelectedSpeakers, true);
   assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
+
+  const vanyaReference = buildRoomDirectorInput({
+    question: 'turn that into a 20 minute version',
+    references: [{
+      speakerId: 'vanya',
+      text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+    }],
+    recentTurns: [
+      { speakerId: 'claudia', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
+    ]
+  });
+
+  assert.equal(vanyaReference.impulsePlan.category, 'practical');
+  assert.equal(vanyaReference.impulsePlan.maxSpeakers, 2);
+  assert.equal(vanyaReference.impulsePlan.enforceSelectedSpeakers, true);
+  assert.deepEqual(vanyaReference.impulsePlan.speakerOrder, ['vanya', 'claudia']);
 });
 
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
@@ -1287,7 +1303,7 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const text = fallbackVisibleText(fallback);
 
   assert.match(text, /\bTiny vanity, clean discipline\b/i);
-  assert.match(text, /\btwenty minutes of training\b/i);
+  assert.match(text, /\btwenty minutes\b/i);
   assert.match(text, /\bthree rounds\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
   assertCleanVisible(fallback);
@@ -1355,7 +1371,7 @@ test('social director fallback closes the third fitness recovery without repeati
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
       const recentTurns = [
-        { speakerId: 'vanya', role: 'primary', text: 'Temperature check: the room is done negotiating. One workout, one meal, one sleep window; that is today.' },
+        { speakerId: 'vanya', role: 'primary', text: 'No more negotiating with the fog. One workout, one meal, one sleep window; that is today.' },
         { speakerId: 'claudia', role: 'side', text: 'Make it real: push, pull, legs; log reps, recover, repeat. Leave two reps in reserve.' },
         { speakerId: 'grok', role: 'closer', text: 'Good. That is specific enough to start.' }
       ];
@@ -1374,7 +1390,8 @@ test('social director fallback closes the third fitness recovery without repeati
       assert.doesNotMatch(text, /one workout, one meal, one sleep window/i);
       assert.doesNotMatch(text, /First move: incline push-ups/i);
       assert.doesNotMatch(text, /No fourth version/i);
-      assert.match(text, /\b(Room temperature|One clean move|premise fault|Start the clock)\b/i);
+      assert.match(text, /\b(One clean move|premise fault|Start the clock)\b/i);
+      assert.doesNotMatch(text, /\b(room temperature|human temperature|temperature check)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
     });
@@ -1510,7 +1527,7 @@ test('social director fallback does not repeat the same watch recommendation blo
       const recentTurns = [
         { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
         { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
-        { speakerId: 'leah', role: 'side', text: 'One strong world, not wallpaper. Pick the one that matches the room temperature.' },
+        { speakerId: 'leah', role: 'side', text: 'One strong world, not wallpaper. Pick the feeling first; the title just admits the mood.' },
         { speakerId: 'grok', role: 'closer', text: 'Choose the constraint before the title. Otherwise recommendation becomes astrology with better lighting.' }
       ];
       const { body } = await postSocial(baseUrl, 'open floor: what should the room watch next?', { recentTurns });
@@ -3685,7 +3702,8 @@ test('social director fallback recovers repetition complaints and planning pivot
 
       const stress = await postSocial(baseUrl, 'I am stressed and this is starting to feel dumb.', { recentTurns });
       const stressText = visibleText(stress.body);
-      assert.match(stressText, /\b(human temperature first|water|clear one surface|smallest next task|set a timer)\b/i);
+      assert.match(stressText, /\b(body first|water|clear one surface|smallest next task|set a timer)\b/i);
+      assert.doesNotMatch(stressText, /\b(room temperature|human temperature|temperature check)\b/i);
       assert.doesNotMatch(stressText, /\b(room-theatre|room theater|essay about the process|objective is|name the actual problem)\b/i);
 
       const planning = await postSocial(baseUrl, 'new topic: I need help planning tomorrow', { recentTurns });
@@ -3698,7 +3716,8 @@ test('social director fallback recovers repetition complaints and planning pivot
         silentReactions: planning.body.silentReactions,
         stateUpdates: { notes: [] }
       }, { userMessage: 'new topic: I need help planning tomorrow', recentTurns });
-      assert.match(planningText, /\b(Make it real|first decision|main build|cleanup|Rank the pain)\b/i);
+      assert.match(planningText, /\b(Make it real|three things|hardest one first|buffer|Rank the pain)\b/i);
+      assert.doesNotMatch(planningText, /\b(main build|handoff before lunch)\b/i);
       assert.doesNotMatch(planningText, /\b(muscle|training|protein|workout)\b/i);
       assert.equal(planningValidation.ok, true, planningValidation.issues.join(', '));
     });
