@@ -1324,7 +1324,7 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const fallback = socialFallbackFor('turn that into a 20 minute version', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bTiny vanity, clean discipline\b/i);
+  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
   assert.match(text, /\btwenty minutes\b/i);
   assert.match(text, /\bthree rounds\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
