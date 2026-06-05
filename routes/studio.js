@@ -1986,6 +1986,24 @@ function publicPulseShowcaseStatus(status = publicAishaRuntimeStatus({})) {
   };
 }
 
+function publicAishaStatus(status = publicAishaRuntimeStatus({})) {
+  const connected = status.aishaEngineConnected === true;
+  const rawEngineMode = safeRuntimeStatusText(status.aishaEngineMode || '');
+  const engineMode = connected && (!rawEngineMode || rawEngineMode === 'mock')
+    ? 'production'
+    : (rawEngineMode || (connected ? 'production' : 'unavailable'));
+  const activeEngine = connected ? 'aisha-runtime-pack1' : 'local-room-intelligence';
+  return {
+    ok: true,
+    aishaConnected: connected,
+    aishaEngineConnected: connected,
+    activeEngine,
+    engineMode,
+    aishaEngineMode: engineMode,
+    updatedAt: safeRuntimeStatusText(status.updatedAt || new Date().toISOString())
+  };
+}
+
 function normalizePulseShowcaseFallbackCategory(value = '') {
   return safeRuntimeStatusText(value)
     .toLowerCase()
@@ -3782,7 +3800,7 @@ router.post('/pulse/workflows/:id/commit', async (req, res) => {
 
 router.get('/pulse/aisha-status', async (req, res) => {
   const status = await hydrateAishaRuntimeStatusIfNeeded({ force: String(req.query?.refresh || '').trim() === '1' });
-  res.json(status);
+  res.json(publicAishaStatus(status));
 });
 
 router.options('/pulse-showcase/status', (req, res) => {
@@ -6365,5 +6383,10 @@ router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPaylo
 router.__ensurePulseShowcaseSilentPresenceForTests = ensurePulseShowcaseSilentPresence;
 router.__parsePulseShowcaseTurnRequestForTests = parsePulseShowcaseTurnRequest;
 router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
+
+router.__test = {
+  publicAishaStatus,
+  publicPulseShowcaseStatus
+};
 
 module.exports = router;

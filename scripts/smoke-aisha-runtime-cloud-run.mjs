@@ -10,22 +10,17 @@ if (!backendUrl) {
 }
 
 function safePickStatus(status = {}) {
+  const connected = status.aishaConnected === true || status.aishaEngineConnected === true;
+  const engineMode = String(status.engineMode || status.aishaEngineMode || '');
   return {
     ok: status.ok,
-    aishaEngineEnabled: status.aishaEngineEnabled,
-    aishaAttempted: status.aishaAttempted,
-    aishaEngineConnected: status.aishaEngineConnected,
-    aishaEngineMode: status.aishaEngineMode,
+    aishaConnected: connected,
+    aishaEngineConnected: connected,
+    engineMode,
+    aishaEngineMode: engineMode,
     activeEngine: status.activeEngine,
-    fallbackReason: status.fallbackReason,
-    aishaPersistenceMode: status.aishaPersistenceMode,
-    aishaPersistenceBackend: status.aishaPersistenceBackend,
-    aishaPersistenceConnected: status.aishaPersistenceConnected,
-    aishaPersistenceFailureReason: status.aishaPersistenceFailureReason,
-    runtimeCredentialProvided: status.runtimeCredentialProvided,
-    runtimeCredentialSource: status.runtimeCredentialSource,
-    runtimeTimeoutMs: status.runtimeTimeoutMs,
-    modelUsed: status.modelUsed
+    updatedAt: status.updatedAt,
+    persistence: status.persistence || null
   };
 }
 
@@ -44,18 +39,21 @@ async function fetchJson(pathname) {
 
 const health = await fetchJson('/health');
 const status = await fetchJson('/api/studio/pulse/aisha-status');
+const showcase = await fetchJson('/api/studio/pulse-showcase/status?refresh=1');
 const summary = {
   backendUrl,
   healthHttpStatus: health.httpStatus,
   healthOk: health.json?.ok === true,
   statusHttpStatus: status.httpStatus,
-  ...safePickStatus(status.json || {})
+  ...safePickStatus(status.json || {}),
+  showcaseHttpStatus: showcase.httpStatus,
+  showcasePersistence: showcase.json?.persistence || null
 };
 
 console.log(JSON.stringify(summary, null, 2));
 
-const connected = status.json?.aishaEngineConnected === true;
-const runtimeUnavailable = String(status.json?.fallbackReason || '') === 'aisha-runtime-unavailable';
+const connected = status.json?.aishaConnected === true || status.json?.aishaEngineConnected === true;
+const runtimeUnavailable = status.json?.activeEngine !== 'aisha-runtime-pack1';
 
 if (!connected || runtimeUnavailable) {
   console.error('A.I.S.H.A runtime smoke failed: Cloud Run is not connected to aisha-runtime-pack1.');

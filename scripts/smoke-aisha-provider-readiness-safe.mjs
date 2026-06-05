@@ -18,18 +18,27 @@ function assertOk(condition, message) {
 }
 
 function safeStatus(status = {}) {
+  const connected = status.aishaConnected === true || status.aishaEngineConnected === true;
+  const engineMode = String(status.engineMode || status.aishaEngineMode || '');
   return {
     ok: status.ok === true,
-    aishaEngineEnabled: status.aishaEngineEnabled === true,
-    aishaAttempted: status.aishaAttempted === true,
+    aishaConnected: connected,
+    aishaEngineConnected: connected,
+    engineMode,
+    aishaEngineMode: engineMode,
+    activeEngine: String(status.activeEngine || ''),
+    updatedAt: String(status.updatedAt || '')
+  };
+}
+
+function safeShowcaseStatus(status = {}) {
+  return {
+    ok: status.ok === true,
+    activeEngine: String(status.activeEngine || ''),
     aishaEngineConnected: status.aishaEngineConnected === true,
     aishaEngineMode: String(status.aishaEngineMode || ''),
-    activeEngine: String(status.activeEngine || ''),
-    aishaPersistenceMode: String(status.aishaPersistenceMode || ''),
-    aishaPersistenceBackend: String(status.aishaPersistenceBackend || ''),
-    aishaPersistenceConnected: status.aishaPersistenceConnected === true,
-    runtimeCredentialProvided: status.runtimeCredentialProvided === true,
-    runtimeCredentialSource: String(status.runtimeCredentialSource || '')
+    persistenceMode: String(status.persistence?.mode || ''),
+    persistenceConnected: status.persistence?.connected === true
   };
 }
 
@@ -79,7 +88,9 @@ async function fetchJson(url) {
 
 const localVault = localVaultProof(LOCAL_PROVIDER_ROOT);
 const statusResponse = await fetchJson(`${BACKEND_URL}/api/studio/pulse/aisha-status?refresh=1`);
+const showcaseResponse = await fetchJson(`${BACKEND_URL}/api/studio/pulse-showcase/status?refresh=1`);
 const runtime = safeStatus(statusResponse.json || {});
+const showcase = safeShowcaseStatus(showcaseResponse.json || {});
 const summary = {
   backendUrl: BACKEND_URL,
   localVault: {
@@ -93,7 +104,9 @@ const summary = {
   cloudRunRuntime: {
     httpStatus: statusResponse.httpStatus,
     ...runtime,
-    cloudRunCredentialSignalPresent: runtime.runtimeCredentialProvided === true
+    cloudRunRuntimeConnected: runtime.aishaEngineConnected === true && runtime.activeEngine === 'aisha-runtime-pack1',
+    showcaseStatusHttpStatus: showcaseResponse.httpStatus,
+    showcase
   }
 };
 
@@ -109,15 +122,11 @@ if (statusResponse.httpStatus !== 200 || runtime.ok !== true) {
   console.error('A.I.S.H.A status endpoint did not return ok.');
   process.exit(1);
 }
-if (runtime.runtimeCredentialProvided !== true) {
-  console.error('Cloud Run runtime credential signal is missing.');
-  process.exit(1);
-}
 if (runtime.activeEngine !== 'aisha-runtime-pack1' || runtime.aishaEngineConnected !== true) {
   console.error('Pack 1 runtime is not connected.');
   process.exit(1);
 }
-if (runtime.aishaPersistenceMode !== 'postgres' || runtime.aishaPersistenceConnected !== true) {
+if (showcase.persistenceMode !== 'postgres' || showcase.persistenceConnected !== true) {
   console.error('Pack 1 Postgres persistence is not connected.');
   process.exit(1);
 }

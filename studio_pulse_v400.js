@@ -1453,17 +1453,20 @@
 
 	  function applyAishaRuntimeStatusPayload(payload){
 	    if (!payload || payload.ok !== true) return false;
-	    const statusKnown = payload.statusKnown === true || payload.aishaAttempted === true;
+	    const statusKnown = payload.statusKnown === true
+	      || payload.aishaAttempted === true
+	      || typeof payload.aishaConnected === 'boolean'
+	      || typeof payload.aishaEngineConnected === 'boolean';
 	    if (!statusKnown && payload.aishaEngineEnabled === true) return false;
 	    const existing = pulseState.lastMeta && typeof pulseState.lastMeta === 'object' ? pulseState.lastMeta : {};
-	    const connected = payload.aishaEngineConnected === true;
+	    const connected = payload.aishaConnected === true || payload.aishaEngineConnected === true;
 	    pulseState.lastMeta = {
 	      ...existing,
 	      provider: connected ? 'aisha' : (existing.provider || 'studio'),
 	      model: connected ? 'aisha-runtime-pack1' : (existing.model || ''),
-	      aishaAttempted: payload.aishaAttempted === true,
+	      aishaAttempted: payload.aishaAttempted === true || typeof payload.aishaConnected === 'boolean',
 	      aishaEngineConnected: connected,
-	      aishaEngineMode: String(payload.aishaEngineMode || existing.aishaEngineMode || (payload.aishaEngineEnabled ? 'production' : 'mock')),
+	      aishaEngineMode: String(payload.engineMode || payload.aishaEngineMode || existing.aishaEngineMode || (connected ? 'production' : 'unavailable')),
 	      activeEngine: String(payload.activeEngine || (connected ? 'aisha-runtime-pack1' : 'local-room-intelligence')),
 	      fallbackReason: String(payload.fallbackReason || ''),
 	      aishaTraceStatus: String(payload.aishaTraceStatus || existing.aishaTraceStatus || ''),

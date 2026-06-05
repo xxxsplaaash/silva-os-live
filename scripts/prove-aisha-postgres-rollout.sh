@@ -127,23 +127,22 @@ run_postgres_conformance() {
 }
 
 assert_live_persistence_status() {
-  local status_json
+  local status_json showcase_json
   status_json="$(curl -fsS "$BACKEND_URL/api/studio/pulse/aisha-status")"
-  printf '%s' "$status_json" | node -e '
-    let body = "";
-    process.stdin.on("data", chunk => body += chunk);
-    process.stdin.on("end", () => {
-      const status = JSON.parse(body);
-      const failures = [];
-      if (status.activeEngine !== "aisha-runtime-pack1") failures.push(`activeEngine=${status.activeEngine}`);
-      if (status.aishaEngineMode !== "production") failures.push(`aishaEngineMode=${status.aishaEngineMode}`);
-      if (status.aishaPersistenceMode !== "postgres") failures.push(`aishaPersistenceMode=${status.aishaPersistenceMode}`);
-      if (status.aishaPersistenceConnected !== true) failures.push(`aishaPersistenceConnected=${status.aishaPersistenceConnected}`);
-      if (failures.length) {
-        console.error(`A.I.S.H.A Postgres status proof failed: ${failures.join(", ")}`);
-        process.exit(1);
-      }
-    });
+  showcase_json="$(curl -fsS "$BACKEND_URL/api/studio/pulse-showcase/status?refresh=1")"
+  STATUS_JSON="$status_json" SHOWCASE_JSON="$showcase_json" node -e '
+    const status = JSON.parse(process.env.STATUS_JSON || "{}");
+    const showcase = JSON.parse(process.env.SHOWCASE_JSON || "{}");
+    const failures = [];
+    const engineMode = status.engineMode || status.aishaEngineMode;
+    if (status.activeEngine !== "aisha-runtime-pack1") failures.push(`activeEngine=${status.activeEngine}`);
+    if (engineMode !== "production") failures.push(`engineMode=${engineMode}`);
+    if (showcase.persistence?.mode !== "postgres") failures.push(`persistence.mode=${showcase.persistence?.mode}`);
+    if (showcase.persistence?.connected !== true) failures.push(`persistence.connected=${showcase.persistence?.connected}`);
+    if (failures.length) {
+      console.error(`A.I.S.H.A Postgres status proof failed: ${failures.join(", ")}`);
+      process.exit(1);
+    }
   '
 }
 

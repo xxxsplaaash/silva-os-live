@@ -16,7 +16,7 @@ const { router: directorRouter } = require('../routes/director');
 async function withTestServer(fn) {
   const app = express();
   app.use(express.json({ limit: '2mb' }));
-  app.get('/health', (req, res) => res.json({ ok: true, providers: ['gemini'], database: 'sqlite' }));
+  app.get('/health', (req, res) => res.json({ ok: true, status: 'operational', timestamp: new Date().toISOString() }));
   app.use('/api/image-models', imageModelsRouter);
   app.use('/api/image-generation', imageGenerationRouter);
   app.use('/api/provider-credentials', providerCredentialsRouter);
@@ -41,7 +41,12 @@ test('core route inventory responds with safe shapes', async () => {
   await withTestServer(async baseUrl => {
     const health = await fetch(`${baseUrl}/health`);
     assert.equal(health.status, 200);
-    assert.equal((await health.json()).ok, true);
+    const healthData = await health.json();
+    assert.equal(healthData.ok, true);
+    assert.equal(healthData.status, 'operational');
+    assert.equal(typeof healthData.timestamp, 'string');
+    assert.equal(Object.prototype.hasOwnProperty.call(healthData, 'providers'), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(healthData, 'database'), false);
 
     const models = await fetch(`${baseUrl}/api/image-models`);
     assert.equal(models.status, 200);

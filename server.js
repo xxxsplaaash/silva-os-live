@@ -66,9 +66,8 @@ app.get('/', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     ok: true,
-    port: PORT,
-    providers: ['gemini'],
-    database: 'sqlite'
+    status: 'operational',
+    timestamp: new Date().toISOString()
   });
 });
 

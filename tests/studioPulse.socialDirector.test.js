@@ -5081,16 +5081,21 @@ test('provider readiness proof script reports safe credential signals only', asy
   app.get('/api/studio/pulse/aisha-status', (_req, res) => {
     res.json({
       ok: true,
-      aishaEngineEnabled: true,
-      aishaAttempted: true,
+      aishaConnected: true,
       aishaEngineConnected: true,
+      engineMode: 'production',
       aishaEngineMode: 'production',
       activeEngine: 'aisha-runtime-pack1',
-      aishaPersistenceMode: 'postgres',
-      aishaPersistenceBackend: 'postgres',
-      aishaPersistenceConnected: true,
-      runtimeCredentialProvided: true,
-      runtimeCredentialSource: 'Server env'
+      updatedAt: '2026-06-05T00:00:00.000Z'
+    });
+  });
+  app.get('/api/studio/pulse-showcase/status', (_req, res) => {
+    res.json({
+      ok: true,
+      activeEngine: 'aisha-runtime-pack1',
+      aishaEngineConnected: true,
+      aishaEngineMode: 'production',
+      persistence: { mode: 'postgres', connected: true, active: false }
     });
   });
   const server = http.createServer(app);
@@ -5103,8 +5108,8 @@ test('provider readiness proof script reports safe credential signals only', asy
     });
     assert.equal(result.code, 0, result.stderr || result.stdout);
     assert.match(result.stdout, /studioPulseGeminiVaultKeyPresent/);
-    assert.match(result.stdout, /cloudRunCredentialSignalPresent/);
-    assert.doesNotMatch(result.stdout + result.stderr, /fake-local-provider-secret|GEMINI_API_KEY|GOOGLE_API_KEY/);
+    assert.match(result.stdout, /cloudRunRuntimeConnected/);
+    assert.doesNotMatch(result.stdout + result.stderr, /fake-local-provider-secret|GEMINI_API_KEY|GOOGLE_API_KEY|runtimeCredential|Server env/);
   } finally {
     await new Promise(resolve => server.close(resolve));
     fs.rmSync(tempRoot, { recursive: true, force: true });
