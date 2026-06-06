@@ -1335,18 +1335,24 @@ test('social director fallback changes short-session shape after referenced 20-m
   const body = {
     recentTurns: [
       { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
-      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes of training, small enough to finish and real enough that you feel it tomorrow.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity gets twenty minutes on the clock; no heroic rebrand, no ego trying to decorate it. Small enough to finish, real enough that you can feel it tomorrow.' },
       { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off. Log one number so next week has a target.' }
     ]
   };
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: body.recentTurns
+  });
 
-  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
-  assert.match(text, /\btwo minutes warm\b/i);
+  assert.match(text, /\bPlain version\b/i);
+  assert.match(text, /\bFour stations\b/i);
   assert.match(text, /\bchair squat\b/i);
+  assert.doesNotMatch(text, /\bTiny vanity gets twenty minutes on the clock\b/i);
   assert.doesNotMatch(text, /\bTwenty minutes is enough if you stop negotiating\b/i);
   assert.doesNotMatch(text, /\bDo three rounds: squat or hinge, push, pull, core\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
   assertCleanVisible(fallback);
 });
 
@@ -1361,7 +1367,7 @@ test('social director fallback changes short-session shape after generated focus
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
+  assert.match(text, /\bPlain version\b/i);
   assert.match(text, /\bchair squat\b/i);
   assert.doesNotMatch(text, /\bfocused session\b/i);
   assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);
