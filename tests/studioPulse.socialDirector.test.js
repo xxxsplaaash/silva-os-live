@@ -3737,7 +3737,7 @@ test('social director fallback recovers repetition complaints and planning pivot
 
       const stress = await postSocial(baseUrl, 'I am stressed and this is starting to feel dumb.', { recentTurns });
       const stressText = visibleText(stress.body);
-      assert.match(stressText, /\b(body first|water|clear one surface|smallest next task|set a timer)\b/i);
+      assert.match(stressText, /\b(breathe first|shrink the room|water|clear one surface|dramatic reset|set a timer)\b/i);
       assert.doesNotMatch(stressText, /\b(room temperature|human temperature|temperature check)\b/i);
       assert.doesNotMatch(stressText, /\b(room-theatre|room theater|essay about the process|objective is|name the actual problem)\b/i);
 

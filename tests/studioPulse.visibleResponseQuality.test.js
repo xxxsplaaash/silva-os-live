@@ -96,6 +96,7 @@ test('blind attribution rejects live short-session Vanya line that ties with Cla
     { speakerId: 'vanya', text: 'Same twenty minutes, cleaner shape: one short training session, no heroic rebrand, leave while the body still trusts it.' },
     { speakerId: 'vanya', text: 'Same twenty minutes, new shape: stop asking for permission and run the clock. Two minutes warm, sixteen minutes work, two minutes notes.' },
     { speakerId: 'vanya', text: 'Tiny vanity, clean discipline. Twenty minutes: warm up, run the circuit, write one number down.' },
+    { speakerId: 'vanya', text: 'Fair. Body first: water, one clear surface, then the smallest next task. No grand reset.' },
     { speakerId: 'vanya', text: 'Fair. Ten minutes: drink water, clear one surface, then choose the smallest next task.' },
     { speakerId: 'claudia', text: 'Current record first; prior record still visible. No quiet rewrite.' }
   ]);
@@ -105,7 +106,8 @@ test('blind attribution rejects live short-session Vanya line that ties with Cla
   assert.notEqual(attribution.results[1].speakerId, 'vanya');
   assert.equal(attribution.results[2].identifiable, false);
   assert.equal(attribution.results[3].identifiable, false);
-  assert.notEqual(attribution.results[4].speakerId, 'claudia');
+  assert.equal(attribution.results[4].identifiable, false);
+  assert.notEqual(attribution.results[5].speakerId, 'claudia');
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:blind-attribution'));
   assert.ok(issueKeys(attribution.issues).includes('speaker-flatness:wrong-attribution'));
 });
