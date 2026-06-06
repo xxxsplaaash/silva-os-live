@@ -54,7 +54,7 @@ curl -fsS "$BACKEND_URL/api/studio/pulse/aisha-status"
 BACKEND_URL="$BACKEND_URL" node scripts/smoke-aisha-runtime-cloud-run.mjs
 ```
 
-Success means `/api/studio/pulse/aisha-status` reports `aishaEngineConnected: true` and `activeEngine: "aisha-runtime-pack1"`. If it still reports `fallbackReason: "aisha-runtime-unavailable"`, Cloud Run did not load the vendored runtime package.
+Success means `/api/studio/pulse/aisha-status` reports `ok: true`, `aishaEngineConnected: true`, `activeEngine: "aisha-runtime-pack1"`, `engineMode: "production"`, and a fresh `updatedAt` timestamp. If those public fields do not show a connected Pack 1 runtime, Cloud Run did not load or connect the vendored runtime package.
 
 ## Frontend: Vercel
 

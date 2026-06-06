@@ -44,6 +44,7 @@ const PULSE_SHOWCASE_JS = path.join(ROOT, 'assets', 'pulse_showcase.js');
 const PULSE_SHOWCASE_CSS = path.join(ROOT, 'assets', 'pulse_showcase.css');
 const BUILD_VERCEL_STATIC = path.join(ROOT, 'scripts', 'build-vercel-static.mjs');
 const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
+const DEPLOYMENT_GOOGLE_CLOUD_VERCEL = path.join(ROOT, 'docs', 'DEPLOYMENT_GOOGLE_CLOUD_VERCEL.md');
 const PULSE_WIX_RUNBOOK = path.join(ROOT, 'docs', 'STUDIO_PULSE_WIX_EMBED_RUNBOOK.md');
 const PULSE_PUBLIC_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-public.mjs');
 const PULSE_LOCAL_IFRAME_SMOKE = path.join(ROOT, 'scripts', 'smoke-pulse-showcase-local-iframe.mjs');
@@ -1603,6 +1604,7 @@ test('public shell does not contain secret literals from the environment', () =>
 test('public operational endpoints are shaped by allowlist without internal readiness leaks', () => {
   const server = fs.readFileSync(SERVER, 'utf8');
   const studio = fs.readFileSync(STUDIO_ROUTE, 'utf8');
+  const deploymentDoc = fs.readFileSync(DEPLOYMENT_GOOGLE_CLOUD_VERCEL, 'utf8');
 
   const healthStart = server.indexOf("app.get('/health'");
   const healthEnd = server.indexOf("app.use('/api/prompts'", healthStart);
@@ -1645,6 +1647,7 @@ test('public operational endpoints are shaped by allowlist without internal read
     'apiKey'
   ]) {
     assert.doesNotMatch(statusFn, new RegExp(`\\b${field}\\b`), `${field} must not be returned by publicAishaStatus`);
+    assert.doesNotMatch(deploymentDoc, new RegExp(`\\b${field}\\b`), `${field} must not appear in public deployment status guidance`);
   }
 });
 
