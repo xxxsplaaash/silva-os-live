@@ -829,6 +829,12 @@ test('showcase impulse planner classifies contradiction, banter, creative, and r
       speakerOrder: ['aisha', 'grok']
     },
     {
+      prompt: 'This is fake helpful nonsense.',
+      category: 'practical',
+      topicClass: 'quality-challenge',
+      speakerOrder: ['grok', 'leah']
+    },
+    {
       prompt: 'lol this room is being dramatic again',
       category: 'normal',
       topicClass: 'banter',
@@ -1416,9 +1422,10 @@ test('social director fallback closes the third fitness recovery without repeati
 
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /one workout, one meal, one sleep window/i);
+      assert.doesNotMatch(text, /Tiny vanity, massive discipline/i);
       assert.doesNotMatch(text, /First move: incline push-ups/i);
       assert.doesNotMatch(text, /No fourth version/i);
-      assert.match(text, /\b(One clean move|premise fault|Start the clock)\b/i);
+      assert.match(text, /\b(One clean move|premise fault|task badge|first rep)\b/i);
       assert.doesNotMatch(text, /\b(room temperature|human temperature|temperature check)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
