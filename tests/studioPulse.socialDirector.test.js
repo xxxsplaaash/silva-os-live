@@ -1425,7 +1425,7 @@ test('social director fallback closes the third fitness recovery without repeati
       assert.doesNotMatch(text, /Tiny vanity, massive discipline/i);
       assert.doesNotMatch(text, /First move: incline push-ups/i);
       assert.doesNotMatch(text, /No fourth version/i);
-      assert.match(text, /\b(One clean move|premise fault|task badge|first rep)\b/i);
+      assert.match(text, /\b(One clean training move|premise fault|task badge|first rep)\b/i);
       assert.doesNotMatch(text, /\b(room temperature|human temperature|temperature check)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
