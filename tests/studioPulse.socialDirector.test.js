@@ -1072,6 +1072,56 @@ test('showcase social signals ignore negative A.I.S.H.A cues when her silence is
   assert.ok(!momentum || momentum.value >= 0, `negative Pack 1 cue created A.I.S.H.A status debt: ${JSON.stringify(momentum)}`);
 });
 
+test('showcase social signals protect quiet-by-design A.I.S.H.A silence', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'social_hierarchy_lab',
+    roomMood: 'focused',
+    responseMode: 'single',
+    messageEvents: [
+      {
+        speakerId: 'vanya',
+        role: 'primary',
+        tone: 'warm',
+        text: 'Same twenty minutes, cleaner shape: warm up, run the clock, write one number down.',
+        visibleState: 'Carrying the practical turn'
+      }
+    ],
+    silentReactions: [
+      {
+        speakerId: 'aisha',
+        visibleState: 'Watching the record',
+        reason: 'quiet by design while Vanya carries the answer'
+      }
+    ],
+    socialCues: {
+      roomMove: 'observe',
+      tensionDelta: 0,
+      continuityDelta: 0,
+      speakerCues: [
+        { speakerId: 'aisha', stance: 'dismissive', statusDelta: -6 },
+        { speakerId: 'vanya', stance: 'dominant', statusDelta: 3 }
+      ]
+    },
+    diagnostics: {
+      fallbackUsed: true,
+      runtimeConnected: true,
+      repairedByRuntime: true,
+      fallbackCategory: 'quality-rejected'
+    }
+  });
+
+  const aisha = signals.hierarchy.find(item => item.speakerId === 'aisha');
+  const aishaEvent = signals.statusEvents.find(item => item.speakerId === 'aisha');
+  const momentum = signals.socialMemory.statusMomentum.find(item => item.speakerId === 'aisha');
+
+  assert.equal(signals.tension, 28, `quiet-by-design silence should not raise fallback tension: ${JSON.stringify(signals)}`);
+  assert.equal(signals.roomMove, 'observe', `quiet-by-design silence should not look like fallback deflection: ${JSON.stringify(signals)}`);
+  assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
+  assert.ok(aisha.delta >= 0, `quiet-by-design A.I.S.H.A silence was penalized: ${JSON.stringify(aisha)}`);
+  assert.notEqual(aishaEvent?.kind, 'status-loss');
+  assert.ok(!momentum || momentum.value >= 0, `quiet-by-design silence created A.I.S.H.A status debt: ${JSON.stringify(momentum)}`);
+});
+
 test('showcase social signals still penalize generic A.I.S.H.A silence on repaired turns', () => {
   const signals = projectShowcaseSocialSignals({
     mode: 'social_hierarchy_lab',
