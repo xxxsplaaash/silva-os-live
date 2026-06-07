@@ -1903,6 +1903,195 @@ function showcaseDesignExpansionBullets(speakerId = '', text = '') {
   return uniqueShowcaseBullets(lines);
 }
 
+function sanitizeShowcaseExpandRecentTurns(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => {
+      const speakerId = String(item?.speakerId || item?.role || '').trim().toLowerCase();
+      const text = safeShowcaseText(item?.text || item?.content || '', 420);
+      if (!text) return null;
+      return {
+        speakerId: PULSE_SHOWCASE_SPEAKERS.includes(speakerId) || speakerId === 'user' ? speakerId : '',
+        role: safeShowcaseText(item?.role || '', 40),
+        text
+      };
+    })
+    .filter(Boolean)
+    .slice(-12);
+}
+
+function latestShowcaseExpandUserText(recentTurns = []) {
+  const latest = [...sanitizeShowcaseExpandRecentTurns(recentTurns)]
+    .reverse()
+    .find(item => item.speakerId === 'user' || /^user$/i.test(item.role));
+  return latest?.text || '';
+}
+
+function showcaseExpandTopic(value = '') {
+  const text = safeShowcaseText(value, 520).toLowerCase();
+  if (/\b(movie|film|watch tonight|watch next|what should we watch|what should the room watch)\b/.test(text)) return 'movie';
+  if (/\b(food|hungry|lunch|dinner|snack|eat|meal|nutrition)\b/.test(text)) return 'food';
+  if (/\b(logo|brand|design|campaign|creative|content|calendar|landing page|homepage|website|web page|hero|saas|visual direction|black glass|red pulse)\b/.test(text)) return 'design';
+  if (/\b(muscle|muscles|fitness|workout|gym|lift|lifting|strength|bulk|train|training|exercise|sets|reps|protein|push[- ]?ups?|squats?|planks?|twenty minutes|20 minutes|session|repeat|week)\b/.test(text)) return 'fitness';
+  if (/\b(plan|planning|tomorrow|schedule|today|what should i do|next move|work|client)\b/.test(text)) return 'planning';
+  if (/\b(repeating yourself|answer normally|stressed|stress|dumb|bruh|bro|useful|fake|actual tension|how is everyone)\b/.test(text)) return 'social';
+  return '';
+}
+
+function showcaseTopicExpansionBullets(speakerId = '', text = '') {
+  const source = safeShowcaseText(text, 520);
+  if (!source) return [];
+  if (/\b(movie|film|watch tonight|watch next|what should we watch|what should the room watch)\b/i.test(source)) {
+    const lines = {
+      aisha: [
+        'Receipt: choose by mood first, then title.',
+        'Keep three options visible: quiet pressure, voltage, or bite.',
+        'The useful answer names the tradeoff, not a vague recommendation.',
+        'If nobody has a mood, pick the boldest shared constraint and stop browsing.'
+      ],
+      vanya: [
+        'Start with the room mood: quiet pressure, bright voltage, or bite.',
+        'Keep the choice social enough that people can say yes quickly.',
+        'Do not turn movie night into a taste tribunal.',
+        'One confident pick beats twenty minutes of scrolling.'
+      ],
+      leah: [
+        'Pick the feeling first; the title only admits the mood.',
+        'One strong world beats wallpaper content.',
+        'If the room wants bite, choose the sharper film instead of the agreeable one.',
+        'Do not flatten the night into algorithm leftovers.'
+      ],
+      claudia: [
+        'Make the choice practical: mood, runtime, then one title.',
+        'Offer three lanes only so the room can decide quickly.',
+        'If time is short, remove anything that needs homework.',
+        'The next step is pressing play, not building a watchlist.'
+      ],
+      grok: [
+        'The failure mode is endless browsing disguised as taste.',
+        'Three clean options solve the premise; arguing longer is noise.',
+        'Match the title to tonight, not to an abstract ranking.',
+        'If the room cannot choose, default to the strongest constraint.'
+      ]
+    }[speakerId] || [];
+    return uniqueShowcaseBullets(lines);
+  }
+  if (/\b(food|hungry|lunch|dinner|snack|eat|meal|nutrition)\b/i.test(source)) {
+    const lines = {
+      aisha: [
+        'Receipt: timing decides the meal size.',
+        'Under an hour means light fuel; two hours means a real plate.',
+        'Keep the answer concrete enough to eat, not admire.',
+        'The proof is whether the food helps the next move happen.'
+      ],
+      vanya: [
+        'Eat for the session, not for drama.',
+        'Small and easy if training is close; bigger if there is time.',
+        'The body needs permission to move, not a perfect food identity.',
+        'Make it boring enough to actually happen.'
+      ],
+      leah: [
+        'Do not romanticize the snack; choose the thing that works.',
+        'Banana and yoghurt is a better answer than wellness fog.',
+        'If there is time, make the plate look intentional, not panicked.',
+        'Taste is allowed, but the session gets priority.'
+      ],
+      claudia: [
+        'Under an hour: banana and yoghurt.',
+        'Two hours: eggs and toast, rice and chicken, or leftovers with water.',
+        'Avoid heavy experiments right before training.',
+        'Put water beside it so the next step is not another decision.'
+      ],
+      grok: [
+        'Protein helps later; right now the question is weight in the stomach.',
+        'If it slows the session, it was the wrong pre-training answer.',
+        'Simple carbs close to training are not a moral failure.',
+        'The test is whether you can move without feeling heavy.'
+      ]
+    }[speakerId] || [];
+    return uniqueShowcaseBullets(lines);
+  }
+  if (/\b(plan|planning|tomorrow|schedule|today|what should i do|next move|work|client)\b/i.test(source)) {
+    const lines = {
+      aisha: [
+        'Receipt: pick the three things that make the day count.',
+        'Hardest useful item goes first before the room starts negotiating.',
+        'Leave a buffer so the plan does not become a future argument.',
+        'End with visible proof, not a prettier list.'
+      ],
+      vanya: [
+        'Give the day one human buffer before it starts pretending to be a machine.',
+        'Choose the useful block you can finish without becoming theatrical.',
+        'A plan with no air is just stress scheduled politely.',
+        'Keep tomorrow survivable enough to repeat.'
+      ],
+      leah: [
+        'Do not make the plan look impressive; make it have a point.',
+        'The hardest item needs a clean position, not decorative busyness.',
+        'Cut anything that only exists to make the day feel productive.',
+        'A good tomorrow has taste: fewer moves, sharper intent.'
+      ],
+      claudia: [
+        'Pick three outcomes for tomorrow.',
+        'Put the hardest one first and cap it with a time box.',
+        'Add one buffer between blocks so the plan survives contact.',
+        'Write the proof condition before the day starts.'
+      ],
+      grok: [
+        'The plan fails when it confuses motion with evidence.',
+        'Hardest first is not motivational; it removes the main failure point.',
+        'If there is no proof condition, it is just calendar decoration.',
+        'The buffer is part of the mechanism, not a luxury.'
+      ]
+    }[speakerId] || [];
+    return uniqueShowcaseBullets(lines);
+  }
+  if (/\b(repeating yourself|answer normally|stressed|stress|dumb|bruh|bro|useful|fake|actual tension|how is everyone)\b/i.test(source)) {
+    const lines = {
+      aisha: [
+        'Name the failure plainly, then correct the next answer.',
+        'Silence can hold authority; repetition cannot.',
+        'The room needs one useful move, not another performance of awareness.',
+        'Keep the correction visible without turning it into a confession.'
+      ],
+      vanya: [
+        'Lower the ceremony and answer the person in front of the room.',
+        'Warmth helps only if it stops the loop.',
+        'If the user is stressed, shrink the ask before sharpening the tone.',
+        'The next sentence should feel usable, not self-aware.'
+      ],
+      leah: [
+        'The fake part is sounding polished while dodging the ask.',
+        'Cut the room-theatre and keep the taste pressure on the answer.',
+        'If the line repeats, it loses status even when it sounds clever.',
+        'Normal is allowed when normal is more useful.'
+      ],
+      claudia: [
+        'One shape, one useful move, no recycled opener.',
+        'Answer the current ask before explaining the room.',
+        'If stress is present, reduce the next step to something finishable.',
+        'The fix is visible behavior, not more commentary.'
+      ],
+      grok: [
+        'Correct: repetition is the visible failure.',
+        'Partly useful is not enough if the answer keeps abstracting.',
+        'The dodge has been identified; now remove it.',
+        'Direct beats impressive here.'
+      ]
+    }[speakerId] || [];
+    return uniqueShowcaseBullets(lines);
+  }
+  return [];
+}
+
+function showcaseExpandContextText(cardText = '', recentTurns = []) {
+  const latestUserText = latestShowcaseExpandUserText(recentTurns);
+  if (!latestUserText) return cardText;
+  const cardTopic = showcaseExpandTopic(cardText);
+  const latestTopic = showcaseExpandTopic(latestUserText);
+  if (latestTopic && latestTopic !== cardTopic) return latestUserText;
+  return cardText;
+}
+
 function showcasePositiveReactionExpansionLine(speakerId = '') {
   return {
     aisha: 'This lane has a receipt; keep tightening the claim instead of widening the speech.',
@@ -1961,8 +2150,10 @@ function buildPulseShowcaseExpandPayload(body = {}) {
     return { error: { statusCode: 400, payload: { ok: false, error: 'missing-message-text' } } };
   }
   const roomState = sanitizeShowcaseRoomState(body.roomState || {}, mode);
-  const clauses = splitShowcaseExpansionClauses(text);
-  const anchor = clauses[0] || text;
+  const recentTurns = sanitizeShowcaseExpandRecentTurns(body.recentTurns || body.history || []);
+  const contextText = showcaseExpandContextText(text, recentTurns);
+  const clauses = splitShowcaseExpansionClauses(contextText);
+  const anchor = clauses[0] || contextText;
   const reactionSummary = sanitizePulseShowcaseReactionSummary(roomState.socialSignals?.reactionSummary || {});
   const affinity = Number(reactionSummary.speakerAffinity?.[speakerId] || 0) || 0;
   const reactionLine = affinity > 0
@@ -1970,7 +2161,22 @@ function buildPulseShowcaseExpandPayload(body = {}) {
     : affinity < 0
       ? showcaseNegativeReactionExpansionLine(speakerId)
       : '';
-  const fitnessBullets = showcaseFitnessExpansionBullets(speakerId, text);
+  const topicBullets = contextText !== text ? showcaseTopicExpansionBullets(speakerId, contextText) : [];
+  if (topicBullets.length >= 3) {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        sessionId,
+        mode,
+        messageId,
+        speakerId,
+        speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
+        bullets: topicBullets.slice(0, 5)
+      }
+    };
+  }
+  const fitnessBullets = showcaseFitnessExpansionBullets(speakerId, contextText);
   if (fitnessBullets.length >= 3) {
     return {
       statusCode: 200,
@@ -1985,7 +2191,7 @@ function buildPulseShowcaseExpandPayload(body = {}) {
       }
     };
   }
-  const designBullets = showcaseDesignExpansionBullets(speakerId, text);
+  const designBullets = showcaseDesignExpansionBullets(speakerId, contextText);
   if (designBullets.length >= 3) {
     return {
       statusCode: 200,

@@ -1388,6 +1388,7 @@
           messageId: safeMessageId,
           speakerId: safeSpeaker,
           text: message.text || '',
+          recentTurns: recentTurns(),
           roomState: {
             roomMood: state.roomMood,
             responseMode: state.responseMode,

@@ -388,6 +388,39 @@ test('pulse showcase expand keeps fitness bullets concrete instead of procedural
   assert.ok(result.payload.bullets.every(bullet => /\b(incline push-ups|chair squats|plank|twenty minutes|20 minutes|repeat|week|session|minutes)\b/i.test(bullet)), joined);
 });
 
+test('pulse showcase expand follows current topic when clicked card is stale', () => {
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-stale-topic-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-claudia-stale-fitness-1',
+    speakerId: 'claudia',
+    text: 'Keep the actual starter set visible: incline push-ups, chair squats, plank.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Keep the actual starter set visible: incline push-ups, chair squats, plank.' },
+      { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
+      { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' }
+    ],
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { more_like: 1 },
+          total: 1,
+          speakerAffinity: { claudia: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  const joined = result.payload.bullets.join(' ');
+  assert.match(joined, /\b(movie|mood|runtime|title|watchlist|pressing play|options)\b/i);
+  assert.doesNotMatch(joined, /\b(incline push-ups|chair squats|plank|workout|training|session|reps)\b/i);
+  assert.ok(result.payload.bullets.every(bullet => /\b(movie|mood|runtime|title|watchlist|pressing play|options|homework|quickly)\b/i.test(bullet)), joined);
+});
+
 test('pulse showcase expand turns design lines into speaker-specific useful bullets', () => {
   const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
     sessionId: 'expand-design-fixture-session',

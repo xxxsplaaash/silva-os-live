@@ -610,6 +610,15 @@ async function submitExpand(result = {}, prior = {}) {
       messageId,
       speakerId: card.speakerId,
       text: card.text,
+      recentTurns: recentTurnWindow([
+        ...(Array.isArray(prior.recentTurns) ? prior.recentTurns : []),
+        { speakerId: 'user', role: 'user', text: result.prompt || '' },
+        ...(Array.isArray(result.messageEvents) ? result.messageEvents : []).map(event => ({
+          speakerId: event.speakerId,
+          role: event.role || 'message',
+          text: event.text || ''
+        }))
+      ]),
       roomState: {
         roomMood: result.roomMood || prior.roomMood || 'focused',
         responseMode: result.responseMode || prior.responseMode || 'single',
@@ -743,7 +752,8 @@ for (const prompt of PROMPTS) {
     roomMood: result.roomMood,
     responseMode: result.responseMode,
     priorSpeaker: '',
-    socialSignals: result.socialSignals
+    socialSignals: result.socialSignals,
+    recentTurns: state.recentTurns
   };
   if (!reactionProbe && result.messageEvents.length) {
     reactionProbe = await submitReaction(result, state.prior);
