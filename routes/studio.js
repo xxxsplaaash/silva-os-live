@@ -2385,12 +2385,64 @@ function parsePulseShowcaseTurnRequest(body = {}) {
     sessionId: pulseShowcaseSessionId(body?.sessionId),
     recentTurns: removeCurrentUserTurnFromRecentTurns(body?.recentTurns || body?.history || [], userText),
     references: sanitizeShowcaseReferences(body?.references || body?.messageReferences || []),
-    roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode)
+    roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode),
+    operatorDiagnostics: body?.operatorDiagnostics === true
+  };
+}
+
+function pulseShowcaseOperatorDiagnosticsEnabled() {
+  return process.env.NODE_ENV !== 'production'
+    || String(process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
+}
+
+function safePulseShowcaseIssueList(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => safeShowcaseText(item, 120))
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function pulseShowcaseOperatorDiagnostics({
+  requested = false,
+  payload = {},
+  showcaseImpulsePlan = {},
+  publicQualityIssues = [],
+  fallbackValidationIssues = [],
+  continuityLabelIssue = '',
+  activeEngine = '',
+  messageEvents = [],
+  fallbackCategory = '',
+  qualityFailureCategory = ''
+} = {}) {
+  if (!requested || !pulseShowcaseOperatorDiagnosticsEnabled()) return null;
+  const validation = payload.validation && typeof payload.validation === 'object' ? payload.validation : {};
+  return {
+    schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
+    source: safeShowcaseText(validation.source || payload.debugSummary?.source || '', 80),
+    activeEngine: safeShowcaseText(activeEngine || payload.activeEngine || '', 80),
+    firstAttemptStatus: safeShowcaseText(validation.firstAttemptStatus || '', 80),
+    repairAttemptStatus: safeShowcaseText(validation.repairAttemptStatus || '', 80),
+    firstAttemptIssues: safePulseShowcaseIssueList(validation.firstAttemptIssues || []),
+    repairAttemptIssues: safePulseShowcaseIssueList(validation.repairAttemptIssues || []),
+    providerValidationIssues: safePulseShowcaseIssueList(validation.issues || []),
+    publicQualityIssues: safePulseShowcaseIssueList(publicQualityIssues),
+    fallbackValidationIssues: safePulseShowcaseIssueList(fallbackValidationIssues),
+    continuityLabelIssue: safeShowcaseText(continuityLabelIssue || '', 120),
+    plannedSpeakerOrder: (Array.isArray(showcaseImpulsePlan.speakerOrder) ? showcaseImpulsePlan.speakerOrder : [])
+      .map(item => safeShowcaseText(item, 40))
+      .filter(Boolean)
+      .slice(0, 5),
+    actualSpeakerOrder: (Array.isArray(messageEvents) ? messageEvents : [])
+      .map(item => safeShowcaseText(item?.speakerId || '', 40))
+      .filter(Boolean)
+      .slice(0, 5),
+    fallbackCategory: safeShowcaseText(fallbackCategory || '', 80),
+    qualityFailureCategory: safeShowcaseText(qualityFailureCategory || '', 80)
   };
 }
 
 async function buildPulseShowcaseTurnPayload(parsed = {}) {
-  const { userText, mode, sessionId, recentTurns, references, roomState } = parsed;
+  const { userText, mode, sessionId, recentTurns, references, roomState, operatorDiagnostics } = parsed;
   const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
   const directorBody = {
     question: userText,
@@ -2475,6 +2527,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     continuityProof,
     continuityLedger
   });
+  let publicQualityIssues = publicQuality.issues || [];
+  let fallbackValidationIssues = [];
   if (!publicQuality.ok || continuityLabelIssue) {
     const fallbackOutput = socialFallbackFor(userText, {
       history: continuityRecentTurns,
@@ -2490,6 +2544,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       continuity: continuityQuality,
       impulsePlan: showcaseImpulsePlan
     });
+    fallbackValidationIssues = fallbackValidation.issues || [];
     const fallbackSafe = fallbackValidation.output || fallbackOutput || {};
     responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
     roomMood = safeShowcaseText(fallbackSafe.roomMood || roomMood, 40) || roomMood;
@@ -2590,6 +2645,18 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     diagnostics
   });
   recordPulseShowcaseVisibleHistory(sessionId, userText, messageEvents);
+  const operatorDiagnosticsPayload = pulseShowcaseOperatorDiagnostics({
+    requested: operatorDiagnostics,
+    payload,
+    showcaseImpulsePlan,
+    publicQualityIssues,
+    fallbackValidationIssues,
+    continuityLabelIssue,
+    activeEngine,
+    messageEvents,
+    fallbackCategory,
+    qualityFailureCategory
+  });
 
   return {
     statusCode: result.statusCode || 200,
@@ -2612,7 +2679,8 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       qualityFailureCategory,
       fallbackCategory,
       runtimePhase: 'final',
-      diagnostics
+      diagnostics,
+      ...(operatorDiagnosticsPayload ? { operatorDiagnostics: operatorDiagnosticsPayload } : {})
     }
   };
 }

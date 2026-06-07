@@ -9,7 +9,7 @@ const os = require('node:os');
 
 const studioRouter = require('../routes/studio');
 const { __setAishaRuntimeImporterForTests } = require('../lib/aisha/aishaAdapter');
-const { buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
+const { acceptanceRubricFor, buildRoomDirectorInput, buildRoomDirectorPrompt } = require('../lib/studio/socialDirector/roomDirectorPrompt');
 const { runSocialDirectorTurn } = require('../lib/studio/socialDirector');
 const { socialFallbackFor } = require('../lib/studio/socialDirector/socialDirectorFallback');
 const { rawInternalLeakFound, validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
@@ -298,8 +298,18 @@ test('room director prompt treats benign practical asks as valid room topics', (
   assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
   assert.ok(input.impulsePlan.intentionalSilence.some(item => item.speakerId === 'aisha' && /holding authority/i.test(item.reason)));
   assert.match(prompt, /impulsePlan/);
+  assert.match(prompt, /ACCEPTANCE RUBRIC/);
+  assert.match(prompt, /plannedSpeakerOrder/);
+  assert.match(prompt, /The visible answer should already pass the validator without needing repair/);
   assert.match(prompt, /max speakers is 2/);
   assert.match(prompt, /silence is presence with a reason/);
+  const rubric = acceptanceRubricFor(input);
+  assert.equal(rubric.schemaVersion, 'studio-pulse.acceptance-rubric.v0.1');
+  assert.equal(rubric.currentTurnWins, true);
+  assert.deepEqual(rubric.plannedSpeakerOrder, ['claudia', 'vanya']);
+  assert.ok(rubric.mustPass.includes('character-specific voice without labels'));
+  assert.ok(rubric.rejectFamilies.includes('generic-advice'));
+  assert.ok(rubric.positiveTargets.some(item => /first move|proof point|concrete ask/i.test(item)));
 });
 
 test('room director prompt treats message references as local anchors only', () => {
@@ -530,10 +540,17 @@ test('showcase acceptance obeys impulse caps on short practical follow-ups', asy
 
   const body = result.payload;
   const plan = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan;
+  const rubric = capturedRequest.projectContext?.socialDirectorV1?.acceptanceRubric;
   assert.equal(plan.category, 'practical');
   assert.equal(plan.maxSpeakers, 2);
   assert.equal(plan.enforceSelectedSpeakers, true);
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.equal(rubric.schemaVersion, 'studio-pulse.acceptance-rubric.v0.1');
+  assert.deepEqual(rubric.plannedSpeakerOrder, ['claudia', 'vanya']);
+  assert.equal(rubric.maxSpeakers, 2);
+  assert.equal(rubric.topicClass, 'practical');
+  assert.ok(rubric.mustPass.includes('planned speaker cap and order'));
+  assert.ok(rubric.rejectFamilies.includes('voice-drift'));
   assert.equal(body.activeEngine, 'aisha-runtime-pack1');
   assert.equal(body.qualityAccepted, true);
   assert.equal(body.repairedByRuntime, false);
@@ -1003,6 +1020,54 @@ test('showcase social signals do not penalize intentionally silent A.I.S.H.A on 
   assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
   assert.ok(aisha.delta >= 0, `silent A.I.S.H.A was unfairly penalized: ${JSON.stringify(aisha)}`);
   assert.ok(!momentum || momentum.value >= 0, `silent A.I.S.H.A momentum was unfairly penalized: ${JSON.stringify(momentum)}`);
+});
+
+test('showcase social signals ignore negative A.I.S.H.A cues when her silence is intentional', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'social_hierarchy_lab',
+    roomMood: 'focused',
+    responseMode: 'single',
+    messageEvents: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'practical',
+        text: 'Do the useful twenty minutes: squat, push, hinge, plank. Record the reps.',
+        visibleState: 'Tracking next steps'
+      }
+    ],
+    silentReactions: [
+      {
+        speakerId: 'aisha',
+        visibleState: 'Anchoring',
+        reason: 'holding continuity while Claudia answers the practical turn'
+      }
+    ],
+    socialCues: {
+      roomMove: 'observe',
+      tensionDelta: 0,
+      continuityDelta: 0,
+      speakerCues: [
+        { speakerId: 'aisha', stance: 'silent', statusDelta: -8 },
+        { speakerId: 'claudia', stance: 'dominant', statusDelta: 4 }
+      ]
+    },
+    diagnostics: {
+      fallbackUsed: true,
+      runtimeConnected: true,
+      repairedByRuntime: true,
+      fallbackCategory: 'quality-rejected'
+    }
+  });
+
+  const aisha = signals.hierarchy.find(item => item.speakerId === 'aisha');
+  const aishaEvent = signals.statusEvents.find(item => item.speakerId === 'aisha');
+  const momentum = signals.socialMemory.statusMomentum.find(item => item.speakerId === 'aisha');
+
+  assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
+  assert.ok(aisha.delta >= 0, `negative Pack 1 cue penalized intentional A.I.S.H.A silence: ${JSON.stringify(aisha)}`);
+  assert.notEqual(aishaEvent?.kind, 'status-loss');
+  assert.ok(!momentum || momentum.value >= 0, `negative Pack 1 cue created A.I.S.H.A status debt: ${JSON.stringify(momentum)}`);
 });
 
 test('showcase social signals still penalize generic A.I.S.H.A silence on repaired turns', () => {
@@ -3814,6 +3879,7 @@ test('social director fallback answers short fitness follow-up and Grok quality 
       assert.ok(shortSession.body.messageEvents.length <= 2);
       assert.match(shortText, /\b(Twenty minutes|three rounds|forty seconds|squat|push|pull)\b/i);
       assert.doesNotMatch(shortText, /\b(consistency is key|adequate protein|timing is key)\b/i);
+      assert.doesNotMatch(shortText, /room turns it into a thesis/i);
 
       const grok = await postSocial(baseUrl, 'Grok, be honest: was that useful or did it sound fake?', { recentTurns });
       const grokText = visibleText(grok.body);
@@ -3860,6 +3926,7 @@ test('social director fallback recovers repetition complaints and planning pivot
       assert.match(normalText, /\b(Plain version|today|one block|one result|write the proof down)\b/i);
       assert.doesNotMatch(normalText, /\bMake it real\b/i);
       assert.doesNotMatch(normalText, /repeated answer is a failed answer/i);
+      assert.doesNotMatch(normalText, /room turns it into a thesis/i);
       assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
       assert.equal(normalValidation.ok, true, normalValidation.issues.join(', '));
 
@@ -5596,6 +5663,23 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
         repairedByRuntime: false,
         qualityFailureCategory: accepted ? '' : 'validator-rejected',
         fallbackCategory: accepted ? '' : 'validator-rejected'
+      },
+      operatorDiagnostics: {
+        schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
+        source: accepted ? 'aisha' : 'sandbox-fallback',
+        activeEngine: accepted ? 'aisha-runtime-pack1' : 'local-social-director',
+        firstAttemptStatus: 'parsed',
+        repairAttemptStatus: accepted ? '' : 'parsed',
+        firstAttemptIssues: accepted ? [] : ['voice-lock:blind-attribution:vanya'],
+        repairAttemptIssues: accepted ? [] : ['product-topic-ignored:referenced-fitness'],
+        providerValidationIssues: accepted ? [] : ['voice-lock:blind-attribution:vanya'],
+        publicQualityIssues: [],
+        fallbackValidationIssues: [],
+        continuityLabelIssue: '',
+        plannedSpeakerOrder: [primarySpeakerId],
+        actualSpeakerOrder: messageEvents.map(item => item.speakerId),
+        fallbackCategory: accepted ? '' : 'validator-rejected',
+        qualityFailureCategory: accepted ? '' : 'validator-rejected'
       }
     };
     groupTurns.set(prompt.sessionGroup, [
@@ -5668,6 +5752,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
       CHECK_FRONTEND_VERSION: '0',
       GAUNTLET_FIXTURE_FILE: fixturePath,
       GAUNTLET_TURN_DELAY_MS: '0',
+      OPERATOR_DIAGNOSTICS: '1',
       SESSION_ID: 'script-test-session'
     });
     assert.equal(result.code, 0, result.stderr || result.stdout);
@@ -5686,6 +5771,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.ok(summary.results.every(item => Array.isArray(item.silence) && item.silence.length === item.silenceCount));
     assert.ok(summary.results.every(item => item.silence.every(card => card.speakerId && card.visibleState && card.reason)));
     assert.ok(summary.results.every(item => Array.isArray(item.ledgerRows) && item.ledgerRows.length === item.ledgerCount));
+    assert.ok(summary.results.every(item => item.operatorDiagnostics?.schemaVersion === 'studio-pulse.operator-diagnostics.v0.1'));
+    assert.ok(summary.results.some(item => item.operatorDiagnostics?.firstAttemptIssues?.includes('voice-lock:blind-attribution:vanya')));
     assert.equal(summary.reactionEffect.reaction, 'more_like');
     assert.equal(summary.reactionEffect.speakerId, 'claudia');
     assert.ok(summary.reactionEffect.reactionSummary.counts.more_like >= 1);
@@ -5697,6 +5784,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.match(result.stderr, /silence: aisha state=Anchoring reason=holding authority until a correction changes the room/);
     assert.match(result.stderr, /ledger: active pack1-memory mock-dashboard-pale-blue: User dashboard preference: pale blue with no red accents/);
     assert.match(result.stderr, /social: \{"tension":18/);
+    assert.match(result.stderr, /operator-diagnostics: \{"schemaVersion":"studio-pulse\.operator-diagnostics\.v0\.1"/);
     assert.match(result.stderr, /reaction-effect: more_like speaker=claudia/);
     assert.match(result.stderr, /expand-effect: speaker=claudia/);
     assert.match(result.stderr, /Keep the starting move visible/);

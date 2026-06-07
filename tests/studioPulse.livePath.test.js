@@ -1519,6 +1519,117 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
   });
 });
 
+test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics only when requested locally', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    delete process.env.NODE_ENV;
+    let callCount = 0;
+    try {
+      __setAishaRuntimeImporterForTests(async () => ({
+        processAishaRequest: async request => {
+          callCount += 1;
+          const invalid = {
+            roomBeat: 'The room misses the referenced training ask.',
+            roomMood: 'focused',
+            responseMode: 'small_exchange',
+            speakers: [
+              { speakerId: 'vanya', role: 'primary', tone: 'warm', text: 'Hey. The room is here; nobody has to earn a voice before speaking.' },
+              { speakerId: 'leah', role: 'side', tone: 'sharp', text: 'Thank God. I was getting bored of pretending silence means absence.' }
+            ],
+            silentReactions: [],
+            stateUpdates: { notes: [] }
+          };
+          const repaired = {
+            roomBeat: 'The room compresses the referenced training answer into twenty usable minutes.',
+            roomMood: 'focused',
+            responseMode: 'small_exchange',
+            speakers: [
+              { speakerId: 'claudia', role: 'primary', tone: 'dry practical', text: 'Twenty minutes: warm up, two rounds of squat, push, row, hinge, plank, then write the reps down.', visibleState: 'Tracking next steps' },
+              { speakerId: 'vanya', role: 'side', tone: 'warm practical', text: 'Plain version: clock starts before the hype asks for costume changes.', visibleState: 'Reading the room' }
+            ],
+            silentReactions: [
+              { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
+              { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until it has a useful edge' },
+              { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+            ],
+            stateUpdates: { notes: [] }
+          };
+          return {
+            ok: true,
+            responses: [{ speakerId: 'aisha', content: JSON.stringify(callCount === 1 ? invalid : repaired) }],
+            memorySummary: { activeTruths: [], supersededTruths: [], memoryCandidates: [], sessionId: request.sessionId },
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true
+          };
+        }
+      }));
+
+      await withStudioServer(async baseUrl => {
+        const baseBody = {
+          sessionId: 'showcase-operator-diagnostics-session',
+          mode: 'social_hierarchy_lab',
+          userText: 'turn that into a 20 minute version',
+          references: [{
+            speakerId: 'claudia',
+            speakerName: 'Claudia',
+            role: 'side',
+            text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+          }],
+          recentTurns: [
+            { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+          ]
+        };
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({ ...baseBody, operatorDiagnostics: true })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        assert.equal(final.ok, true);
+        assert.equal(final.acceptedByPack1, true);
+        assert.equal(final.operatorDiagnostics.schemaVersion, 'studio-pulse.operator-diagnostics.v0.1');
+        assert.ok(final.operatorDiagnostics.firstAttemptIssues.includes('product-topic-ignored:referenced-fitness'));
+        assert.ok(final.operatorDiagnostics.firstAttemptIssues.includes('voice-lock:blind-attribution:vanya'));
+        assert.deepEqual(final.operatorDiagnostics.actualSpeakerOrder, ['claudia', 'vanya']);
+        assert.doesNotMatch(JSON.stringify(final.operatorDiagnostics), /generatorPrompt|socialCues|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY|test-room-provider-key/);
+
+        callCount = 0;
+        const quietResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify(baseBody)
+        });
+        assert.equal(quietResponse.status, 200);
+        const quietFinal = parseSseEvents(await quietResponse.text()).find(item => item.event === 'final').data;
+        assert.equal(Object.prototype.hasOwnProperty.call(quietFinal, 'operatorDiagnostics'), false);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+      if (originalNodeEnv == null) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+});
+
 test('Studio Pulse showcase social cues cannot create continuity ledger rows', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
