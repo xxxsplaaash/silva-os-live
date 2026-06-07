@@ -2163,6 +2163,14 @@ function isRootRuntimeFallbackCategory(value = '') {
   ].includes(normalizePulseShowcaseFallbackCategory(value));
 }
 
+function normalizeConnectedPulseShowcaseFallbackCategory(fallbackCategory = '', qualityFailureCategory = '', runtimeConnected = false) {
+  const fallback = normalizePulseShowcaseFallbackCategory(fallbackCategory || '');
+  if (runtimeConnected === true && fallback === 'aisha-unavailable') {
+    return normalizePulseShowcaseFallbackCategory(qualityFailureCategory || 'quality-rejected');
+  }
+  return fallback;
+}
+
 function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({})) {
   return {
     ...publicPulseShowcaseStatus(status),
@@ -2178,6 +2186,12 @@ function publicPulseShowcasePreflightStatus(status = publicAishaRuntimeStatus({}
 function publicPulseShowcaseFinalStatus(payload = {}) {
   const connected = payload.aishaEngineConnected === true || payload.diagnostics?.runtimeConnected === true;
   const continuity = payload.continuityProof || lastPulseShowcaseContinuityProof || emptyContinuityProof();
+  const qualityFailureCategory = normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || payload.diagnostics?.qualityFailureCategory || '');
+  const fallbackCategory = normalizeConnectedPulseShowcaseFallbackCategory(
+    payload.fallbackCategory || payload.diagnostics?.fallbackCategory || '',
+    qualityFailureCategory,
+    connected
+  );
   return {
     ok: true,
     activeEngine: connected
@@ -2200,8 +2214,8 @@ function publicPulseShowcaseFinalStatus(payload = {}) {
       qualityAccepted: payload.qualityAccepted === true || payload.diagnostics?.qualityAccepted === true,
       repairedByRuntime: payload.repairedByRuntime === true || payload.diagnostics?.repairedByRuntime === true,
       fallbackCarried: payload.acceptedByPack1 !== true,
-      fallbackCategory: normalizePulseShowcaseFallbackCategory(payload.fallbackCategory || payload.diagnostics?.fallbackCategory || ''),
-      qualityFailureCategory: normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || payload.diagnostics?.qualityFailureCategory || ''),
+      fallbackCategory,
+      qualityFailureCategory,
       updatedAt: new Date().toISOString()
     },
     modes: [...PULSE_SHOWCASE_MODES],
@@ -2211,8 +2225,8 @@ function publicPulseShowcaseFinalStatus(payload = {}) {
     acceptedByPack1: payload.acceptedByPack1 === true,
     qualityAccepted: payload.qualityAccepted === true || payload.diagnostics?.qualityAccepted === true,
     repairedByRuntime: payload.repairedByRuntime === true || payload.diagnostics?.repairedByRuntime === true,
-    qualityFailureCategory: normalizePulseShowcaseFallbackCategory(payload.qualityFailureCategory || payload.diagnostics?.qualityFailureCategory || ''),
-    fallbackCategory: normalizePulseShowcaseFallbackCategory(payload.fallbackCategory || payload.diagnostics?.fallbackCategory || ''),
+    qualityFailureCategory,
+    fallbackCategory,
     runtimePhase: 'final'
   };
 }
@@ -2532,6 +2546,10 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(forcedContinuityRepair.issue || 'continuity-repair');
   }
   const runtimeConnected = aishaEngineConnected || (runtimeStatusConnectedNow && fallbackCategory !== 'invalid-key');
+  fallbackCategory = normalizeConnectedPulseShowcaseFallbackCategory(fallbackCategory, qualityFailureCategory, runtimeConnected);
+  if (runtimeConnected === true && fallbackCategory === 'quality-rejected' && repairedByRuntime !== true) {
+    repairedByRuntime = true;
+  }
   const diagnostics = {
     fallbackUsed,
     traceStatus,
@@ -6523,7 +6541,8 @@ router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
 
 router.__test = {
   publicAishaStatus,
-  publicPulseShowcaseStatus
+  publicPulseShowcaseStatus,
+  publicPulseShowcaseFinalStatus
 };
 
 module.exports = router;

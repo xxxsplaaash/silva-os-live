@@ -80,3 +80,30 @@ test('public showcase status strips persistence backend mode while keeping conne
   assert.equal(Object.prototype.hasOwnProperty.call(status.persistence, 'backend'), false);
   assert.doesNotMatch(JSON.stringify(status), /postgres|in-memory|unavailable|password|runtimeCredential|Mock Gemini|trace/i);
 });
+
+test('public showcase final status does not expose unavailable label when runtime is connected', () => {
+  const status = studioRouter.__test.publicPulseShowcaseFinalStatus({
+    ok: true,
+    activeEngine: 'local-social-director',
+    aishaEngineConnected: false,
+    acceptedByPack1: false,
+    qualityAccepted: false,
+    repairedByRuntime: true,
+    fallbackCategory: 'aisha-unavailable',
+    qualityFailureCategory: '',
+    diagnostics: {
+      runtimeConnected: true,
+      fallbackCategory: 'aisha-unavailable',
+      persistenceConnected: true
+    }
+  });
+
+  assert.equal(status.ok, true);
+  assert.equal(status.activeEngine, 'aisha-runtime-pack1');
+  assert.equal(status.aishaEngineConnected, true);
+  assert.equal(status.repairedByRuntime, true);
+  assert.equal(status.fallbackCategory, 'quality-rejected');
+  assert.equal(status.lastTurn.fallbackCategory, 'quality-rejected');
+  assert.notEqual(status.fallbackCategory, 'aisha-unavailable');
+  assert.notEqual(status.lastTurn.fallbackCategory, 'aisha-unavailable');
+});
