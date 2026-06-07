@@ -1527,6 +1527,29 @@ test('social director fallback changes shape after current fitness base recovery
   });
 });
 
+test('social director fallback does not repeat Vanya shape on objective recovery', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'user', role: 'user', text: 'WHERE DO I START' },
+        { speakerId: 'claudia', role: 'side', text: 'Calendar first: Monday, Wednesday, Friday. Two rounds of push, row, squat, hinge; write reps down before you leave.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Keep it small enough to finish and human enough to repeat. Three training days, not a personality transplant.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHAT IS THE OBJECTIVE?', { recentTurns });
+      const text = visibleText(body);
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /Keep it small enough to finish and human enough to repeat/i);
+      assert.doesNotMatch(text, /One workout, one meal, one sleep window/i);
+      assert.match(text, /\b(Timer on|reps logged|push, pull, legs)\b/i);
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback treats exercise artifacts as fitness context after old user line scrolls out', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
