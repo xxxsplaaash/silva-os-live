@@ -388,6 +388,33 @@ test('pulse showcase expand keeps fitness bullets concrete instead of procedural
   assert.ok(result.payload.bullets.every(bullet => /\b(incline push-ups|chair squats|plank|twenty minutes|20 minutes|repeat|week|session|minutes)\b/i.test(bullet)), joined);
 });
 
+test('pulse showcase expand turns design lines into speaker-specific useful bullets', () => {
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-design-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-claudia-design-1',
+    speakerId: 'claudia',
+    text: 'We need a quiet landing page: black glass, one red pulse, and no generic SaaS softness.',
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { useful: 1 },
+          total: 1,
+          speakerAffinity: { claudia: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  const joined = result.payload.bullets.join(' ');
+  assert.match(joined, /\b(landing page|black glass|red pulse|generic SaaS|CTA|hero|spacing)\b/i);
+  assert.doesNotMatch(joined, /\b(Operational hinge|one decision, one constraint|follow-through|just movement|reduce drift|inventing a process|extra ceremony|audience signal|local card|visible aside|button click)\b/i);
+  assert.ok(result.payload.bullets.every(bullet => /\b(landing page|black glass|red pulse|generic SaaS|CTA|hero|spacing|softness|above the fold)\b/i.test(bullet)), joined);
+});
+
 test('pulse showcase turn forwards selected message references as local anchors only', async () => {
   await withAishaFlag('true', async () => {
     let capturedRequest = null;

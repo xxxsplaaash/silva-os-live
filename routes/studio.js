@@ -1853,6 +1853,56 @@ function showcaseFitnessExpansionBullets(speakerId = '', text = '') {
   return uniqueShowcaseBullets(lines);
 }
 
+function showcaseDesignExpansionBullets(speakerId = '', text = '') {
+  const source = safeShowcaseText(text, 520);
+  if (!/\b(landing page|homepage|hero|cta|black glass|red pulse|generic saas|saas softness|spacing|above the fold|interface|visual|design)\b/i.test(source)) return [];
+  const hasLanding = /\b(landing page|homepage|hero|above the fold)\b/i.test(source);
+  const hasBlackGlass = /\bblack glass\b/i.test(source);
+  const hasRedPulse = /\bred pulse\b/i.test(source);
+  const hasSaas = /\b(generic saas|saas softness|softness)\b/i.test(source);
+  const surface = hasLanding ? 'landing page' : 'surface';
+  const palette = hasBlackGlass ? 'black glass' : 'dark field';
+  const accent = hasRedPulse ? 'one red pulse' : 'one accent';
+  const softness = hasSaas ? 'generic SaaS softness' : 'soft polish';
+  const lines = {
+    aisha: [
+      `Receipt: ${surface}, ${palette}, ${accent}.`,
+      `The proof is whether the ${accent} stays singular instead of becoming decoration.`,
+      `Keep ${softness} out of the first screen; no friendly gloss to soften the claim.`,
+      `Above the fold, the user should read the ${palette} direction before any copy explains it.`
+    ],
+    vanya: [
+      `${palette} can feel cold; the ${accent} has to carry the human tension.`,
+      `Do not sweeten the ${surface} into ${softness}; let the quiet feel expensive.`,
+      `If the hero feels empty, add intent with spacing and gaze, not extra badges.`,
+      `The user should feel the restraint before noticing the layout.`
+    ],
+    leah: [
+      `${palette} plus ${accent}: strong world, not wallpaper.`,
+      `Kill ${softness}; the hero needs taste pressure, not startup manners.`,
+      `Spacing is the attitude here. If everything glows, the red pulse means nothing.`,
+      `Make the first screen severe enough that the CTA feels chosen, not pasted on.`
+    ],
+    claudia: [
+      `Lock the ${surface} to ${palette}, ${accent}, and one obvious CTA.`,
+      `Keep the red pulse singular; repeat it only if the user must act there.`,
+      `Use spacing as the hierarchy so the page does not need extra labels to look premium.`,
+      `Cut ${softness}: no rounded busy sections, no decorative glow pile-up.`
+    ],
+    grok: [
+      `Test the claim visually: ${palette}, ${accent}, no ${softness}.`,
+      `If the red appears everywhere, it stops being a signal and becomes noise.`,
+      `The CTA either owns the pulse or the pulse is lying about importance.`,
+      `A quiet hero is fine; a vague hero with black paint is not.`
+    ]
+  }[speakerId] || [
+    `Keep the ${surface} tied to ${palette} and ${accent}.`,
+    `Remove ${softness} before adding more visual detail.`,
+    `Make the CTA and spacing carry the hierarchy.`
+  ];
+  return uniqueShowcaseBullets(lines);
+}
+
 function showcasePositiveReactionExpansionLine(speakerId = '') {
   return {
     aisha: 'This lane has a receipt; keep tightening the claim instead of widening the speech.',
@@ -1932,6 +1982,21 @@ function buildPulseShowcaseExpandPayload(body = {}) {
         speakerId,
         speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
         bullets: fitnessBullets.slice(0, 5)
+      }
+    };
+  }
+  const designBullets = showcaseDesignExpansionBullets(speakerId, text);
+  if (designBullets.length >= 3) {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        sessionId,
+        mode,
+        messageId,
+        speakerId,
+        speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
+        bullets: designBullets.slice(0, 5)
       }
     };
   }
