@@ -448,6 +448,33 @@ test('pulse showcase expand turns design lines into speaker-specific useful bull
   assert.ok(result.payload.bullets.every(bullet => /\b(landing page|black glass|red pulse|generic SaaS|CTA|hero|spacing|softness|above the fold)\b/i.test(bullet)), joined);
 });
 
+test('pulse showcase expand routes broader brand direction through design bullets', () => {
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-broader-design-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-leah-brand-1',
+    speakerId: 'leah',
+    text: 'The brand needs a premium visual direction: logo restraint, website confidence, and no polite startup softness.',
+    roomState: {
+      roomMood: 'sharp',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { useful: 1 },
+          total: 1,
+          speakerAffinity: { leah: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  const joined = result.payload.bullets.join(' ');
+  assert.match(joined, /\b(brand|logo|website|premium|visual direction|startup softness|taste pressure|CTA|hero)\b/i);
+  assert.doesNotMatch(joined, /\b(Operational hinge|one decision, one constraint|follow-through|reduce drift|inventing a process|extra ceremony|line check|not a cosmology)\b/i);
+  assert.ok(result.payload.bullets.every(bullet => /\b(brand|logo|website|premium|visual direction|startup softness|CTA|hero|taste pressure|spacing|first screen|restraint)\b/i.test(bullet)), joined);
+});
+
 test('pulse showcase turn forwards selected message references as local anchors only', async () => {
   await withAishaFlag('true', async () => {
     let capturedRequest = null;

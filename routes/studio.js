@@ -1855,48 +1855,57 @@ function showcaseFitnessExpansionBullets(speakerId = '', text = '') {
 
 function showcaseDesignExpansionBullets(speakerId = '', text = '') {
   const source = safeShowcaseText(text, 520);
-  if (!/\b(landing page|homepage|hero|cta|black glass|red pulse|generic saas|saas softness|spacing|above the fold|interface|visual|design)\b/i.test(source)) return [];
+  if (!/\b(landing page|homepage|website|web page|brand|logo|wordmark|hero|cta|black glass|red pulse|generic saas|startup softness|saas softness|spacing|above the fold|interface|visual direction|visual|design|premium)\b/i.test(source)) return [];
   const hasLanding = /\b(landing page|homepage|hero|above the fold)\b/i.test(source);
+  const hasWebsite = /\b(website|web page)\b/i.test(source);
+  const hasBrand = /\b(brand|logo|wordmark)\b/i.test(source);
+  const hasLogo = /\b(logo|wordmark)\b/i.test(source);
+  const hasPremium = /\bpremium\b/i.test(source);
   const hasBlackGlass = /\bblack glass\b/i.test(source);
   const hasRedPulse = /\bred pulse\b/i.test(source);
-  const hasSaas = /\b(generic saas|saas softness|softness)\b/i.test(source);
-  const surface = hasLanding ? 'landing page' : 'surface';
+  const hasSaas = /\b(generic saas|startup softness|saas softness|softness)\b/i.test(source);
+  const surface = hasLanding ? 'landing page' : hasWebsite ? 'website' : hasBrand ? 'brand system' : 'surface';
+  const brandAnchor = hasLogo ? 'logo restraint' : hasBrand ? 'brand restraint' : 'visual restraint';
+  const premiumAnchor = hasPremium ? 'premium visual direction' : 'visual direction';
   const palette = hasBlackGlass ? 'black glass' : 'dark field';
   const accent = hasRedPulse ? 'one red pulse' : 'one accent';
-  const softness = hasSaas ? 'generic SaaS softness' : 'soft polish';
+  const softness = hasSaas ? (/\bstartup softness\b/i.test(source) ? 'startup softness' : 'generic SaaS softness') : 'soft polish';
+  const visualAnchor = hasBlackGlass || hasRedPulse
+    ? `${palette}, ${accent}`
+    : `${brandAnchor}, ${premiumAnchor}`;
   const lines = {
     aisha: [
-      `Receipt: ${surface}, ${palette}, ${accent}.`,
+      `Receipt: ${surface}, ${visualAnchor}.`,
       `The proof is whether the ${accent} stays singular instead of becoming decoration.`,
       `Keep ${softness} out of the first screen; no friendly gloss to soften the claim.`,
-      `Above the fold, the user should read the ${palette} direction before any copy explains it.`
+      `Above the fold, the user should read the ${palette} ${surface} direction before any copy explains it.`
     ],
     vanya: [
-      `${palette} can feel cold; the ${accent} has to carry the human tension.`,
+      `${premiumAnchor} can feel cold; the ${accent} has to carry the human tension.`,
       `Do not sweeten the ${surface} into ${softness}; let the quiet feel expensive.`,
-      `If the hero feels empty, add intent with spacing and gaze, not extra badges.`,
-      `The user should feel the restraint before noticing the layout.`
+      `If the hero feels empty, add intent with spacing and ${brandAnchor}, not extra badges.`,
+      `The user should feel the premium restraint before noticing the layout.`
     ],
     leah: [
-      `${palette} plus ${accent}: strong world, not wallpaper.`,
+      `${premiumAnchor} plus ${brandAnchor}: strong world, not wallpaper.`,
       `Kill ${softness}; the hero needs taste pressure, not startup manners.`,
-      `Spacing is the attitude here. If everything glows, the red pulse means nothing.`,
+      `Spacing is the attitude here; the ${surface} should not need polite decoration.`,
       `Make the first screen severe enough that the CTA feels chosen, not pasted on.`
     ],
     claudia: [
-      `Lock the ${surface} to ${palette}, ${accent}, and one obvious CTA.`,
+      `Lock the ${surface} to ${visualAnchor}, and one obvious CTA.`,
       `Keep the red pulse singular; repeat it only if the user must act there.`,
       `Use spacing as the hierarchy so the page does not need extra labels to look premium.`,
       `Cut ${softness}: no rounded busy sections, no decorative glow pile-up.`
     ],
     grok: [
-      `Test the claim visually: ${palette}, ${accent}, no ${softness}.`,
-      `If the red appears everywhere, it stops being a signal and becomes noise.`,
+      `Test the brand claim visually: ${brandAnchor}, ${premiumAnchor}, no ${softness}.`,
+      `If the accent appears everywhere, it stops being a signal and becomes noise.`,
       `The CTA either owns the pulse or the pulse is lying about importance.`,
-      `A quiet hero is fine; a vague hero with black paint is not.`
+      `A quiet hero is fine; a vague ${surface} with premium paint is not.`
     ]
   }[speakerId] || [
-    `Keep the ${surface} tied to ${palette} and ${accent}.`,
+    `Keep the ${surface} tied to ${visualAnchor}.`,
     `Remove ${softness} before adding more visual detail.`,
     `Make the CTA and spacing carry the hierarchy.`
   ];
