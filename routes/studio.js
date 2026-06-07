@@ -2369,7 +2369,38 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
   return [...bySpeaker.values()].slice(0, 5);
 }
 
-function parsePulseShowcaseTurnRequest(body = {}) {
+function pulseShowcaseRequestHeader(req, name) {
+  const key = String(name || '').toLowerCase();
+  if (!key) return '';
+  if (typeof req?.get === 'function') return String(req.get(key) || '').trim();
+  const headers = req?.headers && typeof req.headers === 'object' ? req.headers : {};
+  const value = headers[key] || headers[name] || '';
+  return String(Array.isArray(value) ? value[0] : value || '').trim();
+}
+
+function pulseShowcaseSafeTokenEquals(actual = '', expected = '') {
+  const actualText = String(actual || '').trim();
+  const expectedText = String(expected || '').trim();
+  if (!actualText || !expectedText) return false;
+  const actualBuffer = Buffer.from(actualText);
+  const expectedBuffer = Buffer.from(expectedText);
+  if (actualBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+function pulseShowcaseOperatorDiagnosticsTokenAccepted(req = null) {
+  const expected = String(process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN || '').trim();
+  if (!expected) return false;
+  return pulseShowcaseSafeTokenEquals(pulseShowcaseRequestHeader(req, 'x-pulse-operator-token'), expected);
+}
+
+function pulseShowcaseOperatorDiagnosticsEnabled(req = null) {
+  if (process.env.NODE_ENV !== 'production') return true;
+  if (pulseShowcaseOperatorDiagnosticsTokenAccepted(req)) return true;
+  return String(process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
+}
+
+function parsePulseShowcaseTurnRequest(body = {}, req = null) {
   const userText = safeShowcaseText(body?.userText || body?.message || body?.question || '', PULSE_SHOWCASE_MAX_USER_TEXT + 1);
   if (!userText) {
     return { error: { statusCode: 400, payload: { ok: false, error: 'userText is required' } } };
@@ -2386,13 +2417,9 @@ function parsePulseShowcaseTurnRequest(body = {}) {
     recentTurns: removeCurrentUserTurnFromRecentTurns(body?.recentTurns || body?.history || [], userText),
     references: sanitizeShowcaseReferences(body?.references || body?.messageReferences || []),
     roomState: sanitizeShowcaseRoomState(body?.roomState || {}, mode),
-    operatorDiagnostics: body?.operatorDiagnostics === true
+    operatorDiagnostics: body?.operatorDiagnostics === true,
+    operatorDiagnosticsAuthorized: body?.operatorDiagnostics === true && pulseShowcaseOperatorDiagnosticsEnabled(req)
   };
-}
-
-function pulseShowcaseOperatorDiagnosticsEnabled() {
-  return process.env.NODE_ENV !== 'production'
-    || String(process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
 }
 
 function safePulseShowcaseIssueList(items = []) {
@@ -2414,7 +2441,7 @@ function pulseShowcaseOperatorDiagnostics({
   fallbackCategory = '',
   qualityFailureCategory = ''
 } = {}) {
-  if (!requested || !pulseShowcaseOperatorDiagnosticsEnabled()) return null;
+  if (!requested) return null;
   const validation = payload.validation && typeof payload.validation === 'object' ? payload.validation : {};
   return {
     schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
@@ -2442,7 +2469,16 @@ function pulseShowcaseOperatorDiagnostics({
 }
 
 async function buildPulseShowcaseTurnPayload(parsed = {}) {
-  const { userText, mode, sessionId, recentTurns, references, roomState, operatorDiagnostics } = parsed;
+  const {
+    userText,
+    mode,
+    sessionId,
+    recentTurns,
+    references,
+    roomState,
+    operatorDiagnostics,
+    operatorDiagnosticsAuthorized
+  } = parsed;
   const visibleRecentTurns = pulseShowcaseVisibleRecentTurns(sessionId, recentTurns);
   const directorBody = {
     question: userText,
@@ -2646,7 +2682,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   });
   recordPulseShowcaseVisibleHistory(sessionId, userText, messageEvents);
   const operatorDiagnosticsPayload = pulseShowcaseOperatorDiagnostics({
-    requested: operatorDiagnostics,
+    requested: operatorDiagnostics && operatorDiagnosticsAuthorized,
     payload,
     showcaseImpulsePlan,
     publicQualityIssues,
@@ -4060,7 +4096,7 @@ router.get('/pulse-showcase/status', async (req, res) => {
 router.post('/pulse-showcase/turn', async (req, res) => {
   const requestId = pulseShowcaseRequestId();
   if (!guardPulseShowcaseOrigin(req, res, requestId)) return;
-  const parsed = parsePulseShowcaseTurnRequest(req.body || {});
+  const parsed = parsePulseShowcaseTurnRequest(req.body || {}, req);
   if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
   const guard = guardPulseShowcaseTurn(req, res, parsed, { stream: false, originChecked: true, requestId });
   if (!guard.ok) return;
@@ -4103,7 +4139,7 @@ router.post('/pulse-showcase/turn', async (req, res) => {
 router.post('/pulse-showcase/turn-stream', async (req, res) => {
   const requestId = pulseShowcaseRequestId();
   if (!guardPulseShowcaseOrigin(req, res, requestId)) return;
-  const parsed = parsePulseShowcaseTurnRequest(req.body || {});
+  const parsed = parsePulseShowcaseTurnRequest(req.body || {}, req);
   if (parsed.error) return res.status(parsed.error.statusCode).json(parsed.error.payload);
   const guard = guardPulseShowcaseTurn(req, res, parsed, { stream: true, originChecked: true, requestId });
   if (!guard.ok) return;
