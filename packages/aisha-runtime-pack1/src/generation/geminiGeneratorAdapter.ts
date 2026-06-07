@@ -277,8 +277,9 @@ function socialDirectorResponseSchema(): Record<string, unknown> {
             role: { type: "string", enum: ["primary", "side", "closer", "called_in"] },
             tone: { type: "string" },
             text: { type: "string" },
+            visibleState: { type: "string" },
           },
-          required: ["speakerId", "role", "tone", "text"],
+          required: ["speakerId", "role", "tone", "text", "visibleState"],
         },
       },
       silentReactions: {
@@ -288,8 +289,9 @@ function socialDirectorResponseSchema(): Record<string, unknown> {
           properties: {
             speakerId: { type: "string", enum: speakerIds },
             visibleState: { type: "string" },
+            reason: { type: "string" },
           },
-          required: ["speakerId", "visibleState"],
+          required: ["speakerId", "visibleState", "reason"],
         },
       },
       stateUpdates: {

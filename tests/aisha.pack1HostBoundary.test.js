@@ -293,6 +293,22 @@ test('Pack 1 social-director prompt builder prefers generatorPrompt over turn ra
   assert.match(source, /readString\(turn,\s*"rawText"\)/);
 });
 
+test('Pack 1 social-director contract asks for silence reasons and speaker visible states', () => {
+  const promptSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts'),
+    'utf8'
+  );
+  const adapterSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts'),
+    'utf8'
+  );
+
+  assert.match(promptSource, /"visibleState":"safe pulse label"/);
+  assert.match(promptSource, /"reason":"short reason the character is intentionally quiet"/);
+  assert.match(adapterSource, /reason:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(adapterSource, /required:\s*\["speakerId",\s*"visibleState",\s*"reason"\]/);
+});
+
 test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {
   const { processAishaRequest } = await import('../packages/aisha-runtime-pack1/dist/index.js');
   const generatorInputs = [];

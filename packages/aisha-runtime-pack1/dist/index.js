@@ -1407,7 +1407,7 @@ function buildOutputContract(isStudioPulseMode = false, structuredOutputKind = "
       "No markdown.",
       "No code fences.",
       "Do not use response_text.",
-      'JSON shape: {"roomBeat":"short string","roomMood":"warm|playful|tense|focused|chaotic|quiet|sharp|cooling","responseMode":"single|small_exchange|open_floor|aisha_takeover|room_check","speakers":[{"speakerId":"aisha|vanya|leah|claudia|grok","role":"primary|side|closer|called_in","tone":"short string","text":"visible dialogue, max 2 sentences"}],"silentReactions":[{"speakerId":"aisha|vanya|leah|claudia|grok","visibleState":"safe pulse label"}],"stateUpdates":{"notes":["short safe note"]}}'
+      'JSON shape: {"roomBeat":"short string","roomMood":"warm|playful|tense|focused|chaotic|quiet|sharp|cooling","responseMode":"single|small_exchange|open_floor|aisha_takeover|room_check","speakers":[{"speakerId":"aisha|vanya|leah|claudia|grok","role":"primary|side|closer|called_in","tone":"short string","text":"visible dialogue, max 2 sentences","visibleState":"safe pulse label"}],"silentReactions":[{"speakerId":"aisha|vanya|leah|claudia|grok","visibleState":"safe pulse label","reason":"short reason the character is intentionally quiet"}],"stateUpdates":{"notes":["short safe note"]}}'
     ].join(" ");
   }
   const base = [
@@ -1787,9 +1787,10 @@ function socialDirectorResponseSchema() {
             speakerId: { type: "string", enum: speakerIds },
             role: { type: "string", enum: ["primary", "side", "closer", "called_in"] },
             tone: { type: "string" },
-            text: { type: "string" }
+            text: { type: "string" },
+            visibleState: { type: "string" }
           },
-          required: ["speakerId", "role", "tone", "text"]
+          required: ["speakerId", "role", "tone", "text", "visibleState"]
         }
       },
       silentReactions: {
@@ -1798,9 +1799,10 @@ function socialDirectorResponseSchema() {
           type: "object",
           properties: {
             speakerId: { type: "string", enum: speakerIds },
-            visibleState: { type: "string" }
+            visibleState: { type: "string" },
+            reason: { type: "string" }
           },
-          required: ["speakerId", "visibleState"]
+          required: ["speakerId", "visibleState", "reason"]
         }
       },
       stateUpdates: {
