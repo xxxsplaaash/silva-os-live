@@ -1794,6 +1794,65 @@ function showcaseExpansionTemplates(speakerId = '', anchor = '', roomMood = '') 
   ];
 }
 
+function showcaseFitnessExpansionBullets(speakerId = '', text = '') {
+  const source = safeShowcaseText(text, 520);
+  if (!/\b(muscle|training|workout|push[- ]?ups?|squats?|planks?|sets?|reps?|twenty minutes|20 minutes|session|repeat|week)\b/i.test(source)) return [];
+  const hasTwenty = /\b(twenty minutes|20 minutes)\b/i.test(source);
+  const hasPush = /\b(push[- ]?ups?|incline push[- ]?ups?)\b/i.test(source);
+  const hasSquat = /\b(squats?|chair squats?)\b/i.test(source);
+  const hasPlank = /\b(planks?)\b/i.test(source);
+  const hasRepeat = /\b(repeat|repeated|again|week)\b/i.test(source);
+  const hasHomeStart = /\bstart at home(?: this week)?\b/i.test(source);
+  const exerciseList = [
+    hasPush ? 'incline push-ups' : '',
+    hasSquat ? 'chair squats' : '',
+    hasPlank ? 'plank' : ''
+  ].filter(Boolean);
+  const routine = exerciseList.length ? exerciseList.join(', ') : 'one push, one squat, and one core move';
+  const startAnchor = hasHomeStart ? 'Start at home this week' : routine;
+  const timeBox = hasTwenty ? 'twenty minutes' : 'one short session';
+  const repeatLine = hasRepeat
+    ? `The win is repeating ${timeBox}, not adding a bigger plan.`
+    : `Make ${timeBox} repeatable before adding more exercises.`;
+  const lines = {
+    aisha: [
+      `Receipt: ${routine}.`,
+      `Keep the proof simple: ${timeBox}, clean reps, then stop.`,
+      repeatLine,
+      'If the body logs it twice this week, the claim becomes real.'
+    ],
+    vanya: [
+      `${startAnchor}; no heroic rebrand required.`,
+      `${timeBox} is enough when the room stops shaming the start.`,
+      repeatLine,
+      'The user needs momentum they can survive, not a perfect training identity.'
+    ],
+    leah: [
+      `The sharper version is ${routine}, not motivational wallpaper.`,
+      `${timeBox} keeps it honest; anything bigger starts pretending.`,
+      repeatLine,
+      'Make the first week visible before selling a transformation.'
+    ],
+    claudia: [
+      `Keep the actual starter set visible: ${routine}.`,
+      `Hold the session to ${timeBox} so the user can finish it today.`,
+      repeatLine,
+      'Track whether the same small session happens again before changing the plan.'
+    ],
+    grok: [
+      `The test is ${routine}, not whether the room can narrate discipline.`,
+      `${timeBox} removes the excuse layer.`,
+      repeatLine,
+      'If it was not repeated, it was theatre, not training evidence.'
+    ]
+  }[speakerId] || [
+    `Keep the starter set visible: ${routine}.`,
+    `Hold the session to ${timeBox}.`,
+    repeatLine
+  ];
+  return uniqueShowcaseBullets(lines);
+}
+
 function showcasePositiveReactionExpansionLine(speakerId = '') {
   return {
     aisha: 'This lane has a receipt; keep tightening the claim instead of widening the speech.',
@@ -1861,6 +1920,21 @@ function buildPulseShowcaseExpandPayload(body = {}) {
     : affinity < 0
       ? showcaseNegativeReactionExpansionLine(speakerId)
       : '';
+  const fitnessBullets = showcaseFitnessExpansionBullets(speakerId, text);
+  if (fitnessBullets.length >= 3) {
+    return {
+      statusCode: 200,
+      payload: {
+        ok: true,
+        sessionId,
+        mode,
+        messageId,
+        speakerId,
+        speakerName: PULSE_SHOWCASE_SPEAKER_NAMES[speakerId] || speakerId,
+        bullets: fitnessBullets.slice(0, 5)
+      }
+    };
+  }
   const bullets = uniqueShowcaseBullets([
     ...showcaseExpansionTemplates(speakerId, anchor, roomState.roomMood),
     ...clauses.slice(1).map(item => `Anchor detail: ${item}.`),

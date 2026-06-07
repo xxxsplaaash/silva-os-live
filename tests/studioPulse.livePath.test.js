@@ -361,6 +361,33 @@ test('pulse showcase expand avoids meta commentary from live gauntlet', () => {
   assert.match(joined, /\b(Start at home this week|first step|do today|one useful action)\b/i);
 });
 
+test('pulse showcase expand keeps fitness bullets concrete instead of procedural', () => {
+  const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
+    sessionId: 'expand-fitness-fixture-session',
+    mode: 'social_hierarchy_lab',
+    messageId: 'msg-claudia-muscle-1',
+    speakerId: 'claudia',
+    text: 'Start this week: incline push-ups, chair squats, and a plank. Twenty minutes is enough if you actually repeat it.',
+    roomState: {
+      roomMood: 'focused',
+      responseMode: 'single',
+      socialSignals: {
+        reactionSummary: {
+          counts: { more_like: 1 },
+          total: 1,
+          speakerAffinity: { claudia: 2 }
+        }
+      }
+    }
+  });
+
+  assert.equal(result.statusCode, 200);
+  const joined = result.payload.bullets.join(' ');
+  assert.match(joined, /\b(incline push-ups|chair squats|plank|twenty minutes|20 minutes|repeat)\b/i);
+  assert.doesNotMatch(joined, /\b(one decision, one constraint|follow-through|reduce drift|inventing a process|can be checked after the turn|just movement|extra ceremony)\b/i);
+  assert.ok(result.payload.bullets.every(bullet => /\b(incline push-ups|chair squats|plank|twenty minutes|20 minutes|repeat|week|session|minutes)\b/i.test(bullet)), joined);
+});
+
 test('pulse showcase turn forwards selected message references as local anchors only', async () => {
   await withAishaFlag('true', async () => {
     let capturedRequest = null;
@@ -3004,12 +3031,14 @@ test('Studio Pulse showcase keeps connected runtime status when one turn is carr
         assert.equal(final.activeEngine, 'local-social-director');
         assert.equal(final.aishaEngineConnected, false);
         assert.equal(final.acceptedByPack1, false);
-        assert.equal(final.fallbackCategory, 'aisha-unavailable');
+        assert.equal(final.repairedByRuntime, true);
+        assert.equal(final.fallbackCategory, 'no-content');
         assert.equal(final.diagnostics.runtimeConnected, true);
         assert.equal(finalRuntime.activeEngine, 'aisha-runtime-pack1');
         assert.equal(finalRuntime.aishaEngineConnected, true);
         assert.equal(finalRuntime.acceptedByPack1, false);
-        assert.equal(finalRuntime.fallbackCategory, 'aisha-unavailable');
+        assert.equal(finalRuntime.repairedByRuntime, true);
+        assert.equal(finalRuntime.fallbackCategory, 'no-content');
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|model returned no usable/);
       });
     } finally {

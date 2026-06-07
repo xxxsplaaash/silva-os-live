@@ -456,7 +456,7 @@ test('social director fallback uses recent fitness cards for short-session follo
   assertCleanVisible(fallback);
 });
 
-test('showcase impulse planner enforces caps and selected speakers before generation', async () => {
+test('showcase impulse planner still repairs selected speakers with weak voice identity', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
     body: {
@@ -493,14 +493,13 @@ test('showcase impulse planner enforces caps and selected speakers before genera
   assert.ok(plan.intentionalSilence.some(item => item.speakerId === 'grok' && /premise fault/i.test(item.reason)));
   assert.equal(body.activeEngine, 'local-social-director');
   assert.equal(body.validation.fallbackUsed, true);
-  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
-  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-unplanned-speaker:aisha'));
+  assert.ok(body.validation.firstAttemptIssues.includes('voice-lock:blind-attribution:vanya'));
   assert.ok(body.messageEvents.length <= 2);
   assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
   assert.ok(Array.isArray(body.silentReactions));
 });
 
-test('showcase fallback obeys impulse caps on short practical follow-ups', async () => {
+test('showcase acceptance obeys impulse caps on short practical follow-ups', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
     body: {
@@ -535,16 +534,18 @@ test('showcase fallback obeys impulse caps on short practical follow-ups', async
   assert.equal(plan.maxSpeakers, 2);
   assert.equal(plan.enforceSelectedSpeakers, true);
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
-  assert.equal(body.activeEngine, 'local-social-director');
-  assert.equal(body.validation.fallbackUsed, true);
-  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
+  assert.equal(body.activeEngine, 'aisha-runtime-pack1');
+  assert.equal(body.qualityAccepted, true);
+  assert.equal(body.repairedByRuntime, false);
+  assert.equal(body.validation.fallbackUsed, false);
+  assert.deepEqual(body.validation.issues, []);
   assert.ok(body.messageEvents.length <= 2);
   assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
   assert.ok(body.silentReactions.some(item => item.speakerId === 'grok' && String(item.reason || '').trim()));
   assertCleanVisible(body);
 });
 
-test('showcase fallback obeys impulse caps on referenced practical follow-ups', async () => {
+test('showcase fallback repairs weak referenced practical follow-up voice', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
     body: {
@@ -585,13 +586,13 @@ test('showcase fallback obeys impulse caps on referenced practical follow-ups', 
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
   assert.equal(body.activeEngine, 'local-social-director');
   assert.equal(body.validation.fallbackUsed, true);
-  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-too-many-speakers:2'));
+  assert.ok(body.validation.firstAttemptIssues.includes('voice-lock:blind-attribution:vanya'));
   assert.ok(body.messageEvents.length <= 2);
   assert.ok(body.messageEvents.every(item => ['claudia', 'vanya'].includes(item.speakerId)));
   assertCleanVisible(body);
 });
 
-test('showcase impulse plan rejects selected speakers in the wrong order', async () => {
+test('showcase impulse plan still repairs reordered selected speakers with weak voice identity', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
     body: {
@@ -619,7 +620,7 @@ test('showcase impulse plan rejects selected speakers in the wrong order', async
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
   assert.equal(body.activeEngine, 'local-social-director');
   assert.equal(body.validation.fallbackUsed, true);
-  assert.ok(body.validation.firstAttemptIssues.includes('impulse-plan-wrong-order:claudia>vanya'));
+  assert.ok(body.validation.firstAttemptIssues.includes('voice-lock:blind-attribution:vanya'));
   assert.deepEqual(body.messageEvents.map(item => item.speakerId), ['claudia', 'vanya']);
   assertCleanVisible(body);
 });
@@ -960,6 +961,130 @@ test('showcase impulse planner keeps cooled affinity out of the next bounded pla
   assert.equal(practical.impulsePlan.category, 'practical');
   assert.deepEqual(practical.impulsePlan.speakerOrder, ['grok']);
   assert.equal(practical.impulsePlan.maxSpeakers, 2);
+});
+
+test('showcase social signals do not penalize intentionally silent A.I.S.H.A on repaired turns', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'social_hierarchy_lab',
+    roomMood: 'focused',
+    responseMode: 'single',
+    messageEvents: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'practical',
+        text: 'Start with two rounds, write the reps down, then stop.',
+        visibleState: 'Tracking next steps'
+      }
+    ],
+    silentReactions: [
+      {
+        speakerId: 'aisha',
+        visibleState: 'Anchoring',
+        reason: 'holding authority while the practical voice answers'
+      },
+      {
+        speakerId: 'grok',
+        visibleState: 'Tracking',
+        reason: 'watching for the premise fault before interrupting'
+      }
+    ],
+    diagnostics: {
+      fallbackUsed: true,
+      runtimeConnected: true,
+      repairedByRuntime: true,
+      fallbackCategory: 'quality-rejected'
+    }
+  });
+
+  const aisha = signals.hierarchy.find(item => item.speakerId === 'aisha');
+  const momentum = signals.socialMemory.statusMomentum.find(item => item.speakerId === 'aisha');
+
+  assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
+  assert.ok(aisha.delta >= 0, `silent A.I.S.H.A was unfairly penalized: ${JSON.stringify(aisha)}`);
+  assert.ok(!momentum || momentum.value >= 0, `silent A.I.S.H.A momentum was unfairly penalized: ${JSON.stringify(momentum)}`);
+});
+
+test('showcase social signals still penalize generic A.I.S.H.A silence on repaired turns', () => {
+  const signals = projectShowcaseSocialSignals({
+    mode: 'social_hierarchy_lab',
+    roomMood: 'focused',
+    responseMode: 'single',
+    messageEvents: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'practical',
+        text: 'Start with two rounds, write the reps down, then stop.',
+        visibleState: 'Tracking next steps'
+      }
+    ],
+    silentReactions: [
+      {
+        speakerId: 'aisha',
+        visibleState: 'Watching',
+        reason: 'holding because this turn only needs the selected voices'
+      }
+    ],
+    diagnostics: {
+      fallbackUsed: true,
+      runtimeConnected: true,
+      repairedByRuntime: true,
+      fallbackCategory: 'quality-rejected'
+    }
+  });
+
+  const aisha = signals.hierarchy.find(item => item.speakerId === 'aisha');
+  const momentum = signals.socialMemory.statusMomentum.find(item => item.speakerId === 'aisha');
+
+  assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
+  assert.ok(aisha.delta < 0, `generic silent A.I.S.H.A was not penalized: ${JSON.stringify(aisha)}`);
+  assert.ok(momentum && momentum.value < 0, `generic silent A.I.S.H.A momentum was not penalized: ${JSON.stringify(momentum)}`);
+});
+
+test('social director accepts Pack 1 output after applying the server speaker plan', async () => {
+  let capturedRequest = null;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'LOL I WANNA GROW MY MUSCLES',
+      recentTurns: []
+    },
+    callAishaEngine: async request => {
+      capturedRequest = request;
+      return mockAishaJson({
+        roomBeat: 'The room trims the fitness ask to the planned useful voices.',
+        roomMood: 'focused',
+        responseMode: 'small_exchange',
+        speakers: [
+          { speakerId: 'claudia', role: 'primary', tone: 'practical', text: 'Start with incline push-ups, chair squats, and a plank. Write the reps down after twenty minutes.', visibleState: 'Tracking next steps' },
+          { speakerId: 'vanya', role: 'side', tone: 'warm practical', text: 'No heroic rebrand. Make it small enough to repeat this week.', visibleState: 'Reading the room' },
+          { speakerId: 'leah', role: 'side', tone: 'sharp', text: 'Tiny vanity, massive discipline; at least it has a shape.', visibleState: 'Holding critique' },
+          { speakerId: 'grok', role: 'side', tone: 'dry', text: 'Track reps or you are just sweating near furniture.', visibleState: 'Tracking' },
+          { speakerId: 'aisha', role: 'closer', tone: 'clean authority', text: 'Receipt first: one short session, logged, repeated.', visibleState: 'Anchoring' }
+        ],
+        silentReactions: [],
+        stateUpdates: { notes: [] }
+      });
+    }
+  });
+
+  const plannedSilence = capturedRequest.projectContext?.socialDirectorV1?.impulsePlan?.intentionalSilence || [];
+  const plannedAisha = plannedSilence.find(item => item.speakerId === 'aisha');
+  const plannedGrok = plannedSilence.find(item => item.speakerId === 'grok');
+  const silentAisha = result.payload.silentReactions.find(item => item.speakerId === 'aisha');
+  const silentGrok = result.payload.silentReactions.find(item => item.speakerId === 'grok');
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.activeEngine, 'aisha-runtime-pack1');
+  assert.equal(result.payload.qualityAccepted, true);
+  assert.equal(result.payload.repairedByRuntime, false);
+  assert.equal(result.payload.validation.fallbackUsed, false);
+  assert.deepEqual(result.payload.validation.issues, []);
+  assert.deepEqual(result.payload.messageEvents.map(item => item.speakerId), ['claudia', 'vanya']);
+  assert.equal(silentAisha?.reason, plannedAisha?.reason);
+  assert.equal(silentGrok?.reason, plannedGrok?.reason);
+  assert.match(silentAisha?.reason || '', /\bholding authority\b/i);
+  assert.match(silentGrok?.reason || '', /\bpremise fault\b/i);
 });
 
 test('social director character bibles expose behavior-level voice locks to the prompt', () => {
@@ -4632,6 +4757,33 @@ test('social director falls back within deadline when A.I.S.H.A generation stall
   assert.equal(result.payload.validation.fallbackUsed, true);
   assert.equal(result.payload.validation.failureCategory, 'generation-timeout');
   assert.match(visibleText(result.payload), /\bTwenty minutes|three rounds|squat|push|pull|core\b/i);
+});
+
+test('social director reports connected empty A.I.S.H.A output as no-content, not unavailable', async () => {
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'is the room tense right now?',
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'Leah pushed back hard on the dashboard idea.' },
+        { speakerId: 'leah', role: 'primary', text: 'That idea is bland consensus hiding behind polish.' }
+      ]
+    },
+    callAishaEngine: async () => ({
+      ok: true,
+      aishaEngineConnected: true,
+      engineMode: 'production',
+      responses: [],
+      trace: { status: 'succeeded' }
+    })
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.activeEngine, 'local-social-director');
+  assert.equal(result.payload.aishaConnected, true);
+  assert.equal(result.payload.validation.fallbackUsed, true);
+  assert.equal(result.payload.validation.failureCategory, 'no-content');
+  assert.equal(result.payload.debugSummary.failureCategory, 'no-content');
+  assert.notEqual(result.payload.validation.failureCategory, 'aisha-unavailable');
 });
 
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
