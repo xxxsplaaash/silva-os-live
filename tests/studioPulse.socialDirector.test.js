@@ -4791,6 +4791,47 @@ test('social director reports connected empty A.I.S.H.A output as no-content, no
   assert.notEqual(result.payload.validation.failureCategory, 'aisha-unavailable');
 });
 
+test('social director preserves connected runtime category when repair times out', async () => {
+  let callCount = 0;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'who is hungry?',
+      threadId: 'repair-timeout-connected-runtime'
+    },
+    callAishaEngine: async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return {
+          ok: true,
+          aishaEngineConnected: true,
+          engineMode: 'production',
+          responses: [{ content: 'not json at all' }],
+          trace: { status: 'succeeded' }
+        };
+      }
+      await new Promise(resolve => setTimeout(resolve, 50));
+      return {
+        ok: true,
+        aishaEngineConnected: true,
+        engineMode: 'production',
+        responses: [{ content: '{}' }],
+        trace: { status: 'succeeded' }
+      };
+    },
+    runtimeOptions: { socialDirectorDeadlineMs: 20, socialDirectorAttemptTimeoutMs: 5 }
+  });
+
+  assert.equal(callCount, 2);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.activeEngine, 'local-social-director');
+  assert.equal(result.payload.aishaConnected, true);
+  assert.equal(result.payload.validation.fallbackUsed, true);
+  assert.equal(result.payload.validation.failureCategory, 'generation-timeout');
+  assert.equal(result.payload.debugSummary.failureCategory, 'generation-timeout');
+  assert.equal(result.payload.debugSummary.repairAttempted, true);
+  assert.notEqual(result.payload.validation.failureCategory, 'aisha-unavailable');
+});
+
 test('social director normalizes bounded social cues and ignores invalid speakers', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'A status challenge lands.',
