@@ -1519,10 +1519,11 @@ test('Studio Pulse showcase turn-stream emits safe SSE events and final payload'
   });
 });
 
-test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics only when requested locally', async () => {
+test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics locally or with operator token', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
     const originalNodeEnv = process.env.NODE_ENV;
+    const originalDiagnosticsToken = process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN;
     process.env.GEMINI_API_KEY = 'test-room-provider-key';
     delete process.env.NODE_ENV;
     let callCount = 0;
@@ -1620,12 +1621,56 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics o
         assert.equal(quietResponse.status, 200);
         const quietFinal = parseSseEvents(await quietResponse.text()).find(item => item.event === 'final').data;
         assert.equal(Object.prototype.hasOwnProperty.call(quietFinal, 'operatorDiagnostics'), false);
+
+        process.env.NODE_ENV = 'production';
+        process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN = 'operator-test-token';
+
+        callCount = 0;
+        const productionQuietResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({ ...baseBody, operatorDiagnostics: true })
+        });
+        assert.equal(productionQuietResponse.status, 200);
+        const productionQuietFinal = parseSseEvents(await productionQuietResponse.text()).find(item => item.event === 'final').data;
+        assert.equal(Object.prototype.hasOwnProperty.call(productionQuietFinal, 'operatorDiagnostics'), false);
+
+        callCount = 0;
+        const productionWrongTokenResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'text/event-stream',
+            'x-pulse-operator-token': 'wrong-token'
+          },
+          body: JSON.stringify({ ...baseBody, operatorDiagnostics: true })
+        });
+        assert.equal(productionWrongTokenResponse.status, 200);
+        const productionWrongTokenFinal = parseSseEvents(await productionWrongTokenResponse.text()).find(item => item.event === 'final').data;
+        assert.equal(Object.prototype.hasOwnProperty.call(productionWrongTokenFinal, 'operatorDiagnostics'), false);
+
+        callCount = 0;
+        const productionDiagnosticsResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'text/event-stream',
+            'x-pulse-operator-token': 'operator-test-token'
+          },
+          body: JSON.stringify({ ...baseBody, operatorDiagnostics: true })
+        });
+        assert.equal(productionDiagnosticsResponse.status, 200);
+        const productionDiagnosticsFinal = parseSseEvents(await productionDiagnosticsResponse.text()).find(item => item.event === 'final').data;
+        assert.equal(productionDiagnosticsFinal.operatorDiagnostics.schemaVersion, 'studio-pulse.operator-diagnostics.v0.1');
+        assert.ok(productionDiagnosticsFinal.operatorDiagnostics.firstAttemptIssues.includes('product-topic-ignored:referenced-fitness'));
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;
       else process.env.GEMINI_API_KEY = originalGemini;
       if (originalNodeEnv == null) delete process.env.NODE_ENV;
       else process.env.NODE_ENV = originalNodeEnv;
+      if (originalDiagnosticsToken == null) delete process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN;
+      else process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN = originalDiagnosticsToken;
     }
   });
 });

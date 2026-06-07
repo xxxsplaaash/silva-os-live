@@ -20,6 +20,7 @@ const SESSION_ID = String(process.env.SESSION_ID || `pulse-turn-acceptance-${Dat
 const REQUIRE_MOST_ACCEPTED = process.env.REQUIRE_MOST_ACCEPTED === '1';
 const ALLOW_LOCAL_FALLBACK = process.env.ALLOW_LOCAL_FALLBACK === '1';
 const OPERATOR_DIAGNOSTICS = /^(1|true|yes)$/i.test(String(process.env.OPERATOR_DIAGNOSTICS || process.env.GAUNTLET_OPERATOR_DIAGNOSTICS || ''));
+const OPERATOR_DIAGNOSTICS_TOKEN = String(process.env.OPERATOR_DIAGNOSTICS_TOKEN || process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN || '').trim();
 const GAUNTLET_FIXTURE_FILE = String(process.env.GAUNTLET_FIXTURE_FILE || '').trim();
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const IS_LOCAL_BACKEND = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/i.test(BACKEND_URL);
@@ -397,7 +398,11 @@ async function streamTurn(prompt, prior = {}, recentTurns = []) {
     try {
       response = await gauntletFetch(`${BACKEND_URL}/api/studio/pulse-showcase/turn-stream`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+        headers: {
+          'content-type': 'application/json',
+          accept: 'text/event-stream',
+          ...(OPERATOR_DIAGNOSTICS && OPERATOR_DIAGNOSTICS_TOKEN ? { 'x-pulse-operator-token': OPERATOR_DIAGNOSTICS_TOKEN } : {})
+        },
         body: JSON.stringify(body),
         signal: controller.signal
       });

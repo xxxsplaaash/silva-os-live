@@ -1017,6 +1017,8 @@ test('showcase social signals do not penalize intentionally silent A.I.S.H.A on 
   const aisha = signals.hierarchy.find(item => item.speakerId === 'aisha');
   const momentum = signals.socialMemory.statusMomentum.find(item => item.speakerId === 'aisha');
 
+  assert.equal(signals.tension, 28, `intentional A.I.S.H.A silence should not add fallback tension: ${JSON.stringify(signals)}`);
+  assert.equal(signals.roomMove, 'observe', `intentional A.I.S.H.A silence should not look like fallback deflection: ${JSON.stringify(signals)}`);
   assert.ok(aisha, 'A.I.S.H.A hierarchy row missing');
   assert.ok(aisha.delta >= 0, `silent A.I.S.H.A was unfairly penalized: ${JSON.stringify(aisha)}`);
   assert.ok(!momentum || momentum.value >= 0, `silent A.I.S.H.A momentum was unfairly penalized: ${JSON.stringify(momentum)}`);
