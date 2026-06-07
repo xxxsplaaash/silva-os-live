@@ -609,6 +609,71 @@ test('showcase fallback repairs weak referenced practical follow-up voice', asyn
   assertCleanVisible(body);
 });
 
+test('showcase prompt carries concrete referenced 20-minute fitness acceptance target', () => {
+  const input = buildRoomDirectorInput({
+    question: 'turn that into a 20 minute version',
+    roomState: { roomMood: 'focused' },
+    references: [{
+      speakerId: 'claudia',
+      speakerName: 'Claudia',
+      role: 'side',
+      text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+    }],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.equal(input.impulsePlan.topicClass, 'reference-follow-up');
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
+  assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
+  assert.ok(rubric.positiveTargets.some(item => /minute blocks, named movements/i.test(item)));
+  assert.match(prompt, /Twenty minutes: warm up for 3/i);
+  assert.match(prompt, /Small enough to finish, real enough that tomorrow notices/i);
+  assert.match(prompt, /Do not answer with generic habit talk/i);
+});
+
+test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The referenced workout card becomes a twenty-minute plan.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'direct',
+        text: 'Twenty minutes: warm up for 3, then two rounds of incline push-ups, backpack rows, split squats, hip hinges, and plank. Write the lowest rep count down.'
+      },
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        tone: 'warm',
+        text: 'Small enough to finish, real enough that tomorrow notices.'
+      }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
+      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until useful' },
+      { speakerId: 'grok', visibleState: 'Watching', reason: 'holding because this turn only needs selected voices' }
+    ],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'turn that into a 20 minute version',
+    references: [{
+      speakerId: 'claudia',
+      text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+    }],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+    ]
+  });
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+});
+
 test('showcase impulse plan still repairs reordered selected speakers with weak voice identity', async () => {
   let capturedRequest = null;
   const result = await runSocialDirectorTurn({
@@ -1435,7 +1500,7 @@ test('social director fallback changes shape instead of repeating fitness recove
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
       assert.doesNotMatch(text, /Start with three full-body sessions a week/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|tiny vanity)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1456,7 +1521,7 @@ test('social director fallback changes shape after current fitness base recovery
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start at home this week/i);
       assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|tiny vanity)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1480,7 +1545,7 @@ test('social director fallback treats exercise artifacts as fitness context afte
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start at home this week/i);
       assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|tiny vanity)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1517,7 +1582,7 @@ test('social director fallback keeps start-here recovery lines character-attribu
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start here: three training days this week/i);
       assert.doesNotMatch(text, /Pick three training days, write the exercises down/i);
-      assert.match(text, /\btiny vanity\b/i);
+      assert.match(text, /\bsmall enough to finish\b/i);
       assert.match(text, /\bwrite reps down\b/i);
       assert.equal(attributionIssues.ok, true);
       assert.deepEqual(attributionIssues.issues, []);
@@ -1549,7 +1614,7 @@ test('social director fallback changes shape after character-attributable start-
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Room energy, not a task queue/i);
       assert.doesNotMatch(text, /Calendar first: Monday/i);
-      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|specific enough to start)\b/i);
+      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|specific enough to start|small enough to finish)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
     });
@@ -1572,7 +1637,7 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const fallback = socialFallbackFor('turn that into a 20 minute version', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bTiny vanity gets twenty minutes\b/i);
+  assert.match(text, /\bSmall enough to finish\b/i);
   assert.match(text, /\btwenty minutes\b/i);
   assert.match(text, /\bthree rounds\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
@@ -2325,6 +2390,46 @@ test('social director quality validator rejects lines borrowed from another char
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('voice-lock:blind-attribution:vanya'));
   assert.ok(validation.issues.includes('voice-lock:blind-attribution:claudia'));
+});
+
+test('social director quality validator rejects repeated Vanya phrase families', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room lets Vanya repeat the same charm button.',
+    roomMood: 'playful',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'vanya',
+        role: 'primary',
+        tone: 'warm',
+        text: 'Good. Tiny vanity, massive discipline. We can work with that.'
+      },
+      {
+        speakerId: 'claudia',
+        role: 'side',
+        tone: 'direct',
+        text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.'
+      }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until the first week exists' },
+      { speakerId: 'grok', visibleState: 'Tracking failure', reason: 'watching for a premise fault before interrupting' }
+    ],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'ok, keep going',
+    recentTurns: [
+      {
+        speakerId: 'vanya',
+        role: 'primary',
+        text: 'Good. Tiny vanity, massive discipline. We can work with that.'
+      }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:repeated-vanya-phrase:tiny-vanity'));
 });
 
 test('turn acceptance smoke script fails public cards with voice-lock drift', async () => {
