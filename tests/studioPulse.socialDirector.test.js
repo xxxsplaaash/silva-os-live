@@ -1603,6 +1603,7 @@ test('social director fallback treats training-adjacent food as nutrition, not s
       assert.equal(body.ok, true);
       assert.equal(body.responseMode, 'small_exchange');
       assert.match(text, /\b(banana|yoghurt|eggs and toast|rice and chicken|water|heavy)\b/i);
+      assert.doesNotMatch(text, /\bMake it real\b/i);
       assert.doesNotMatch(text, /\b(three full-body sessions|progressive overload|basic pushes|squats or hinges)\b/i);
       assert.doesNotMatch(text, /\b(recorded change|claim first|anchor the difference)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
@@ -1635,6 +1636,7 @@ test('social director fallback answers lunch with concrete food direction', asyn
 
       assert.equal(body.ok, true);
       assert.match(text, /\b(lunch|rice and chicken|eggs and toast|sandwich|leftovers|water)\b/i);
+      assert.doesNotMatch(text, /\bMake it real\b/i);
       assert.doesNotMatch(text, /system warning|assigning ownership|debate/i);
       assert.doesNotMatch(text, /\b(push-ups|split squats|progressive overload|training week)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
@@ -3856,6 +3858,7 @@ test('social director fallback recovers repetition complaints and planning pivot
         stateUpdates: { notes: [] }
       }, { userMessage: 'answer normally, what should I do today?', recentTurns });
       assert.match(normalText, /\b(Plain version|today|one block|one result|write the proof down)\b/i);
+      assert.doesNotMatch(normalText, /\bMake it real\b/i);
       assert.doesNotMatch(normalText, /repeated answer is a failed answer/i);
       assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
       assert.equal(normalValidation.ok, true, normalValidation.issues.join(', '));
@@ -3876,7 +3879,8 @@ test('social director fallback recovers repetition complaints and planning pivot
         silentReactions: planning.body.silentReactions,
         stateUpdates: { notes: [] }
       }, { userMessage: 'new topic: I need help planning tomorrow', recentTurns });
-      assert.match(planningText, /\b(Make it real|three things|hardest one first|buffer|Rank the pain)\b/i);
+      assert.match(planningText, /\b(Tomorrow|three things|hardest one first|buffer|Rank the pain)\b/i);
+      assert.doesNotMatch(planningText, /\bMake it real\b/i);
       assert.doesNotMatch(planningText, /\b(main build|handoff before lunch)\b/i);
       assert.doesNotMatch(planningText, /\b(muscle|training|protein|workout)\b/i);
       assert.equal(planningValidation.ok, true, planningValidation.issues.join(', '));
@@ -4688,6 +4692,7 @@ test('social director fallback acknowledges continuity claims and memory challen
       const updateText = visibleText(update.body);
       assert.match(updateText, /\bwhite editorial with no red\b/i);
       assert.match(updateText, /\bprior record remains landing page style is black glass with a single red pulse\b/i);
+      assert.doesNotMatch(updateText, /\bMake it real\b/i);
       assert.doesNotMatch(updateText, /\bold version stays visible instead of being quietly erased\b/i);
 
       const recentTurns = [
