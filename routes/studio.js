@@ -2752,13 +2752,16 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
     const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[item.speakerId] || {};
     const planned = plannedBySpeaker.get(item.speakerId);
     const usePlanned = planned && isGenericPulseShowcaseSilentReason(item.speakerId, item.reason);
+    const plannedReason = usePlanned && isGenericPulseShowcaseSilentReason(planned.speakerId, planned.reason)
+      ? pulseShowcaseBeatSilenceReason(planned.speakerId, plannedBeat) || planned.reason
+      : planned?.reason;
     const beatReason = !planned && isGenericPulseShowcaseSilentReason(item.speakerId, item.reason)
       ? pulseShowcaseBeatSilenceReason(item.speakerId, plannedBeat)
       : '';
     bySpeaker.set(item.speakerId, {
       speakerId: item.speakerId,
       visibleState: (usePlanned ? planned.visibleState : item.visibleState) || fallback.visibleState || 'Watching',
-      reason: (usePlanned ? planned.reason : beatReason || item.reason) || fallback.reason || 'intentionally quiet while another character carries the turn'
+      reason: (usePlanned ? plannedReason : beatReason || item.reason) || fallback.reason || 'intentionally quiet while another character carries the turn'
     });
   });
   plannedBySpeaker.forEach(item => {
