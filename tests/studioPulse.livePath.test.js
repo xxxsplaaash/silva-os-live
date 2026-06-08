@@ -307,7 +307,7 @@ test('pulse showcase public payload prefers planned beat-specific silence over g
       { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
     ],
     {
-      selectedSpeakers: [{ speakerId: 'claudia' }, { speakerId: 'vanya' }, { speakerId: 'leah' }],
+      selectedSpeakers: [{ speakerId: 'claudia' }, { speakerId: 'vanya' }],
       intentionalSilence: [
         { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the record while the 20-minute workout gets the useful voice' },
         { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault inside the 20-minute workout' }

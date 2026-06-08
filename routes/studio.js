@@ -2724,7 +2724,9 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
     .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id)));
   const bySpeaker = new Map();
   const plannedBySpeaker = new Map();
-  sanitizeShowcaseSilentReactions(plannedPulseShowcaseSilentReactions(plannedSilentOrImpulse, messageEvents)).forEach(item => {
+  const plannedReactions = sanitizeShowcaseSilentReactions(plannedPulseShowcaseSilentReactions(plannedSilentOrImpulse, messageEvents));
+  const plannedBeat = pulseShowcaseSilentBeatFromPlan(plannedReactions);
+  plannedReactions.forEach(item => {
     if (speaking.has(item.speakerId) || plannedBySpeaker.has(item.speakerId)) return;
     plannedBySpeaker.set(item.speakerId, item);
   });
@@ -2733,10 +2735,13 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
     const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[item.speakerId] || {};
     const planned = plannedBySpeaker.get(item.speakerId);
     const usePlanned = planned && isGenericPulseShowcaseSilentReason(item.speakerId, item.reason);
+    const beatReason = !planned && isGenericPulseShowcaseSilentReason(item.speakerId, item.reason)
+      ? pulseShowcaseBeatSilenceReason(item.speakerId, plannedBeat)
+      : '';
     bySpeaker.set(item.speakerId, {
       speakerId: item.speakerId,
       visibleState: (usePlanned ? planned.visibleState : item.visibleState) || fallback.visibleState || 'Watching',
-      reason: (usePlanned ? planned.reason : item.reason) || fallback.reason || 'intentionally quiet while another character carries the turn'
+      reason: (usePlanned ? planned.reason : beatReason || item.reason) || fallback.reason || 'intentionally quiet while another character carries the turn'
     });
   });
   plannedBySpeaker.forEach(item => {
