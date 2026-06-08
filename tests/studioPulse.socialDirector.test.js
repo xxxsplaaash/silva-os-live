@@ -761,18 +761,39 @@ test('showcase prompt carries line-job, attribution, and continuity receipt cont
   assert.ok(rubric.mustPass.includes('continuity receipts label current and prior records when evidence exists'));
   assert.match(prompt, /Each visible speaker line gets one job only/i);
   assert.match(prompt, /A\.I\.S\.H\.A continuity receipt format: Current record:/i);
-  assert.match(prompt, /Vanya line job: temperature plus one specific social pressure/i);
+  assert.match(prompt, /Vanya line job: human signal plus one specific social pressure/i);
   assert.match(prompt, /Leah line job: taste verdict plus one cultural or visual stake/i);
   assert.match(prompt, /Claudia line job: sequence, owner, timer, count, or next measurable move/i);
   assert.match(prompt, /Grok line job: premise fault plus one dry consequence/i);
   assert.match(prompt, /Do not borrow Claudia's timers or counts for Vanya/i);
   assert.match(prompt, /A\.I\.S\.H\.A silence example: holding authority until the room needs correction/i);
-  assert.match(prompt, /Vanya silence example: listening for the human temperature before entering/i);
+  assert.match(prompt, /Vanya silence example: listening for the human signal before entering/i);
   assert.match(prompt, /Leah silence example: saving the taste cut until there is a useful edge/i);
   assert.match(prompt, /Claudia silence example: tracking structure without turning the exchange into a project plan/i);
   assert.match(prompt, /Grok silence example: watching for the premise fault before interrupting/i);
   assert.match(prompt, /Never write silence reasons as bare waiting, monitoring, observing, watching, or listening/i);
   assert.match(prompt, /Do not answer a continuity question by asking what changed/i);
+});
+
+test('showcase prompt seeds continuity receipts from recent user claim changes', () => {
+  const input = buildRoomDirectorInput({
+    question: 'What changed?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Current record: obsidian dashboard, one red accent. Prior record remains pale blue, no red.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /CONTINUITY RECEIPT SEED/);
+  assert.match(prompt, /Current record candidate: Actually my dashboard preference is pale blue with no red accents\./);
+  assert.match(prompt, /Prior record candidate: My dashboard preference is obsidian with one red accent\./);
+  assert.match(prompt, /Use these recent visible user claims only as local receipt context/i);
+  assert.match(prompt, /Current-only tokens: pale, blue/);
+  assert.match(prompt, /Prior-only tokens: obsidian, accent/);
+  assert.doesNotMatch(prompt, /Current record candidate: Current record: obsidian dashboard/i);
 });
 
 test('showcase prompt carries minimum voice signatures for attribution drift families', () => {
@@ -2270,6 +2291,29 @@ test('social director fallback answers logo direction with concrete brand moves'
       assertCleanVisible(body);
     });
   });
+});
+
+test('deterministic logo fallback keeps Claudia blind-attributable and not silent', () => {
+  const output = socialFallbackFor('I need a sharper logo direction for Silva', {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'answer normally, what should I do today?' },
+      { speakerId: 'claudia', role: 'side', text: 'If the old topic was training, do one short session.' }
+    ]
+  });
+  const claudia = output.speakers.find(item => item.speakerId === 'claudia');
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'I need a sharper logo direction for Silva',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'answer normally, what should I do today?' },
+      { speakerId: 'claudia', role: 'side', text: 'If the old topic was training, do one short session.' }
+    ]
+  });
+
+  assert.ok(claudia);
+  assert.match(claudia.text, /\bOne decision:\s*simplify the mark, tighten spacing\b/i);
+  assert.doesNotMatch(claudia.text, /\bPractical cut:\s*simplify the shape\b/i);
+  assert.ok(!output.silentReactions.some(item => item.speakerId === 'claudia'), 'speaking Claudia must not also be silent');
+  assert.equal(validation.ok, true, validation.issues.join(', '));
 });
 
 test('social director fallback answers landing-page design direction instead of generic room banter', async () => {
@@ -6211,7 +6255,7 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     const speakingIds = new Set(messageEvents.map(item => item.speakerId));
     const silentReactions = [
       { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until a correction changes the room' },
-      { speakerId: 'vanya', visibleState: 'Reading', reason: 'listening for emotional temperature before entering' },
+      { speakerId: 'vanya', visibleState: 'Reading', reason: 'listening for the human signal before entering' },
       { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the taste cut until there is a useful edge' },
       { speakerId: 'claudia', visibleState: 'Tracking next steps', reason: 'tracking structure without turning the exchange into a project plan' },
       { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
