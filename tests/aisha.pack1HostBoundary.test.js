@@ -332,6 +332,8 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /concrete first move/i);
   assert.match(promptSource, /food or design direction directly/i);
   assert.match(promptSource, /contrast current and prior claims/i);
+  assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);
+  assert.match(promptSource, /ask-finding loops/i);
   assert.match(promptSource, /visible silence reason/i);
   assert.match(promptSource, /Vanya:/);
   assert.match(promptSource, /Claudia:/);
@@ -455,6 +457,8 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Current record first/);
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
+  assert.match(prompt.systemPrompt, /workflow alignment, deliverables, production readiness, and stakeholder language/i);
+  assert.match(prompt.systemPrompt, /not process readiness or delivery theater/i);
   assert.match(prompt.systemPrompt, /For planning-tomorrow asks, give a plain day skeleton/i);
   assert.match(prompt.systemPrompt, /Tomorrow: first block for the hardest task/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human: one hard thing early/i);
@@ -474,7 +478,63 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Room Presence Summary: aisha:anchoring, leah:active, claudia:active, vanya:quiet, grok:quiet/i);
   assert.match(prompt.systemPrompt, /If the user changes topic, drop stale context immediately/i);
   assert.match(prompt.systemPrompt, /Never invent an objective for the user/i);
+  assert.match(prompt.systemPrompt, /For stress\/frustration turns, do not answer with objective slogans/i);
+  assert.match(prompt.systemPrompt, /questions that shift the burden back to the user/i);
   assert.match(prompt.systemPrompt, /A movie prompt after fitness is a movie prompt/i);
+});
+
+test('Pack 1 social-director built prompt separates recent assistant repeat risks from user anchors', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-risk-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = 'Return roomBeat, speakers, silentReactions, and stateUpdates for this fresher follow-up.';
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'Use that card, but make the room answer fresher.',
+      text: 'Use that card, but make the room answer fresher.',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'Do not treat my line as an assistant answer to imitate.' },
+        { speakerId: 'vanya', content: 'Tiny vanity, clean discipline. Let the clock do the arguing.' },
+        { speakerId: 'claudia', content: 'Start with three 20-minute sessions: push, squat, hinge, row.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'Use that card, but make the room answer fresher.',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /Recent assistant\/card repeat risks:/i);
+  assert.match(prompt.systemPrompt, /vanya: Tiny vanity, clean discipline/i);
+  assert.match(prompt.systemPrompt, /claudia: Start with three 20-minute sessions/i);
+  assert.match(prompt.systemPrompt, /User recent lines are anchors, not answer text to imitate/i);
+  assert.doesNotMatch(
+    prompt.systemPrompt.match(/Recent assistant\/card repeat risks:[\s\S]*?Recent room messages:/)?.[0] || '',
+    /Do not treat my line as an assistant answer/i
+  );
 });
 
 test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {

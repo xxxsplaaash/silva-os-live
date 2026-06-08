@@ -1204,9 +1204,11 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "For planning-tomorrow asks, give a plain day skeleton with blocks, owner/risk, and a recovery gap; do not invent client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
-  "Reject operational jargon such as design brief, implementation parameters, status green, and current objectives; translate it into visible taste, concrete options, or one next move.",
+  "Reject operational jargon such as design brief, implementation parameters, status green, current objectives, workflow alignment, deliverables, production readiness, and stakeholder language; translate it into visible taste, concrete options, or one next move.",
+  "For design, food, planning, and room-social asks, answer the visible choice or next action, not process readiness or delivery theater.",
   "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
   "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
+  "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
@@ -1375,6 +1377,16 @@ function formatStringList(value) {
   if (!Array.isArray(value)) return "";
   return value.map((item) => compactText(item, 120)).filter(Boolean).join("; ");
 }
+function formatAssistantRepeatRisks(value) {
+  if (!Array.isArray(value)) return "";
+  return value.slice(-8).map((item) => {
+    const record = asRecord(item);
+    const speaker = readString(record, "speakerId") ?? readString(record, "role") ?? "unknown";
+    if (!speaker || speaker.toLowerCase() === "user") return "";
+    const content = readString(record, "content") ?? "";
+    return content ? `${speaker}: ${compactText(content, 180)}` : "";
+  }).filter(Boolean).join("\n");
+}
 function formatPresence(value) {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   const record = asRecord(value);
@@ -1479,6 +1491,12 @@ function buildStudioPulseContextBlock(input) {
     }
     const recentMessages2 = ctx.recentMessages;
     if (Array.isArray(recentMessages2) && recentMessages2.length > 0) {
+      const repeatRisks = formatAssistantRepeatRisks(recentMessages2);
+      if (repeatRisks) {
+        lines.push(`Recent assistant/card repeat risks:
+${repeatRisks}
+User recent lines are anchors, not answer text to imitate.`);
+      }
       const recent = recentMessages2.slice(-6).map((item) => {
         const record = asRecord(item);
         const speaker = readString(record, "speakerId") ?? readString(record, "role") ?? "unknown";

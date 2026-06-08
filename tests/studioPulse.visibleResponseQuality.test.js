@@ -695,6 +695,29 @@ test('visible response quality rejects repeated room-temperature self-theater', 
   assert.ok(issueKeys(issues).includes('self-theater:temperature-language'));
 });
 
+test('visible response quality rejects live repetition recovery self-theater phrasing', () => {
+  const repeatIssues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      'I am keeping the room human and cutting the loop. One useful move lands now.',
+      'One clean move: next answer gets one shape, one useful move, and no recycled opener.',
+      'Correct. The pattern repeated; the dodge has been identified.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(repeatIssues).includes('self-theater:meta-language'));
+
+  const normalIssues = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      'Plain version: keep the room human. One useful block today: twenty minutes, one result, then stop narrating the plan.',
+      'One clean move today: choose training or work, set twenty minutes, finish one visible result, and write the proof down.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(normalIssues).includes('self-theater:meta-language'));
+});
+
 test('visible response quality rejects live generic planning build invention', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',

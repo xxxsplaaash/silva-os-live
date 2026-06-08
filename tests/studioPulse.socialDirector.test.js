@@ -703,6 +703,36 @@ test('showcase prompt carries concrete recent-line guard from visible history', 
   assert.doesNotMatch(prompt, /user: how is everyone today/i);
 });
 
+test('showcase prompt carries referenced visible cards into recent-line guard', () => {
+  const input = buildRoomDirectorInput({
+    question: 'use this, but make the room answer fresher',
+    roomState: { roomMood: 'warm' },
+    references: [
+      {
+        speakerId: 'vanya',
+        role: 'primary',
+        text: 'Tiny vanity, clean discipline. Let the clock do the arguing.'
+      },
+      {
+        speakerId: 'user',
+        role: 'user',
+        text: 'do not treat the user card as an assistant line'
+      }
+    ],
+    recentTurns: [
+      { speakerId: 'claudia', role: 'side', text: 'Start with three 20-minute sessions: push, squat, hinge, row.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+  const guard = prompt.match(/RECENT VISIBLE LINE GUARD[\s\S]*?OUTPUT SCHEMA/)?.[0] || '';
+
+  assert.match(prompt, /RECENT VISIBLE LINE GUARD/);
+  assert.match(guard, /vanya: Tiny vanity, clean discipline/i);
+  assert.match(guard, /claudia: Start with three 20-minute sessions/i);
+  assert.match(guard, /Avoid opening frames: Tiny vanity, clean discipline; Start with three 20-minute/i);
+  assert.doesNotMatch(guard, /do not treat the user card as an assistant line/i);
+});
+
 test('showcase prompt tells social pivots to drop stale fitness context', () => {
   const input = buildRoomDirectorInput({
     question: 'how is everyone actually feeling in here?',
@@ -836,7 +866,9 @@ test('showcase prompt carries food-design punt and operational-jargon rejection 
   assert.ok(rubric.mustPass.includes('food/design asks answer with named options or visible design decisions'));
   assert.ok(rubric.positiveTargets.some(item => /named food option or visual decision/i.test(item)));
   assert.match(prompt, /Food\/design answers must land a named option or visible design decision/i);
-  assert.match(prompt, /Reject operational jargon like design brief, implementation parameters, status green, and current objectives/i);
+  assert.match(prompt, /Reject operational jargon like design brief, implementation parameters, status green, current objectives/i);
+  assert.match(prompt, /workflow alignment, deliverables, production readiness, and stakeholder language/i);
+  assert.match(prompt, /not process readiness or delivery theater/i);
   assert.match(prompt, /dinner menu redesign/i);
 });
 
@@ -861,6 +893,28 @@ test('showcase prompt carries Claudia planning-tomorrow target without invented 
   assert.match(prompt, /Make the afternoon stay human: one hard thing early/i);
   assert.doesNotMatch(prompt, /room earns another sentence/i);
   assert.doesNotMatch(prompt, /draft a preliminary schedule with key tasks and deadlines by EOD/i);
+});
+
+test('showcase prompt tells stress turns to avoid objective slogans and burden-shifting', () => {
+  const input = buildRoomDirectorInput({
+    question: 'I am stressed and this is starting to feel dumb.',
+    roomState: { roomMood: 'tense' },
+    recentTurns: [
+      { speakerId: 'aisha', role: 'primary', text: 'The objective is the signal. If the details are not serving it, they are the problem.' },
+      { speakerId: 'claudia', role: 'side', text: 'Focus on one concrete action for today. What is the single most important task?' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.rejectFamilies.includes('false-objective'));
+  assert.ok(rubric.rejectFamilies.includes('generic-advice'));
+  assert.match(prompt, /If the user is frustrated, stressed, or says the room feels dumb/i);
+  assert.match(prompt, /Do not answer stress with objective slogans/i);
+  assert.match(prompt, /do not ask the user to identify the real problem, single task, or objective/i);
+  assert.match(prompt, /Vanya can lower the temperature; Claudia can name one reset move/i);
+  assert.match(prompt, /BAD: user says "I am stressed and this is starting to feel dumb" and Aisha says "The objective is the signal/i);
+  assert.doesNotMatch(prompt, /No other objectives/i);
 });
 
 test('social director quality validator accepts concrete planning target from live gauntlet', () => {
@@ -4531,8 +4585,9 @@ test('social director fallback recovers repetition complaints and planning pivot
         silentReactions: repeat.body.silentReactions,
         stateUpdates: { notes: [] }
       }, { userMessage: 'you keep repeating yourself', recentTurns });
-      assert.match(repeatText, /\b(loop got loud|one useful move|recycled opener|pattern repeated)\b/i);
+      assert.match(repeatText, /\b(loop got loud|land one sentence|measurable next move|premise fault)\b/i);
       assert.doesNotMatch(repeatText, /\b(tiny vanity|massive discipline|task badge|dramatic reset|no drama|leave the ceremony outside)\b/i);
+      assert.doesNotMatch(repeatText, /\b(keeping the room human|keep the room human|room human|cutting the loop|one useful move lands now|dodge has been identified)\b/i);
       assert.doesNotMatch(repeatText, /\b(current priorities|objective is clear|personal fitness routines)\b/i);
       assert.equal(repeatValidation.ok, true, repeatValidation.issues.join(', '));
 
@@ -4546,10 +4601,11 @@ test('social director fallback recovers repetition complaints and planning pivot
         silentReactions: normal.body.silentReactions,
         stateUpdates: { notes: [] }
       }, { userMessage: 'answer normally, what should I do today?', recentTurns });
-      assert.match(normalText, /\b(Plain version|today|one block|one result|write the proof down)\b/i);
+      assert.match(normalText, /\b(Plain version|today|necessary task|maintenance task|twenty minutes)\b/i);
       assert.doesNotMatch(normalText, /\bMake it real\b/i);
       assert.doesNotMatch(normalText, /repeated answer is a failed answer/i);
       assert.doesNotMatch(normalText, /room turns it into a thesis/i);
+      assert.doesNotMatch(normalText, /\b(keep the room human|stop narrating the plan|choose training or work|write the proof down)\b/i);
       assert.doesNotMatch(normalText, /\b(tiny vanity|massive discipline|task badge|dramatic reset|no drama|leave the ceremony outside)\b/i);
       assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
       assert.equal(normalValidation.ok, true, normalValidation.issues.join(', '));

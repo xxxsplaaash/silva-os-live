@@ -1359,6 +1359,8 @@ function sanitizePulseShowcaseLedgerRows(rows = []) {
 function pulseShowcaseLedgerSlot(text = '') {
   const normalized = safeShowcaseText(text, 240)
     .toLowerCase()
+    .replace(/^(?:active|current|prior|previous|superseded)\s+record(?:\s+logged)?\s*:\s*/i, '')
+    .replace(/^(?:current|prior|previous|superseded)\s+value\s*:\s*/i, '')
     .replace(/\s+/g, ' ')
     .trim();
   if (!normalized) return '';
