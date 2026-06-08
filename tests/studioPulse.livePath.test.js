@@ -320,6 +320,25 @@ test('pulse showcase public payload prefers planned beat-specific silence over g
   assert.match(silent.find(item => item.speakerId === 'grok').reason, /20-minute workout/i);
 });
 
+test('pulse showcase public payload infers silence beat from accepted practical cards', () => {
+  assert.equal(typeof studioRouter.__ensurePulseShowcaseSilentPresenceForTests, 'function');
+  const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(
+    [
+      { speakerId: 'claudia', text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down before you stop.' },
+      { speakerId: 'vanya', text: 'First round proves the mood; the mirror can wait.' }
+    ],
+    [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
+      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until there is a useful edge' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+    ]
+  );
+
+  assert.match(silent.find(item => item.speakerId === 'aisha').reason, /workout answer/i);
+  assert.match(silent.find(item => item.speakerId === 'leah').reason, /workout answer/i);
+  assert.match(silent.find(item => item.speakerId === 'grok').reason, /workout answer/i);
+});
+
 test('pulse showcase expand returns brief local voice bullets without Pack 1 memory rows', () => {
   assert.equal(typeof studioRouter.__buildPulseShowcaseExpandPayloadForTests, 'function');
   const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({

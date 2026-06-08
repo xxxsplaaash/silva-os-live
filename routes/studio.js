@@ -2679,6 +2679,23 @@ function pulseShowcaseSilentBeatFromPlan(plannedSilentReactions = []) {
   return match?.[1] || '';
 }
 
+function pulseShowcaseSilentBeatFromVisibleTurn(messageEvents = []) {
+  const text = (Array.isArray(messageEvents) ? messageEvents : [])
+    .map(item => [item?.speakerId, item?.visibleState, item?.text].filter(Boolean).join(' '))
+    .join(' ')
+    .toLowerCase();
+  if (!text) return '';
+  if (/\b(landing page|website|hero|section|saas)\b/.test(text)) return 'landing page direction';
+  if (/\b(logo|brand|visual|design|palette|type|typography|aesthetic)\b/.test(text)) return 'design decision';
+  if (/\b(push[- ]?ups?|pushups?|rows?|squats?|hinges?|plank|lunges?|wall sit|sets?|reps?|training|workout|gym|muscles?|session|recover|reserve)\b/.test(text)) return 'workout answer';
+  if (/\b(hungry|lunch|dinner|snack|eat|food|meal|toast|rice|chicken|yoghurt|eggs|sandwich|leftovers)\b/.test(text)) return 'food choice';
+  if (/\b(plan|planning|schedule|tomorrow|today|task|cleanup|handoff|owner|completion|next move)\b/.test(text)) return 'planning move';
+  if (/\b(movie|film|watch|netflix|series|show|arrival|spider-verse|heat|knives out|menu)\b/.test(text)) return 'watch choice';
+  if (/\b(repeating|repetition|loop|fake|dumb|breathe|plain version|answer normally|failed answer|one sentence)\b/.test(text)) return 'frustration recovery';
+  if (/\b(how is everyone|alive|restless|check-in|attendance|tension|floor|room gets noisy|help desk|making eye contact)\b/.test(text)) return 'room check-in';
+  return '';
+}
+
 function pulseShowcaseBeatSilenceReason(speakerId = '', beat = '') {
   const normalizedBeat = safeShowcaseText(beat, 80);
   if (!normalizedBeat) return '';
@@ -2725,7 +2742,7 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
   const bySpeaker = new Map();
   const plannedBySpeaker = new Map();
   const plannedReactions = sanitizeShowcaseSilentReactions(plannedPulseShowcaseSilentReactions(plannedSilentOrImpulse, messageEvents));
-  const plannedBeat = pulseShowcaseSilentBeatFromPlan(plannedReactions);
+  const plannedBeat = pulseShowcaseSilentBeatFromPlan(plannedReactions) || pulseShowcaseSilentBeatFromVisibleTurn(messageEvents);
   plannedReactions.forEach(item => {
     if (speaking.has(item.speakerId) || plannedBySpeaker.has(item.speakerId)) return;
     plannedBySpeaker.set(item.speakerId, item);
@@ -2756,10 +2773,11 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
   PULSE_SHOWCASE_SPEAKERS.forEach(speakerId => {
     if (speaking.has(speakerId) || bySpeaker.has(speakerId)) return;
     const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[speakerId] || {};
+    const beatReason = pulseShowcaseBeatSilenceReason(speakerId, plannedBeat);
     bySpeaker.set(speakerId, {
       speakerId,
       visibleState: fallback.visibleState || 'Watching',
-      reason: fallback.reason || 'intentionally quiet while another character carries the turn'
+      reason: beatReason || fallback.reason || 'intentionally quiet while another character carries the turn'
     });
   });
   return [...bySpeaker.values()].slice(0, 5);
