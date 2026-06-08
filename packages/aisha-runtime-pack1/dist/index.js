@@ -1198,11 +1198,14 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Every spoken text must be blind-attributable without the speaker label.",
   "Do not reuse the same opening, rhythm, or sentence frame across speakers or recent room messages.",
   "If a recent line already used 'Same twenty minutes', 'Fair.', 'Good.', 'Current record first', or a similar opener, choose a new shape.",
+  "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
   "Reject operational jargon such as design brief, implementation parameters, status green, and current objectives; translate it into visible taste, concrete options, or one next move.",
+  "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
+  "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
@@ -1234,7 +1237,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Fitness first ask",
     speakerId: "vanya",
-    text: "Start at home this week; small enough to finish, real enough that you can feel it tomorrow."
+    text: "First round proves the mood; the mirror can wait."
   },
   {
     scenario: "20-minute fitness follow-up",
@@ -1244,7 +1247,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "20-minute fitness follow-up",
     speakerId: "vanya",
-    text: "Small enough to finish, real enough that you can feel it tomorrow."
+    text: "Let the clock do the arguing; the ego can decorate later."
   },
   {
     scenario: "Objective/frustration recovery",

@@ -327,6 +327,8 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /blind-attributable/i);
   assert.match(promptSource, /Do not reuse the same opening/i);
   assert.match(promptSource, /recent-repeat-risk/i);
+  assert.match(promptSource, /Vanya must not lean on stale charm families/i);
+  assert.match(promptSource, /small enough \/ real enough/i);
   assert.match(promptSource, /concrete first move/i);
   assert.match(promptSource, /food or design direction directly/i);
   assert.match(promptSource, /contrast current and prior claims/i);
@@ -447,6 +449,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.equal(prompt.userMessage, generatorPrompt);
   assert.match(prompt.systemPrompt, /Do not reuse the same opening, rhythm, or sentence frame/i);
   assert.match(prompt.systemPrompt, /Same twenty minutes/);
+  assert.match(prompt.systemPrompt, /Vanya must not lean on stale charm families/i);
+  assert.match(prompt.systemPrompt, /Let the clock do the arguing/i);
+  assert.doesNotMatch(prompt.systemPrompt, /Small enough to finish, real enough/i);
   assert.match(prompt.systemPrompt, /Current record first/);
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
@@ -463,6 +468,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Grok silence: watching for the premise fault before interrupting/i);
   assert.match(prompt.systemPrompt, /Every intentionally quiet character needs a visible silence reason/i);
   assert.match(prompt.systemPrompt, /Room Presence Summary: aisha:anchoring, leah:active, claudia:active, vanya:quiet, grok:quiet/i);
+  assert.match(prompt.systemPrompt, /If the user changes topic, drop stale context immediately/i);
+  assert.match(prompt.systemPrompt, /Never invent an objective for the user/i);
+  assert.match(prompt.systemPrompt, /A movie prompt after fitness is a movie prompt/i);
 });
 
 test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {

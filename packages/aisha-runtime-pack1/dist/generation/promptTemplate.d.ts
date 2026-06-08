@@ -13,7 +13,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Fitness first ask";
     readonly speakerId: "vanya";
-    readonly text: "Start at home this week; small enough to finish, real enough that you can feel it tomorrow.";
+    readonly text: "First round proves the mood; the mirror can wait.";
 }, {
     readonly scenario: "20-minute fitness follow-up";
     readonly speakerId: "claudia";
@@ -21,7 +21,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "20-minute fitness follow-up";
     readonly speakerId: "vanya";
-    readonly text: "Small enough to finish, real enough that you can feel it tomorrow.";
+    readonly text: "Let the clock do the arguing; the ego can decorate later.";
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "claudia";

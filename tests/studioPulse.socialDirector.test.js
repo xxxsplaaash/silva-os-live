@@ -631,7 +631,8 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
   assert.ok(rubric.positiveTargets.some(item => /minute blocks, named movements/i.test(item)));
   assert.match(prompt, /Twenty minutes: warm up for 3/i);
-  assert.match(prompt, /Small enough to finish, real enough that tomorrow notices/i);
+  assert.match(prompt, /Let the clock do the arguing; the ego can decorate later/i);
+  assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
   assert.match(prompt, /Do not answer with generic habit talk/i);
 });
 
@@ -654,6 +655,9 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.ok(rubric.rejectFamilies.includes('speaker-attribution-drift'));
   assert.match(prompt, /Do not reuse recent line openings, catchphrases, sentence frames, or advice shapes/i);
   assert.match(prompt, /Use different sentence shapes across speakers/i);
+  assert.match(prompt, /Vanya must not live on one catchphrase/i);
+  assert.match(prompt, /Let the clock do the arguing/i);
+  assert.doesNotMatch(prompt, /Small enough to finish, real enough/i);
   assert.match(prompt, /A\.I\.S\.H\.A: receipt or continuity anchor/i);
   assert.match(prompt, /Claudia: concrete sequence, owner, timer, movement, or measurable next step/i);
   assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
