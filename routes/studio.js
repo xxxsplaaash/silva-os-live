@@ -2670,13 +2670,61 @@ function isGenericPulseShowcaseSilentReason(speakerId = '', reason = '') {
   return /\b(holding authority until the room needs correction|saving the taste cut until there is a useful edge|watching for the premise fault before interrupting|tracking structure without turning the exchange into a project plan|listening for the human signal before entering)\b/i.test(normalizedReason);
 }
 
-function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions = [], plannedSilentReactions = []) {
+function pulseShowcaseSilentBeatFromPlan(plannedSilentReactions = []) {
+  const text = sanitizeShowcaseSilentReactions(plannedSilentReactions)
+    .map(item => item.reason)
+    .join(' ')
+    .toLowerCase();
+  const match = text.match(/\b(20-minute workout|referenced workout|food choice|planning move|watch choice|technical fault|creative line|logo direction|landing page direction|dashboard direction)\b/i);
+  return match?.[1] || '';
+}
+
+function pulseShowcaseBeatSilenceReason(speakerId = '', beat = '') {
+  const normalizedBeat = safeShowcaseText(beat, 80);
+  if (!normalizedBeat) return '';
+  const reasons = {
+    aisha: `holding the record while the ${normalizedBeat} gets the useful voice`,
+    vanya: `staying quiet because the ${normalizedBeat} already has enough human pressure`,
+    leah: `saving the sharper taste cut until the ${normalizedBeat} needs another edge`,
+    claudia: `holding structure until the ${normalizedBeat} needs another measurable step`,
+    grok: `watching for the premise fault inside the ${normalizedBeat}`
+  };
+  return reasons[String(speakerId || '').trim().toLowerCase()] || '';
+}
+
+function plannedPulseShowcaseSilentReactions(plannedSilentOrImpulse = [], messageEvents = []) {
+  const speaking = new Set((Array.isArray(messageEvents) ? messageEvents : [])
+    .map(item => String(item?.speakerId || '').trim().toLowerCase())
+    .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id)));
+  const impulse = Array.isArray(plannedSilentOrImpulse) ? null : plannedSilentOrImpulse;
+  const plannedSilent = Array.isArray(plannedSilentOrImpulse)
+    ? plannedSilentOrImpulse
+    : Array.isArray(impulse?.intentionalSilence) ? impulse.intentionalSilence : [];
+  const planned = sanitizeShowcaseSilentReactions(plannedSilent);
+  const bySpeaker = new Map(planned.map(item => [item.speakerId, item]));
+  const beat = pulseShowcaseSilentBeatFromPlan(planned);
+  if (impulse && Array.isArray(impulse.selectedSpeakers)) {
+    impulse.selectedSpeakers.forEach(item => {
+      const speakerId = String(item?.speakerId || '').trim().toLowerCase();
+      if (!PULSE_SHOWCASE_SPEAKERS.includes(speakerId) || speaking.has(speakerId) || bySpeaker.has(speakerId)) return;
+      const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[speakerId] || {};
+      bySpeaker.set(speakerId, {
+        speakerId,
+        visibleState: fallback.visibleState || 'Watching',
+        reason: pulseShowcaseBeatSilenceReason(speakerId, beat) || fallback.reason || 'intentionally quiet while another character carries the turn'
+      });
+    });
+  }
+  return [...bySpeaker.values()];
+}
+
+function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions = [], plannedSilentOrImpulse = []) {
   const speaking = new Set((Array.isArray(messageEvents) ? messageEvents : [])
     .map(item => String(item?.speakerId || '').trim().toLowerCase())
     .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id)));
   const bySpeaker = new Map();
   const plannedBySpeaker = new Map();
-  sanitizeShowcaseSilentReactions(plannedSilentReactions).forEach(item => {
+  sanitizeShowcaseSilentReactions(plannedPulseShowcaseSilentReactions(plannedSilentOrImpulse, messageEvents)).forEach(item => {
     if (speaking.has(item.speakerId) || plannedBySpeaker.has(item.speakerId)) return;
     plannedBySpeaker.set(item.speakerId, item);
   });
@@ -2859,7 +2907,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
   let roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
   let messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
-  let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
+  let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || [], showcaseImpulsePlan);
   const priorPack1Ledger = pulseShowcaseSessionPack1Ledger(sessionId);
   const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates, priorPack1Ledger);
   const continuityProof = continuityProofFromLedger(continuityLedger);
@@ -2935,7 +2983,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
@@ -2970,7 +3018,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;

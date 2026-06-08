@@ -306,11 +306,13 @@ test('pulse showcase public payload prefers planned beat-specific silence over g
       { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until there is a useful edge' },
       { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
     ],
-    [
-      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the record while the 20-minute workout gets the useful voice' },
-      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper taste cut until the 20-minute workout needs another edge' },
-      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault inside the 20-minute workout' }
-    ]
+    {
+      selectedSpeakers: [{ speakerId: 'claudia' }, { speakerId: 'vanya' }, { speakerId: 'leah' }],
+      intentionalSilence: [
+        { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the record while the 20-minute workout gets the useful voice' },
+        { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault inside the 20-minute workout' }
+      ]
+    }
   );
 
   assert.match(silent.find(item => item.speakerId === 'aisha').reason, /20-minute workout/i);
