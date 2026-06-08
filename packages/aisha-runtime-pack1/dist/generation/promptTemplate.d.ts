@@ -29,7 +29,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "vanya";
-    readonly text: "No slogan. First rep, then the room earns another sentence.";
+    readonly text: "No slogan. Same twenty minutes, cleaner shape; the body trusts it before the ego decorates the clock.";
 }, {
     readonly scenario: "Movie pivot after fitness";
     readonly speakerId: "leah";
@@ -46,6 +46,14 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly scenario: "Food practical";
     readonly speakerId: "vanya";
     readonly text: "Feed the session, not the performance; small if training is close, human if the day is messy.";
+}, {
+    readonly scenario: "Work planning";
+    readonly speakerId: "claudia";
+    readonly text: "Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery.";
+}, {
+    readonly scenario: "Work planning";
+    readonly speakerId: "vanya";
+    readonly text: "Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.";
 }, {
     readonly scenario: "Design direction";
     readonly speakerId: "leah";

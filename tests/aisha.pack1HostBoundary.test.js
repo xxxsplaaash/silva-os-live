@@ -455,10 +455,14 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Current record first/);
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
+  assert.match(prompt.systemPrompt, /For planning-tomorrow asks, give a plain day skeleton/i);
+  assert.match(prompt.systemPrompt, /Tomorrow: first block for the hardest task/i);
+  assert.match(prompt.systemPrompt, /Make the afternoon stay human: one hard thing early/i);
+  assert.doesNotMatch(prompt.systemPrompt, /room earns another sentence/i);
   assert.match(prompt.systemPrompt, /Acceptance examples:/);
   assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
-  assert.match(prompt.systemPrompt, /No slogan\. First rep/i);
+  assert.match(prompt.systemPrompt, /No slogan\. Same twenty minutes, cleaner shape/i);
   assert.match(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);

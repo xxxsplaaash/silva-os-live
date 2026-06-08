@@ -1239,6 +1239,7 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
+  "For planning-tomorrow asks, give a plain day skeleton with blocks, owner/risk, and a recovery gap; do not invent client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
   "Reject operational jargon such as design brief, implementation parameters, status green, and current objectives; translate it into visible taste, concrete options, or one next move.",
@@ -1295,7 +1296,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Objective/frustration recovery",
     speakerId: "vanya",
-    text: "No slogan. First rep, then the room earns another sentence."
+    text: "No slogan. Same twenty minutes, cleaner shape; the body trusts it before the ego decorates the clock."
   },
   {
     scenario: "Movie pivot after fitness",
@@ -1316,6 +1317,16 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     scenario: "Food practical",
     speakerId: "vanya",
     text: "Feed the session, not the performance; small if training is close, human if the day is messy."
+  },
+  {
+    scenario: "Work planning",
+    speakerId: "claudia",
+    text: "Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery."
+  },
+  {
+    scenario: "Work planning",
+    speakerId: "vanya",
+    text: "Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud."
   },
   {
     scenario: "Design direction",
@@ -1368,6 +1379,7 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Objective/frustration recovery: ${targetLinesForScenario("Objective/frustration recovery")}`,
   `Movie pivot after fitness: ${targetLinesForScenario("Movie pivot after fitness")}`,
   `Food practical: ${targetLinesForScenario("Food practical")}`,
+  `Work planning: ${targetLinesForScenario("Work planning")}`,
   `Design direction: ${targetLinesForScenario("Design direction")}`,
   `Quality challenge: ${targetLinesForScenario("Quality challenge")}`,
   `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`

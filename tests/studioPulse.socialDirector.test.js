@@ -715,6 +715,29 @@ test('showcase prompt carries food-design punt and operational-jargon rejection 
   assert.match(prompt, /dinner menu redesign/i);
 });
 
+test('showcase prompt carries Claudia planning-tomorrow target without invented ops', () => {
+  const input = buildRoomDirectorInput({
+    question: 'new topic: I need help planning tomorrow',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'how is everyone?' },
+      { speakerId: 'claudia', role: 'side', text: 'Operational status is green. No immediate blockers.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.rejectFamilies.includes('operational-jargon'));
+  assert.ok(rubric.rejectFamilies.includes('speaker-attribution-drift'));
+  assert.ok(rubric.positiveTargets.some(item => /first move, constraint, or proof point/i.test(item)));
+  assert.match(prompt, /For planning-tomorrow asks, Claudia should give a plain day skeleton/i);
+  assert.match(prompt, /not invented agendas, clients, KPIs, deliverables, or EOD reporting/i);
+  assert.match(prompt, /Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff/i);
+  assert.match(prompt, /Make the afternoon stay human: one hard thing early/i);
+  assert.doesNotMatch(prompt, /room earns another sentence/i);
+  assert.doesNotMatch(prompt, /draft a preliminary schedule with key tasks and deadlines by EOD/i);
+});
+
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The referenced workout card becomes a twenty-minute plan.',
