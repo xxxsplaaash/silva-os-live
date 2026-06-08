@@ -2661,12 +2661,37 @@ function sanitizeShowcaseSilentReactions(items = []) {
     .slice(0, 5);
 }
 
-function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions = []) {
+function isGenericPulseShowcaseSilentReason(speakerId = '', reason = '') {
+  const normalizedSpeaker = String(speakerId || '').trim().toLowerCase();
+  const normalizedReason = safeShowcaseText(reason || '', 180).toLowerCase();
+  if (!normalizedReason) return true;
+  const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[normalizedSpeaker] || {};
+  if (safeShowcaseText(fallback.reason || '', 180).toLowerCase() === normalizedReason) return true;
+  return /\b(holding authority until the room needs correction|saving the taste cut until there is a useful edge|watching for the premise fault before interrupting|tracking structure without turning the exchange into a project plan|listening for the human signal before entering)\b/i.test(normalizedReason);
+}
+
+function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions = [], plannedSilentReactions = []) {
   const speaking = new Set((Array.isArray(messageEvents) ? messageEvents : [])
     .map(item => String(item?.speakerId || '').trim().toLowerCase())
     .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id)));
   const bySpeaker = new Map();
+  const plannedBySpeaker = new Map();
+  sanitizeShowcaseSilentReactions(plannedSilentReactions).forEach(item => {
+    if (speaking.has(item.speakerId) || plannedBySpeaker.has(item.speakerId)) return;
+    plannedBySpeaker.set(item.speakerId, item);
+  });
   sanitizeShowcaseSilentReactions(silentReactions).forEach(item => {
+    if (speaking.has(item.speakerId) || bySpeaker.has(item.speakerId)) return;
+    const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[item.speakerId] || {};
+    const planned = plannedBySpeaker.get(item.speakerId);
+    const usePlanned = planned && isGenericPulseShowcaseSilentReason(item.speakerId, item.reason);
+    bySpeaker.set(item.speakerId, {
+      speakerId: item.speakerId,
+      visibleState: (usePlanned ? planned.visibleState : item.visibleState) || fallback.visibleState || 'Watching',
+      reason: (usePlanned ? planned.reason : item.reason) || fallback.reason || 'intentionally quiet while another character carries the turn'
+    });
+  });
+  plannedBySpeaker.forEach(item => {
     if (speaking.has(item.speakerId) || bySpeaker.has(item.speakerId)) return;
     const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[item.speakerId] || {};
     bySpeaker.set(item.speakerId, {
@@ -2834,7 +2859,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let responseMode = safeShowcaseText(payload.responseMode || 'single', 40) || 'single';
   let roomMood = safeShowcaseText(payload.roomMood || roomState.roomMood || 'focused', 40) || 'focused';
   let messageEvents = sanitizeShowcaseMessages(payload.messageEvents || []);
-  let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || []);
+  let silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, payload.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
   const priorPack1Ledger = pulseShowcaseSessionPack1Ledger(sessionId);
   const continuityLedger = pulseShowcaseLedgerFrom(memorySummary, stateUpdates, priorPack1Ledger);
   const continuityProof = continuityProofFromLedger(continuityLedger);
@@ -2910,7 +2935,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;
@@ -2945,7 +2970,7 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
       text: item.text,
       visibleState: item.visibleState
     })));
-    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || []);
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan.intentionalSilence || []);
     socialCues = null;
     activeEngine = 'local-social-director';
     fallbackUsed = true;

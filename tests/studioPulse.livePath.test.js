@@ -294,6 +294,30 @@ test('pulse showcase public payload fills intentional silence for non-speaking c
   assert.equal(silent.find(item => item.speakerId === 'aisha').visibleState, 'Anchoring');
 });
 
+test('pulse showcase public payload prefers planned beat-specific silence over generic repaired reasons', () => {
+  assert.equal(typeof studioRouter.__ensurePulseShowcaseSilentPresenceForTests, 'function');
+  const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(
+    [
+      { speakerId: 'claudia', text: 'Do three rounds: squat or hinge, push, pull, core.' },
+      { speakerId: 'vanya', text: 'Set twenty minutes. First round proves the day is moving.' }
+    ],
+    [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
+      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until there is a useful edge' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+    ],
+    [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the record while the 20-minute workout gets the useful voice' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper taste cut until the 20-minute workout needs another edge' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault inside the 20-minute workout' }
+    ]
+  );
+
+  assert.match(silent.find(item => item.speakerId === 'aisha').reason, /20-minute workout/i);
+  assert.match(silent.find(item => item.speakerId === 'leah').reason, /20-minute workout/i);
+  assert.match(silent.find(item => item.speakerId === 'grok').reason, /20-minute workout/i);
+});
+
 test('pulse showcase expand returns brief local voice bullets without Pack 1 memory rows', () => {
   assert.equal(typeof studioRouter.__buildPulseShowcaseExpandPayloadForTests, 'function');
   const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
