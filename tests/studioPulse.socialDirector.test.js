@@ -312,6 +312,23 @@ test('room director prompt treats benign practical asks as valid room topics', (
   assert.ok(rubric.positiveTargets.some(item => /first move|proof point|concrete ask/i.test(item)));
 });
 
+test('room director impulse plan anchors silence reasons to the current design beat', () => {
+  const input = buildRoomDirectorInput({
+    message: 'What should the landing page hero do with this red pulse?',
+    roomState: { roomMood: 'focused' }
+  });
+  const reasons = Object.fromEntries(input.impulsePlan.intentionalSilence.map(item => [item.speakerId, item.reason]));
+
+  assert.equal(input.impulsePlan.topicClass, 'creative');
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['leah', 'grok']);
+  assert.match(reasons.aisha, /landing page hero/i);
+  assert.match(reasons.vanya, /landing page hero/i);
+  assert.match(reasons.claudia, /landing page hero/i);
+  assert.doesNotMatch(reasons.aisha, /^holding authority until the room needs correction$/i);
+  assert.doesNotMatch(reasons.vanya, /^listening for emotional temperature before entering$/i);
+  assert.doesNotMatch(reasons.claudia, /^tracking structure without turning the exchange into a project plan$/i);
+});
+
 test('room director prompt treats message references as local anchors only', () => {
   const input = buildRoomDirectorInput({
     message: 'Reference this and make it sharper.',
@@ -756,6 +773,29 @@ test('showcase prompt carries line-job, attribution, and continuity receipt cont
   assert.match(prompt, /Grok silence example: watching for the premise fault before interrupting/i);
   assert.match(prompt, /Never write silence reasons as bare waiting, monitoring, observing, watching, or listening/i);
   assert.match(prompt, /Do not answer a continuity question by asking what changed/i);
+});
+
+test('showcase prompt carries minimum voice signatures for attribution drift families', () => {
+  const input = buildRoomDirectorInput({
+    question: 'Everyone give me one useful line on this landing page direction.',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'The landing page direction is black glass with one red pulse.' },
+      { speakerId: 'leah', role: 'primary', text: 'One strong world, not wallpaper. The red pulse gets one job or it becomes random taste noise.' },
+      { speakerId: 'claudia', role: 'side', text: 'Hero quiet, CTA obvious, one red accent doing work.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.rejectFamilies.includes('speaker-attribution-drift'));
+  assert.match(prompt, /VOICE SIGNATURE FLOOR/i);
+  assert.match(prompt, /A\.I\.S\.H\.A floor: record, receipt, evidence, current\/prior, or grounded distinction/i);
+  assert.match(prompt, /Vanya floor: temperature, dignity, human pressure, breathable reset, or room warmth/i);
+  assert.match(prompt, /Leah floor: taste, status, edge, boredom, cultural pressure, or visual stake/i);
+  assert.match(prompt, /Claudia floor: first step, timer, owner, sequence, count, or measurable next move/i);
+  assert.match(prompt, /Grok floor: premise, fault line, useful\/fake judgment, evidence, or dry consequence/i);
+  assert.match(prompt, /If a line could be moved to another speaker without changing words, rewrite it/i);
 });
 
 test('showcase prompt carries food-design punt and operational-jargon rejection pressure', () => {
