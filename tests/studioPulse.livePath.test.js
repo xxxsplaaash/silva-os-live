@@ -365,6 +365,28 @@ test('pulse showcase public payload upgrades generic planned silence with inferr
   assert.match(silent.find(item => item.speakerId === 'grok').reason, /workout answer/i);
 });
 
+test('pulse showcase public payload lets current stress intent beat workout words in repaired cards', () => {
+  assert.equal(typeof studioRouter.__ensurePulseShowcaseSilentPresenceForTests, 'function');
+  const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(
+    [
+      { speakerId: 'vanya', text: 'Fair. Breathe first; shrink the room to water, one clear surface, and ten minutes that do not need a speech.' },
+      { speakerId: 'claudia', text: 'Set a timer. When it ends, write what changed: reps done, file opened, or one decision made.' }
+    ],
+    [
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
+      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until there is a useful edge' },
+      { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
+    ],
+    [],
+    { userText: 'I am stressed and this is starting to feel dumb.' }
+  );
+
+  assert.match(silent.find(item => item.speakerId === 'aisha').reason, /frustration recovery/i);
+  assert.match(silent.find(item => item.speakerId === 'leah').reason, /frustration recovery/i);
+  assert.match(silent.find(item => item.speakerId === 'grok').reason, /frustration recovery/i);
+  assert.doesNotMatch(silent.map(item => item.reason).join('\n'), /workout answer/i);
+});
+
 test('pulse showcase expand returns brief local voice bullets without Pack 1 memory rows', () => {
   assert.equal(typeof studioRouter.__buildPulseShowcaseExpandPayloadForTests, 'function');
   const result = studioRouter.__buildPulseShowcaseExpandPayloadForTests({
