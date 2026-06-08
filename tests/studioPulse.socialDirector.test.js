@@ -350,6 +350,31 @@ test('room director impulse plan anchors silence reasons to the current design b
   assert.doesNotMatch(reasons.claudia, /^tracking structure without turning the exchange into a project plan$/i);
 });
 
+test('room director impulse plan anchors silence reasons to current practical follow-up beat', () => {
+  const input = buildRoomDirectorInput({
+    message: 'turn that into a 20 minute version',
+    roomState: { roomMood: 'focused' },
+    references: [{
+      speakerId: 'claudia',
+      speakerName: 'Claudia',
+      role: 'side',
+      text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+    }],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' }
+    ]
+  });
+  const reasons = Object.fromEntries(input.impulsePlan.intentionalSilence.map(item => [item.speakerId, item.reason]));
+
+  assert.equal(input.impulsePlan.topicClass, 'reference-follow-up');
+  assert.match(reasons.aisha, /20-minute workout/i);
+  assert.match(reasons.leah, /20-minute workout/i);
+  assert.match(reasons.grok, /20-minute workout/i);
+  assert.doesNotMatch(reasons.aisha, /^holding authority until the room needs correction$/i);
+  assert.doesNotMatch(reasons.leah, /^saving the taste cut until there is a useful edge$/i);
+  assert.doesNotMatch(reasons.grok, /^watching for the premise fault before interrupting$/i);
+});
+
 test('room director prompt treats message references as local anchors only', () => {
   const input = buildRoomDirectorInput({
     message: 'Reference this and make it sharper.',
