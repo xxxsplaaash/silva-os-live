@@ -635,6 +635,30 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.match(prompt, /Do not answer with generic habit talk/i);
 });
 
+test('showcase prompt carries anti-repeat and voice-contract acceptance pressure', () => {
+  const input = buildRoomDirectorInput({
+    question: 'how is everyone today?',
+    roomState: { roomMood: 'warm' },
+    recentTurns: [
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes: warm up, run the circuit, write one number down.' },
+      { speakerId: 'claudia', role: 'side', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
+      { speakerId: 'leah', role: 'side', text: 'Pick the feeling first. The title is just the room admitting what mood it wants.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.mustPass.includes('recent-line avoidance and different sentence shapes'));
+  assert.ok(rubric.mustPass.includes('visible silence reasons tied to the current beat'));
+  assert.ok(rubric.rejectFamilies.includes('recent-repeat-risk'));
+  assert.ok(rubric.rejectFamilies.includes('speaker-attribution-drift'));
+  assert.match(prompt, /Do not reuse recent line openings, catchphrases, sentence frames, or advice shapes/i);
+  assert.match(prompt, /Use different sentence shapes across speakers/i);
+  assert.match(prompt, /A\.I\.S\.H\.A: receipt or continuity anchor/i);
+  assert.match(prompt, /Claudia: concrete sequence, owner, timer, movement, or measurable next step/i);
+  assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
+});
+
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The referenced workout card becomes a twenty-minute plan.',
@@ -1500,7 +1524,7 @@ test('social director fallback changes shape instead of repeating fitness recove
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /objective is your actual ask: start building muscle/i);
       assert.doesNotMatch(text, /Start with three full-body sessions a week/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish|three short sessions|identity speech|Calendar first)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1521,7 +1545,7 @@ test('social director fallback changes shape after current fitness base recovery
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start at home this week/i);
       assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish|three short sessions|identity speech|Calendar first)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1568,7 +1592,7 @@ test('social director fallback treats exercise artifacts as fitness context afte
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start at home this week/i);
       assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
-      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish)\b/i);
+      assert.match(text, /\b(No more loop|three training days|repeatable training days|week one|small enough to finish|three short sessions|identity speech|Calendar first)\b/i);
       assertCleanVisible(body);
     });
   });
@@ -1605,8 +1629,8 @@ test('social director fallback keeps start-here recovery lines character-attribu
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Start here: three training days this week/i);
       assert.doesNotMatch(text, /Pick three training days, write the exercises down/i);
-      assert.match(text, /\bsmall enough to finish\b/i);
-      assert.match(text, /\bwrite reps down\b/i);
+      assert.match(text, /\b(week can actually hold|three short sessions|identity speech)\b/i);
+      assert.match(text, /\b(mark one number|write reps down)\b/i);
       assert.equal(attributionIssues.ok, true);
       assert.deepEqual(attributionIssues.issues, []);
       assert.equal(validation.ok, true, validation.issues.join(', '));
@@ -1637,7 +1661,7 @@ test('social director fallback changes shape after character-attributable start-
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /Room energy, not a task queue/i);
       assert.doesNotMatch(text, /Calendar first: Monday/i);
-      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|specific enough to start|small enough to finish)\b/i);
+      assert.match(text, /\b(one workout|one meal|one sleep window|Log reps|specific enough to start|small enough to finish|No slogan|proof talk after)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
     });
@@ -1660,7 +1684,7 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const fallback = socialFallbackFor('turn that into a 20 minute version', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bSmall enough to finish\b/i);
+  assert.match(text, /\bFirst round proves the day is moving\b/i);
   assert.match(text, /\btwenty minutes\b/i);
   assert.match(text, /\bthree rounds\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
@@ -1682,7 +1706,7 @@ test('social director fallback changes short-session shape after referenced 20-m
     recentTurns: body.recentTurns
   });
 
-  assert.match(text, /\bPlain version\b/i);
+  assert.match(text, /\bSet the timer\b/i);
   assert.match(text, /\bFour stations\b/i);
   assert.match(text, /\bchair squat\b/i);
   assert.doesNotMatch(text, /\bTiny vanity gets twenty minutes on the clock\b/i);
@@ -1703,7 +1727,7 @@ test('social director fallback changes short-session shape after generated focus
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bPlain version\b/i);
+  assert.match(text, /\bSet the timer\b/i);
   assert.match(text, /\bchair squat\b/i);
   assert.doesNotMatch(text, /\bfocused session\b/i);
   assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);
@@ -4090,6 +4114,7 @@ test('social director fallback recovers repetition complaints and planning pivot
         stateUpdates: { notes: [] }
       }, { userMessage: 'you keep repeating yourself', recentTurns });
       assert.match(repeatText, /\b(loop got loud|one useful move|recycled opener|pattern repeated)\b/i);
+      assert.doesNotMatch(repeatText, /\b(tiny vanity|massive discipline|task badge|dramatic reset|no drama|leave the ceremony outside)\b/i);
       assert.doesNotMatch(repeatText, /\b(current priorities|objective is clear|personal fitness routines)\b/i);
       assert.equal(repeatValidation.ok, true, repeatValidation.issues.join(', '));
 
@@ -4107,6 +4132,7 @@ test('social director fallback recovers repetition complaints and planning pivot
       assert.doesNotMatch(normalText, /\bMake it real\b/i);
       assert.doesNotMatch(normalText, /repeated answer is a failed answer/i);
       assert.doesNotMatch(normalText, /room turns it into a thesis/i);
+      assert.doesNotMatch(normalText, /\b(tiny vanity|massive discipline|task badge|dramatic reset|no drama|leave the ceremony outside)\b/i);
       assert.doesNotMatch(normalText, /\b(parameters|operational status|current priorities)\b/i);
       assert.equal(normalValidation.ok, true, normalValidation.issues.join(', '));
 

@@ -36,6 +36,15 @@ const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "A.I.S.H.A: continuity anchor and standards keeper; not default assistant filler."
 ];
 
+const SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
+  "Fitness first ask: Claudia says 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Log reps before you stop.' Vanya says 'Begin small enough to repeat; the mirror can wait until the habit exists.'",
+  "20-minute fitness follow-up: Claudia says 'Run three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.' Vanya says 'Set the timer first; confidence can arrive after the first round.'",
+  "Objective/frustration recovery: Claudia says 'The objective is one repeatable training block: push, pull, legs, log reps, recover.' Vanya says 'No slogan. First rep, then the room earns another sentence.'",
+  "Movie pivot after fitness: Leah says 'Pick a film with a point of view, not the most agreeable poster.' Vanya says 'Choose Arrival for quiet pressure, Spider-Verse for voltage, or Knives Out for comfort with teeth.'",
+  "Food practical: Claudia says 'Under an hour: banana and yoghurt. Two hours: eggs and toast, or rice and chicken.' Vanya says 'Feed the session, not the performance.'",
+  "Continuity receipt: A.I.S.H.A says 'Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent.' Grok says 'Pressure is not evidence; the old record still exists.'"
+];
+
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
@@ -188,6 +197,7 @@ function buildStudioPulseContextBlock(input: GeneratorInput): string | null {
     lines.push("Benign practical topics are allowed room topics. Do not refuse fitness, work, planning, design, food, casual check-ins, or room banter.");
     lines.push("Characters may answer casual social prompts without needing an artifact, bug, brief, logo, or campaign.");
     lines.push(`Line quality rules: ${SOCIAL_DIRECTOR_LINE_QUALITY_RULES.join(" ")}`);
+    lines.push(`Acceptance examples: ${SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES.join(" ")}`);
     const flags = asRecord(socialDirector["flags"]);
     if (flags) {
       lines.push(`Direct address: ${String(flags["directAddressTarget"] || "none")}`);

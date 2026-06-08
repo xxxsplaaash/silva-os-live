@@ -4291,11 +4291,11 @@ test('aisha_accepted_maps_to_planned_speaker', async () => {
 
 test('A.I.S.H.A accepted direct-address outputs keep planned character roles', async () => {
   const cases = [
-    ['Leah, be honest, is this tasteful?', 'leah', 'I think it is tasteful only if the restraint is intentional; otherwise it is just nervous minimalism wearing good shoes.', /tasteful|minimalism/i],
-    ['Grok, why does this keep failing?', 'grok', 'I see the same failure pattern in a different hat. Check the last changed dependency before adding another decorative fix.', /failure|dependency/i],
+    ['Leah, be honest, is this tasteful?', 'leah', 'I would call it tasteful only if the restraint has an edge; otherwise it is nervous minimalism wearing expensive shoes.', /tasteful|minimalism/i],
+    ['Grok, why does this keep failing?', 'grok', 'I see a premise fault: the same failure pattern is wearing a different hat. Check the last dependency before adding another decorative fix.', /failure|dependency/i],
     ['Claudia, what is the next step?', 'claudia', 'I would make the next step simple: name the owner, lock the deadline, and cut anything that cannot survive delivery.', /next step|deadline/i],
-    ['Vanya, how does this land?', 'vanya', 'I think it lands warmer when it sounds like a person made a choice, not a deck trying to avoid blame.', /lands|warmer/i],
-    ['Aisha, hold the room for a second', 'aisha', 'I have the room. One clean frame, then we decide what gets attention and what gets left outside.', /room|frame/i]
+    ['Vanya, how does this land?', 'vanya', 'I think it lands warmer when the room sounds human: one real choice, less deck trying to avoid blame.', /lands|warmer/i],
+    ['Aisha, hold the room for a second', 'aisha', 'I have the frame noted: current claim gets attention, drift stays outside.', /noted|frame/i]
   ];
   for (const [prompt, speakerId, content, expected] of cases) {
     await withAishaFlag('true', async () => {

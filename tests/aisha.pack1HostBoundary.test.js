@@ -334,6 +334,13 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Leah:/);
   assert.match(promptSource, /Grok:/);
   assert.match(promptSource, /A\.I\.S\.H\.A:/);
+  assert.match(promptSource, /SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES/);
+  assert.match(promptSource, /Fitness first ask/);
+  assert.match(promptSource, /20-minute fitness follow-up/);
+  assert.match(promptSource, /Objective\/frustration recovery/);
+  assert.match(promptSource, /Movie pivot after fitness/);
+  assert.match(promptSource, /Food practical/);
+  assert.match(promptSource, /Continuity receipt/);
   assert.match(adapterSource, /blind-attributable/i);
   assert.match(adapterSource, /different sentence shapes/i);
   assert.match(adapterSource, /current-beat reason/i);
@@ -411,6 +418,10 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Current record first/);
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
+  assert.match(prompt.systemPrompt, /Acceptance examples:/);
+  assert.match(prompt.systemPrompt, /Under an hour: banana and yoghurt/i);
+  assert.match(prompt.systemPrompt, /Pick a film with a point of view/i);
+  assert.match(prompt.systemPrompt, /No slogan\. First rep/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);
   assert.match(prompt.systemPrompt, /Every intentionally quiet character needs a visible silence reason/i);
