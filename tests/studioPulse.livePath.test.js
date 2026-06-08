@@ -3778,6 +3778,129 @@ test('Studio Pulse showcase promotes prior visible style row when Pack 1 later r
   });
 });
 
+test('Studio Pulse ledger demotes stale Pack 1 active row from current visible correction notes', () => {
+  assert.equal(typeof studioRouter.__buildPulseShowcaseLedgerFromForTests, 'function');
+  const ledger = studioRouter.__buildPulseShowcaseLedgerFromForTests(
+    {
+      activeTruths: [{
+        noteId: 'note-black-glass-stale-active',
+        canonicalText: 'User landing page style: black glass with a single red pulse',
+        status: 'active',
+        confidence: 0.93
+      }],
+      supersededTruths: []
+    },
+    {
+      notes: [
+        'Active record: landing page style is white editorial with no red.',
+        'Prior record: landing page style is black glass with a single red pulse.'
+      ]
+    },
+    []
+  );
+
+  assert.ok(ledger.some(item => item.status === 'active' && item.source === 'showcase-session' && /white editorial with no red/i.test(item.text)));
+  assert.ok(ledger.some(item => item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text)));
+  assert.ok(!ledger.some(item => item.status === 'active' && /black glass with a single red pulse/i.test(item.text)));
+});
+
+test('Studio Pulse showcase demotes stale Pack 1 active row when current correction is only in visible state updates', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            const text = String(request.messageText || '');
+            const isCorrection = /white editorial with no red/i.test(text);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'Pack 1 continuity is being read from durable memory.',
+                  roomMood: 'focused',
+                  responseMode: 'single',
+                  speakers: [
+                    {
+                      speakerId: 'aisha',
+                      role: 'primary',
+                      tone: 'precise',
+                      text: isCorrection
+                        ? 'Current record logged: landing page style is white editorial with no red. Prior record remains landing page style is black glass with a single red pulse.'
+                        : 'Current record logged: landing page style is black glass with a single red pulse.',
+                      visibleState: 'Anchoring'
+                    }
+                  ],
+                  silentReactions: [],
+                  stateUpdates: {
+                    notes: isCorrection
+                      ? [
+                        'Active record: landing page style is white editorial with no red.',
+                        'Prior record: landing page style is black glass with a single red pulse.'
+                      ]
+                      : ['Active record: landing page style is black glass with a single red pulse.']
+                  }
+                })
+              }],
+              memorySummary: {
+                activeTruths: [{
+                  noteId: 'note-black-glass-stale-active',
+                  canonicalText: 'User landing page style: black glass with a single red pulse',
+                  status: 'active',
+                  confidence: 0.93
+                }],
+                supersededTruths: [],
+                memoryCandidates: [],
+                sessionId: request.sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.91
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const sessionId = 'showcase-pack1-stale-active-style-gap';
+        async function turn(userText) {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+            body: JSON.stringify({ sessionId, mode: 'continuity_breaker', userText })
+          });
+          assert.equal(response.status, 200);
+          const events = parseSseEvents(await response.text());
+          return events.find(item => item.event === 'final').data;
+        }
+
+        await turn('My landing page style is black glass with a single red pulse.');
+        const second = await turn('Actually my landing page style is white editorial with no red.');
+
+        assert.ok(second.continuityLedger.some(item => item.status === 'active' && item.source === 'showcase-session' && /white editorial with no red/i.test(item.text)));
+        assert.ok(second.continuityLedger.some(item => item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text)));
+        assert.ok(!second.continuityLedger.some(item => item.status === 'active' && /black glass with a single red pulse/i.test(item.text)));
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('aisha_generic_hello_rejected_for_room_mode', async () => {
   await withAishaFlag('true', async () => {
     __setAishaRuntimeImporterForTests(async () => ({

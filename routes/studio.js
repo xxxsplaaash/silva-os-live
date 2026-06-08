@@ -1371,6 +1371,55 @@ function pulseShowcaseLedgerSlot(text = '') {
   return '';
 }
 
+function pulseShowcaseLedgerValueTokens(text = '') {
+  return safeShowcaseText(text, 240)
+    .toLowerCase()
+    .replace(/^(?:active|current|prior|previous|superseded)\s+record(?:\s+logged)?\s*:\s*/i, '')
+    .replace(/^(?:current|prior|previous|superseded)\s+value\s*:\s*/i, '')
+    .replace(/^user\s+/, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(/\s+/)
+    .filter(token => token.length >= 3)
+    .filter(token => !new Set([
+      'user',
+      'active',
+      'current',
+      'prior',
+      'previous',
+      'superseded',
+      'record',
+      'logged',
+      'remains',
+      'landing',
+      'page',
+      'dashboard',
+      'brand',
+      'style',
+      'preference',
+      'color',
+      'with',
+      'without',
+      'and',
+      'the',
+      'is'
+    ]).has(token));
+}
+
+function pulseShowcaseLedgerValuesEquivalent(a = '', b = '') {
+  const slotA = pulseShowcaseLedgerSlot(a);
+  const slotB = pulseShowcaseLedgerSlot(b);
+  if (!slotA || !slotB || slotA !== slotB) return false;
+  const tokensA = new Set(pulseShowcaseLedgerValueTokens(a));
+  const tokensB = new Set(pulseShowcaseLedgerValueTokens(b));
+  if (!tokensA.size || !tokensB.size) {
+    return safeShowcaseText(a, 240).toLowerCase() === safeShowcaseText(b, 240).toLowerCase();
+  }
+  const smaller = tokensA.size <= tokensB.size ? tokensA : tokensB;
+  const larger = tokensA.size <= tokensB.size ? tokensB : tokensA;
+  const overlap = [...smaller].filter(token => larger.has(token)).length;
+  return overlap >= Math.min(2, smaller.size);
+}
+
 function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
   const rows = sanitizePulseShowcaseLedgerRows(currentRows);
   const prior = sanitizePulseShowcaseLedgerRows(priorRows);
@@ -2488,9 +2537,46 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
   const isShowcaseSessionLedgerNote = (value = '') => {
     const text = safeShowcaseText(value, 240);
     if (!text) return false;
+    if (!/^(?:active|current|prior|previous|superseded)\s+record(?:\s+logged)?\s*:/i.test(text)) return false;
     return /\b(preference|style|color|dashboard|landing page|brand|claim|record)\b/i.test(text)
       && /\b(is|confirmed|changed|updated|prior|previous|superseded|active|no red|red pulse|red accent)\b/i.test(text)
       && !/\b(seeking clarity|operational shift|drift in aesthetic direction|reading the room|tracking next steps|summarized from visible recent turns|summarized from pack 1)\b/i.test(text);
+  };
+  const demoteActiveSlotConflicts = (text = '') => {
+    const incomingText = safeShowcaseText(text, 240);
+    const incomingSlot = pulseShowcaseLedgerSlot(incomingText);
+    if (!incomingSlot) return;
+    for (const row of rows) {
+      if (row.status !== 'active') continue;
+      const rowSlot = pulseShowcaseLedgerSlot(row.text);
+      if (!rowSlot || rowSlot !== incomingSlot) continue;
+      if (safeShowcaseText(row.text, 240).toLowerCase() === incomingText.toLowerCase()) continue;
+      row.status = 'superseded';
+      row.id = safeShowcaseText(`${row.id || 'prior-row'}-superseded`, 140);
+      seen.add(`${row.source}:superseded:${String(row.text || '').toLowerCase()}`);
+    }
+  };
+  const addStateUpdateLedgerNotes = () => {
+    (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
+      .filter(isShowcaseSessionLedgerNote)
+      .forEach((note, index) => {
+        const status = /\b(prior|previous|superseded)\s+record\b/i.test(String(note || '')) ? 'superseded' : 'active';
+        const noteSlot = pulseShowcaseLedgerSlot(note);
+        if (status === 'active') {
+          const activeRowsForSlot = rows.filter(row => row.status === 'active' && pulseShowcaseLedgerSlot(row.text) === noteSlot);
+          const hasSameActive = activeRowsForSlot.some(row => pulseShowcaseLedgerValuesEquivalent(row.text, note));
+          const hasConflictingActive = activeRowsForSlot.some(row => !pulseShowcaseLedgerValuesEquivalent(row.text, note));
+          if (hasSameActive && !hasConflictingActive) return;
+          if (hasConflictingActive) demoteActiveSlotConflicts(note);
+        } else {
+          const hasSamePrior = rows.some(row =>
+            ['superseded', 'disputed'].includes(row.status)
+            && pulseShowcaseLedgerValuesEquivalent(row.text, note)
+          );
+          if (hasSamePrior) return;
+        }
+        add({ id: `showcase-note-${index}`, text: note, status }, status, 'showcase-session');
+      });
   };
 
   (Array.isArray(memorySummary.activeTruths) ? memorySummary.activeTruths : [])
@@ -2506,6 +2592,7 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
     });
   (Array.isArray(memorySummary.supersededTruths) ? memorySummary.supersededTruths : [])
     .forEach(item => add(item, 'superseded', 'pack1-memory'));
+  addStateUpdateLedgerNotes();
   let pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   const hasCurrentPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasCurrentPack1MemoryRows) {
@@ -2515,12 +2602,6 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
   }
   const hasPack1MemoryRows = pack1Rows.some(item => item.source === 'pack1-memory');
   if (!hasPack1MemoryRows) {
-    (Array.isArray(stateUpdates.notes) ? stateUpdates.notes : [])
-      .filter(isShowcaseSessionLedgerNote)
-      .forEach((note, index) => {
-        const status = /\b(prior|previous|superseded)\s+record\b/i.test(String(note || '')) ? 'superseded' : 'active';
-        add({ id: `showcase-note-${index}`, text: note, status }, status, 'showcase-session');
-      });
     pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
 
@@ -6859,6 +6940,7 @@ router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPaylo
 router.__ensurePulseShowcaseSilentPresenceForTests = ensurePulseShowcaseSilentPresence;
 router.__parsePulseShowcaseTurnRequestForTests = parsePulseShowcaseTurnRequest;
 router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
+router.__buildPulseShowcaseLedgerFromForTests = pulseShowcaseLedgerFrom;
 
 router.__test = {
   publicAishaStatus,
