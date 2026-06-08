@@ -909,6 +909,16 @@ test('visible response quality rejects bland accepted practical answers from liv
   assert.ok(issueKeys(acceptedNormalMiss).includes('weak-next-move:normal-answer'));
   assert.ok(issueKeys(acceptedNormalMiss).includes('speaker-flatness:generic-warmth'));
 
+  const inventedHandoffMiss = evaluateVisibleResponse({
+    userMessage: 'answer normally, what should I do today?',
+    visibleText: [
+      'Break the day into three blocks: one for the hardest task, one for cleanup, and one buffer before you stop. Assign one owner to the handoff.',
+      'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(inventedHandoffMiss).includes('weak-next-move:normal-answer'));
+
   const planningIssues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',
     visibleText: [

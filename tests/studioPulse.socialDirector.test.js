@@ -749,6 +749,44 @@ test('showcase prompt carries concrete recent-line guard from visible history', 
   assert.doesNotMatch(prompt, /user: how is everyone today/i);
 });
 
+test('showcase prompt locks recent phrase families before they become repeat risk', () => {
+  const input = buildRoomDirectorInput({
+    question: 'ok, answer normally now',
+    roomState: { roomMood: 'warm' },
+    recentTurns: [
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Let the clock do the arguing; the ego can decorate later.' },
+      { speakerId: 'claudia', role: 'side', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
+      { speakerId: 'grok', role: 'side', text: 'Track reps. Otherwise you are just sweating with narrative ambition.' },
+      { speakerId: 'leah', role: 'side', text: 'Pick the feeling first. The title is just the room admitting what mood it wants.' },
+      { speakerId: 'user', role: 'user', text: 'ok, answer normally now' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /RECENT REPEAT FAMILY LOCKS/);
+  assert.match(prompt, /Vanya recent family: tiny vanity \/ clock-arguing pressure/i);
+  assert.match(prompt, /Claudia recent family: three-session timer structure/i);
+  assert.match(prompt, /Grok recent family: track-reps \/ narrative-ambition fault/i);
+  assert.match(prompt, /Leah recent family: pick-the-feeling \/ title-mood verdict/i);
+  assert.match(prompt, /Replace the family, not only the exact words/i);
+  assert.doesNotMatch(prompt, /user recent family/i);
+});
+
+test('showcase prompt separates generic today recovery from planning handoff examples', () => {
+  const input = buildRoomDirectorInput({
+    question: 'answer normally, what should I do today?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /For "answer normally" or "what should I do today\?" recovery turns/i);
+  assert.match(prompt, /do not invent handoffs, owners, clients, teams, or project logistics/i);
+  assert.match(prompt, /open the first necessary file, run twenty minutes, leave one visible result/i);
+});
+
 test('showcase prompt carries referenced visible cards into recent-line guard', () => {
   const input = buildRoomDirectorInput({
     question: 'use this, but make the room answer fresher',
@@ -4804,6 +4842,26 @@ test('social director quality validator rejects normal-answer dodges that ask fo
   assert.equal(liveTodayQuestionBounce.ok, false);
   assert.ok(liveTodayQuestionBounce.issues.includes('frustration-ignored'));
   assert.ok(liveTodayQuestionBounce.issues.includes('product-weak-next-move:normal-answer'));
+
+  const liveTodayInventedHandoff = validateDirectorOutput({
+    roomBeat: 'The room invents project logistics for a generic today ask.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'dry practical', text: 'Break the day into three blocks: one for the hardest task, one for cleanup, and one buffer before you stop. Assign one owner to the handoff.' },
+      { speakerId: 'vanya', role: 'side', tone: 'warm host', text: 'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' }
+    ]
+  });
+
+  assert.equal(liveTodayInventedHandoff.ok, false);
+  assert.ok(liveTodayInventedHandoff.issues.includes('product-weak-next-move:normal-answer'));
 });
 
 test('social director quality validator rejects stress turns that dodge into command posture', () => {
