@@ -659,6 +659,37 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
 });
 
+test('showcase prompt carries line-job, attribution, and continuity receipt contracts', () => {
+  const input = buildRoomDirectorInput({
+    question: 'What changed?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Current record: obsidian dashboard, one red accent. Prior record remains pale blue, no red.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.mustPass.includes('one clear line job per visible speaker'));
+  assert.ok(rubric.mustPass.includes('continuity receipts label current and prior records when evidence exists'));
+  assert.match(prompt, /Each visible speaker line gets one job only/i);
+  assert.match(prompt, /A\.I\.S\.H\.A continuity receipt format: Current record:/i);
+  assert.match(prompt, /Vanya line job: temperature plus one specific social pressure/i);
+  assert.match(prompt, /Leah line job: taste verdict plus one cultural or visual stake/i);
+  assert.match(prompt, /Claudia line job: sequence, owner, timer, count, or next measurable move/i);
+  assert.match(prompt, /Grok line job: premise fault plus one dry consequence/i);
+  assert.match(prompt, /Do not borrow Claudia's timers or counts for Vanya/i);
+  assert.match(prompt, /A\.I\.S\.H\.A silence example: holding authority until the room needs correction/i);
+  assert.match(prompt, /Vanya silence example: listening for the human temperature before entering/i);
+  assert.match(prompt, /Leah silence example: saving the taste cut until there is a useful edge/i);
+  assert.match(prompt, /Claudia silence example: tracking structure without turning the exchange into a project plan/i);
+  assert.match(prompt, /Grok silence example: watching for the premise fault before interrupting/i);
+  assert.match(prompt, /Never write silence reasons as bare waiting, monitoring, observing, watching, or listening/i);
+  assert.match(prompt, /Do not answer a continuity question by asking what changed/i);
+});
+
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The referenced workout card becomes a twenty-minute plan.',

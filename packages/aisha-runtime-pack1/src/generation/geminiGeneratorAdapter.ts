@@ -276,7 +276,10 @@ function socialDirectorResponseSchema(): Record<string, unknown> {
             speakerId: { type: "string", enum: speakerIds },
             role: { type: "string", enum: ["primary", "side", "closer", "called_in"] },
             tone: { type: "string" },
-            text: { type: "string" },
+            text: {
+              type: "string",
+              description: "Visible dialogue. Must be blind-attributable to speakerId, current-topic useful, not generic advice, and not a repeated recent opening.",
+            },
             visibleState: { type: "string" },
           },
           required: ["speakerId", "role", "tone", "text", "visibleState"],
@@ -289,7 +292,10 @@ function socialDirectorResponseSchema(): Record<string, unknown> {
           properties: {
             speakerId: { type: "string", enum: speakerIds },
             visibleState: { type: "string" },
-            reason: { type: "string" },
+            reason: {
+              type: "string",
+              description: "Current-beat silence reason. Do not use generic waiting, monitoring, observing, watching, or listening unless it names why this character is quiet right now.",
+            },
           },
           required: ["speakerId", "visibleState", "reason"],
         },
@@ -582,7 +588,7 @@ REQUIRED: Use one concrete hook from the user's message, one room-awareness hook
     }
 
     if (socialDirectorStructuredMode) {
-      prompt.userMessage = `${prompt.userMessage}\n\n--- SOCIAL DIRECTOR JSON CONTRACT ---\nReturn exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. If a character is silent, include a current-beat reason. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language.\n-------------------------------------`;
+      prompt.userMessage = `${prompt.userMessage}\n\n--- SOCIAL DIRECTOR JSON CONTRACT ---\nReturn exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. Speaker line jobs: A.I.S.H.A=Current record/Prior record receipt or precision anchor; Vanya=human temperature plus social pressure; Leah=taste verdict plus cultural stake; Claudia=sequence, timer, count, movement, food option, or next measurable move; Grok=premise fault plus dry consequence. If a character is silent, include a current-beat reason: A.I.S.H.A holds authority until correction is needed; Vanya listens for human temperature before entering; Leah saves the taste cut until useful; Claudia tracks structure without making a project plan; Grok watches for the premise fault before interrupting. Do not write silent reasons as generic waiting, monitoring, observing, watching, or listening. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language.\n-------------------------------------`;
     }
 
     if (process.env.AISHA_DEBUG === "true") {

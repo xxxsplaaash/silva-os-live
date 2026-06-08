@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const esbuild = require('esbuild');
+const { evaluateBlindAttributionLines } = require('../lib/studio/socialDirector/visibleResponseQuality');
 
 function iso() {
   return '2026-06-02T12:00:00.000Z';
@@ -308,7 +309,8 @@ test('Pack 1 social-director contract asks for silence reasons and speaker visib
 
   assert.match(promptSource, /"visibleState":"safe pulse label"/);
   assert.match(promptSource, /"reason":"short reason the character is intentionally quiet"/);
-  assert.match(adapterSource, /reason:\s*\{\s*type:\s*"string"\s*\}/);
+  assert.match(adapterSource, /reason:\s*\{\s*type:\s*"string"/);
+  assert.match(adapterSource, /Current-beat silence reason/i);
   assert.match(adapterSource, /required:\s*\["speakerId",\s*"visibleState",\s*"reason"\]/);
 });
 
@@ -335,21 +337,50 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Grok:/);
   assert.match(promptSource, /A\.I\.S\.H\.A:/);
   assert.match(promptSource, /SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES/);
+  assert.match(promptSource, /SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES/);
+  assert.match(promptSource, /SOCIAL_DIRECTOR_LINE_JOB_RULES/);
+  assert.match(promptSource, /SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS/);
   assert.match(promptSource, /Fitness first ask/);
   assert.match(promptSource, /20-minute fitness follow-up/);
   assert.match(promptSource, /Objective\/frustration recovery/);
   assert.match(promptSource, /Movie pivot after fitness/);
   assert.match(promptSource, /Food practical/);
+  assert.match(promptSource, /Design direction/);
   assert.match(promptSource, /Quality challenge/);
   assert.match(promptSource, /Continuity receipt/);
   assert.match(adapterSource, /blind-attributable/i);
   assert.match(adapterSource, /different sentence shapes/i);
   assert.match(adapterSource, /current-beat reason/i);
+  assert.match(adapterSource, /Speaker line jobs/i);
+  assert.match(adapterSource, /Vanya=human temperature plus social pressure/i);
+  assert.match(adapterSource, /Claudia=sequence, timer, count, movement, food option/i);
+  assert.match(adapterSource, /Do not write silent reasons as generic waiting/i);
   assert.match(adapterSource, /practical, food, design, or continuity asks/i);
   assert.match(adapterSource, /generic advice or operations language/i);
   assert.match(promptSource, /Line quality rules: \$\{SOCIAL_DIRECTOR_LINE_QUALITY_RULES\.join\(" "\)\}/);
+  assert.match(promptSource, /Line job contracts: \$\{SOCIAL_DIRECTOR_LINE_JOB_RULES\.join\(" "\)\}/);
+  assert.match(promptSource, /Silence reason examples: \$\{SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS\.join\(" "\)\}/);
   assert.match(promptSource, /Recent room messages:\\n/);
   assert.match(promptSource, /recentMessages\.slice\(-6\)/);
+});
+
+test('Pack 1 social-director target lines pass blind-attribution scoring', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-targets-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES } = await import(pathToFileURL(outfile).href);
+  const evaluation = evaluateBlindAttributionLines(SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES);
+  assert.equal(evaluation.ok, true, JSON.stringify(evaluation.results, null, 2));
+  for (const result of evaluation.results) {
+    assert.equal(result.speakerId, result.expectedSpeakerId, `${result.expectedSpeakerId}: ${result.text}`);
+    assert.ok(result.identifiable, `${result.expectedSpeakerId} target was not identifiable: ${result.text}`);
+  }
 });
 
 test('Pack 1 social-director built prompt carries line-quality fixture pressure', async () => {
@@ -420,12 +451,16 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
   assert.match(prompt.systemPrompt, /Acceptance examples:/);
-  assert.match(prompt.systemPrompt, /Under an hour: banana and yoghurt/i);
-  assert.match(prompt.systemPrompt, /Pick a film with a point of view/i);
+  assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
+  assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
   assert.match(prompt.systemPrompt, /No slogan\. First rep/i);
   assert.match(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);
+  assert.match(prompt.systemPrompt, /Line job contracts:/i);
+  assert.match(prompt.systemPrompt, /Vanya line job: human temperature plus one specific social pressure/i);
+  assert.match(prompt.systemPrompt, /Silence reason examples:/i);
+  assert.match(prompt.systemPrompt, /Grok silence: watching for the premise fault before interrupting/i);
   assert.match(prompt.systemPrompt, /Every intentionally quiet character needs a visible silence reason/i);
   assert.match(prompt.systemPrompt, /Room Presence Summary: aisha:anchoring, leah:active, claudia:active, vanya:quiet, grok:quiet/i);
 });
