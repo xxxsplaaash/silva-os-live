@@ -312,6 +312,27 @@ test('room director prompt treats benign practical asks as valid room topics', (
   assert.ok(rubric.positiveTargets.some(item => /first move|proof point|concrete ask/i.test(item)));
 });
 
+test('room director rubric demands evidence-led openers and varied practical line shapes', () => {
+  const input = buildRoomDirectorInput({
+    message: 'ok but I only have 20 minutes',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Start with three short sessions and write the count down.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes can hold the room.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+  const rubric = acceptanceRubricFor(input);
+
+  assert.ok(rubric.mustPass.includes('evidence-led opener before interpretation'));
+  assert.ok(rubric.mustPass.includes('distinct sentence form for every visible speaker'));
+  assert.ok(rubric.positiveTargets.some(item => /open with a named movement, count, timer, option, visual choice, or receipt/i.test(item)));
+  assert.match(prompt, /Open each practical, food, design, or continuity answer with a named concrete thing/);
+  assert.match(prompt, /Do not open with broad frames like "the key is", "focus on", "start by", "what matters", "you should", or "it is important"/i);
+  assert.match(prompt, /At least one visible line must use a different form: imperative, receipt, verdict, or premise challenge/);
+});
+
 test('room director impulse plan anchors silence reasons to the current design beat', () => {
   const input = buildRoomDirectorInput({
     message: 'What should the landing page hero do with this red pulse?',

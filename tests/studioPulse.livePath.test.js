@@ -3804,6 +3804,32 @@ test('Studio Pulse ledger demotes stale Pack 1 active row from current visible c
   assert.ok(!ledger.some(item => item.status === 'active' && /black glass with a single red pulse/i.test(item.text)));
 });
 
+test('Studio Pulse ledger demotes stale prior Pack 1 row when fallback carries the current correction', () => {
+  assert.equal(typeof studioRouter.__buildPulseShowcaseLedgerFromForTests, 'function');
+  const ledger = studioRouter.__buildPulseShowcaseLedgerFromForTests(
+    {
+      activeTruths: [],
+      supersededTruths: []
+    },
+    {
+      notes: [
+        'Active record: landing page style is white editorial with no red.',
+        'Prior record: landing page style is black glass with a single red pulse.'
+      ]
+    },
+    [{
+      id: 'note-black-glass-prior-history',
+      text: 'User landing page style: black glass with a single red pulse',
+      status: 'active',
+      source: 'pack1-memory'
+    }]
+  );
+
+  assert.ok(ledger.some(item => item.status === 'active' && item.source === 'showcase-session' && /white editorial with no red/i.test(item.text)));
+  assert.ok(ledger.some(item => item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text)));
+  assert.ok(!ledger.some(item => item.status === 'active' && /black glass with a single red pulse/i.test(item.text)));
+});
+
 test('Studio Pulse showcase demotes stale Pack 1 active row when current correction is only in visible state updates', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

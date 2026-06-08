@@ -1456,7 +1456,7 @@ function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
     if (!priorSlot) continue;
     const changedActive = currentActiveSlots.some(entry =>
       entry.slot === priorSlot &&
-      safeShowcaseText(entry.item.text || '', 240).toLowerCase() !== safeShowcaseText(item.text || '', 240).toLowerCase()
+      !pulseShowcaseLedgerValuesEquivalent(entry.item.text, item.text)
     );
     if (changedActive) {
       add({
@@ -2597,7 +2597,27 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
   const hasCurrentPack1MemoryRows = rows.some(item => item.source === 'pack1-memory');
   if (!hasCurrentPack1MemoryRows) {
     sanitizePulseShowcaseLedgerRows(priorPack1Rows)
-      .forEach(item => add(item, item.status || 'active', item.source === 'showcase-session' ? 'showcase-session' : 'pack1-memory'));
+      .forEach(item => {
+        const source = item.source === 'showcase-session' ? 'showcase-session' : 'pack1-memory';
+        const status = item.status || 'active';
+        const itemSlot = pulseShowcaseLedgerSlot(item.text);
+        if (status === 'active' && itemSlot) {
+          const changedActive = rows.some(row =>
+            row.status === 'active' &&
+            pulseShowcaseLedgerSlot(row.text) === itemSlot &&
+            !pulseShowcaseLedgerValuesEquivalent(row.text, item.text)
+          );
+          if (changedActive) {
+            add({
+              ...item,
+              id: `${item.id || 'prior-pack1-memory'}-superseded`,
+              status: 'superseded'
+            }, 'superseded', source);
+            return;
+          }
+        }
+        add(item, status, source);
+      });
     pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
   const hasPack1MemoryRows = pack1Rows.some(item => item.source === 'pack1-memory');
