@@ -1293,7 +1293,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Objective/frustration recovery",
     speakerId: "claudia",
-    text: "The objective is one repeatable training block: push, pull, legs, log reps, recover."
+    text: "Use one repeatable training block: push, pull, legs, log reps, recover. One timer, one note, then stop negotiating."
   },
   {
     scenario: "Objective/frustration recovery",

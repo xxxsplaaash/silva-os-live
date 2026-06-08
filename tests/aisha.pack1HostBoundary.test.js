@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const esbuild = require('esbuild');
-const { evaluateBlindAttributionLines } = require('../lib/studio/socialDirector/visibleResponseQuality');
+const { evaluateBlindAttributionLines, evaluateVisibleResponse } = require('../lib/studio/socialDirector/visibleResponseQuality');
 
 function iso() {
   return '2026-06-02T12:00:00.000Z';
@@ -385,6 +385,30 @@ test('Pack 1 social-director target lines pass blind-attribution scoring', async
     assert.equal(result.speakerId, result.expectedSpeakerId, `${result.expectedSpeakerId}: ${result.text}`);
     assert.ok(result.identifiable, `${result.expectedSpeakerId} target was not identifiable: ${result.text}`);
   }
+});
+
+test('Pack 1 social-director frustration target lines avoid objective-slogan rejects', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-objective-targets-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES } = await import(pathToFileURL(outfile).href);
+  const targetLines = SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES
+    .filter(item => item.scenario === 'Objective/frustration recovery');
+  const visibleText = targetLines.map(item => item.text).join('\n');
+  const issues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText,
+    speakerLines: targetLines.map(item => ({ speakerId: item.speakerId, text: item.text }))
+  }).map(issue => issue.key || issue);
+
+  assert.doesNotMatch(visibleText, /\bthe objective is\b/i);
+  assert.ok(!issues.includes('false-objective:command-posture'), issues.join(', '));
 });
 
 test('Pack 1 social-director built prompt carries line-quality fixture pressure', async () => {

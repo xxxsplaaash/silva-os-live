@@ -2667,7 +2667,7 @@ function isGenericPulseShowcaseSilentReason(speakerId = '', reason = '') {
   if (!normalizedReason) return true;
   const fallback = PULSE_SHOWCASE_SILENT_DEFAULTS[normalizedSpeaker] || {};
   if (safeShowcaseText(fallback.reason || '', 180).toLowerCase() === normalizedReason) return true;
-  return /\b(holding authority until the room needs correction|saving the taste cut until there is a useful edge|watching for the premise fault before interrupting|tracking structure without turning the exchange into a project plan|listening for the human signal before entering)\b/i.test(normalizedReason);
+  return /\b(holding authority until the room needs correction|saving the taste cut until (there is|it has) a useful edge|watching for the premise fault before interrupting|tracking structure without turning the exchange into a project plan|listening for the human signal before entering)\b/i.test(normalizedReason);
 }
 
 function pulseShowcaseSilentBeatFromPlan(plannedSilentReactions = []) {

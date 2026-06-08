@@ -25,7 +25,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "claudia";
-    readonly text: "The objective is one repeatable training block: push, pull, legs, log reps, recover.";
+    readonly text: "Use one repeatable training block: push, pull, legs, log reps, recover. One timer, one note, then stop negotiating.";
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "vanya";

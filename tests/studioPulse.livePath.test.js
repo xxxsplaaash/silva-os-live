@@ -303,7 +303,7 @@ test('pulse showcase public payload prefers planned beat-specific silence over g
     ],
     [
       { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding authority until the room needs correction' },
-      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until there is a useful edge' },
+      { speakerId: 'leah', visibleState: 'Watching', reason: 'saving the taste cut until it has a useful edge' },
       { speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault before interrupting' }
     ],
     {
