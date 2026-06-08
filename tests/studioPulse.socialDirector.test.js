@@ -1816,10 +1816,12 @@ test('social director fallback changes short-session shape after referenced 20-m
     recentTurns: body.recentTurns
   });
 
-  assert.match(text, /\bLeave the ceremony outside\b/i);
-  assert.match(text, /\bRun the clock in quarters\b/i);
-  assert.match(text, /\blegs, push, pull, core\b/i);
+  assert.match(text, /\bKeep the body honest, not dramatic\b/i);
+  assert.match(text, /\bUse a short timer\b/i);
+  assert.match(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
+  assert.match(text, /\bFour rounds, count reps, stop\b/i);
   assert.doesNotMatch(text, /\bSame twenty minutes\b/i);
+  assert.doesNotMatch(text, /\bLeave the ceremony outside\b/i);
   assert.doesNotMatch(text, /\bclock do the arguing\b/i);
   assert.doesNotMatch(text, /\bTwenty minutes is enough time to feel it tomorrow\b/i);
   assert.doesNotMatch(text, /\bTwo rounds: incline push-ups\b/i);
@@ -1839,8 +1841,9 @@ test('social director fallback changes short-session shape after generated focus
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bLeave the ceremony outside\b/i);
-  assert.match(text, /\bRun the clock in quarters\b/i);
+  assert.match(text, /\bKeep the body honest, not dramatic\b/i);
+  assert.match(text, /\bUse a short timer\b/i);
+  assert.match(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
   assert.doesNotMatch(text, /\bfocused session\b/i);
   assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);
   assertCleanVisible(fallback);
