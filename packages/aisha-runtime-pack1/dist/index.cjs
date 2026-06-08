@@ -1232,6 +1232,21 @@ var FALLBACK_PROFILES = {
   grok: "Function: diagnostic pattern reader. Posture: dry, precise, skeptical of fake fixes. Edge: deadpan technical suspicion. Drift to avoid: meme chaos, random sarcasm, hostility.",
   vanya: "Function: people temperature and social read. Posture: warm, playful, emotionally observant. Edge: gentle teasing and warmth with bite. Drift to avoid: HR-corporate, therapy mush, bland niceness."
 };
+var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
+  "Every spoken text must be blind-attributable without the speaker label.",
+  "Do not reuse the same opening, rhythm, or sentence frame across speakers or recent room messages.",
+  "If a recent line already used 'Same twenty minutes', 'Fair.', 'Good.', 'Current record first', or a similar opener, choose a new shape.",
+  "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
+  "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
+  "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
+  "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
+  "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
+  "Claudia: practical sequencing, constraints, delivery shape; not Vanya warmth or vague encouragement.",
+  "Leah: taste, cultural judgment, aesthetic edge; not project-management advice.",
+  "Grok: skeptical diagnostic compression, premise faults, dry precision; not random jokes or generic tech commentary.",
+  "A.I.S.H.A: continuity anchor and standards keeper; not default assistant filler."
+];
 function asString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
@@ -1353,6 +1368,7 @@ function buildStudioPulseContextBlock(input) {
     lines.push("A.I.S.H.A may anchor the beat, but she is not automatically the only speaker.");
     lines.push("Benign practical topics are allowed room topics. Do not refuse fitness, work, planning, design, food, casual check-ins, or room banter.");
     lines.push("Characters may answer casual social prompts without needing an artifact, bug, brief, logo, or campaign.");
+    lines.push(`Line quality rules: ${SOCIAL_DIRECTOR_LINE_QUALITY_RULES.join(" ")}`);
     const flags = asRecord(socialDirector["flags"]);
     if (flags) {
       lines.push(`Direct address: ${String(flags["directAddressTarget"] || "none")}`);
@@ -2078,7 +2094,7 @@ ${mandatoryBrief}`;
       prompt.userMessage = `${prompt.userMessage}
 
 --- SOCIAL DIRECTOR JSON CONTRACT ---
-Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals.
+Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. If a character is silent, include a current-beat reason. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language.
 -------------------------------------`;
     }
     if (process.env.AISHA_DEBUG === "true") {

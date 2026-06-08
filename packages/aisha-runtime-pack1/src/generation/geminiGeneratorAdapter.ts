@@ -582,7 +582,7 @@ REQUIRED: Use one concrete hook from the user's message, one room-awareness hook
     }
 
     if (socialDirectorStructuredMode) {
-      prompt.userMessage = `${prompt.userMessage}\n\n--- SOCIAL DIRECTOR JSON CONTRACT ---\nReturn exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals.\n-------------------------------------`;
+      prompt.userMessage = `${prompt.userMessage}\n\n--- SOCIAL DIRECTOR JSON CONTRACT ---\nReturn exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. If a character is silent, include a current-beat reason. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language.\n-------------------------------------`;
     }
 
     if (process.env.AISHA_DEBUG === "true") {

@@ -20,6 +20,22 @@ const FALLBACK_PROFILES: Record<string, string> = {
   vanya: "Function: people temperature and social read. Posture: warm, playful, emotionally observant. Edge: gentle teasing and warmth with bite. Drift to avoid: HR-corporate, therapy mush, bland niceness."
 };
 
+const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
+  "Every spoken text must be blind-attributable without the speaker label.",
+  "Do not reuse the same opening, rhythm, or sentence frame across speakers or recent room messages.",
+  "If a recent line already used 'Same twenty minutes', 'Fair.', 'Good.', 'Current record first', or a similar opener, choose a new shape.",
+  "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
+  "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
+  "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
+  "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
+  "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
+  "Claudia: practical sequencing, constraints, delivery shape; not Vanya warmth or vague encouragement.",
+  "Leah: taste, cultural judgment, aesthetic edge; not project-management advice.",
+  "Grok: skeptical diagnostic compression, premise faults, dry precision; not random jokes or generic tech commentary.",
+  "A.I.S.H.A: continuity anchor and standards keeper; not default assistant filler."
+];
+
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
@@ -171,6 +187,7 @@ function buildStudioPulseContextBlock(input: GeneratorInput): string | null {
     lines.push("A.I.S.H.A may anchor the beat, but she is not automatically the only speaker.");
     lines.push("Benign practical topics are allowed room topics. Do not refuse fitness, work, planning, design, food, casual check-ins, or room banter.");
     lines.push("Characters may answer casual social prompts without needing an artifact, bug, brief, logo, or campaign.");
+    lines.push(`Line quality rules: ${SOCIAL_DIRECTOR_LINE_QUALITY_RULES.join(" ")}`);
     const flags = asRecord(socialDirector["flags"]);
     if (flags) {
       lines.push(`Direct address: ${String(flags["directAddressTarget"] || "none")}`);

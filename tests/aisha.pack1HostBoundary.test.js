@@ -1,7 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const esbuild = require('esbuild');
 
 function iso() {
   return '2026-06-02T12:00:00.000Z';
@@ -307,6 +310,111 @@ test('Pack 1 social-director contract asks for silence reasons and speaker visib
   assert.match(promptSource, /"reason":"short reason the character is intentionally quiet"/);
   assert.match(adapterSource, /reason:\s*\{\s*type:\s*"string"\s*\}/);
   assert.match(adapterSource, /required:\s*\["speakerId",\s*"visibleState",\s*"reason"\]/);
+});
+
+test('Pack 1 social-director contract asks for blind-attributable diverse speaker lines', () => {
+  const promptSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts'),
+    'utf8'
+  );
+  const adapterSource = fs.readFileSync(
+    path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'geminiGeneratorAdapter.ts'),
+    'utf8'
+  );
+
+  assert.match(promptSource, /blind-attributable/i);
+  assert.match(promptSource, /Do not reuse the same opening/i);
+  assert.match(promptSource, /recent-repeat-risk/i);
+  assert.match(promptSource, /concrete first move/i);
+  assert.match(promptSource, /food or design direction directly/i);
+  assert.match(promptSource, /contrast current and prior claims/i);
+  assert.match(promptSource, /visible silence reason/i);
+  assert.match(promptSource, /Vanya:/);
+  assert.match(promptSource, /Claudia:/);
+  assert.match(promptSource, /Leah:/);
+  assert.match(promptSource, /Grok:/);
+  assert.match(promptSource, /A\.I\.S\.H\.A:/);
+  assert.match(adapterSource, /blind-attributable/i);
+  assert.match(adapterSource, /different sentence shapes/i);
+  assert.match(adapterSource, /current-beat reason/i);
+  assert.match(adapterSource, /practical, food, design, or continuity asks/i);
+  assert.match(adapterSource, /generic advice or operations language/i);
+  assert.match(promptSource, /Line quality rules: \$\{SOCIAL_DIRECTOR_LINE_QUALITY_RULES\.join\(" "\)\}/);
+  assert.match(promptSource, /Recent room messages:\\n/);
+  assert.match(promptSource, /recentMessages\.slice\(-6\)/);
+});
+
+test('Pack 1 social-director built prompt carries line-quality fixture pressure', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = 'Return roomBeat, speakers, silentReactions, and stateUpdates for everyone.';
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'What should Leah and Claudia do with the dinner menu redesign tonight?',
+      text: 'What should Leah and Claudia do with the dinner menu redesign tonight?',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      activeCharacterId: 'aisha',
+      localRoomState: {
+        roomMood: 'focused',
+        currentTopic: 'dinner menu redesign',
+        knownPresenceStatus: {
+          aisha: 'anchoring',
+          leah: 'active',
+          claudia: 'active',
+          vanya: 'quiet',
+          grok: 'quiet',
+        },
+      },
+      recentMessages: [
+        { speakerId: 'aisha', content: 'Same twenty minutes, same constraint.' },
+        { speakerId: 'claudia', content: 'Current record first, then we move.' },
+        { speakerId: 'leah', content: 'Fair. The page still looks like a template.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'What should Leah and Claudia do with the dinner menu redesign tonight?',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          flags: {
+            directAddressTarget: 'none',
+            explicitEveryoneRequested: true,
+            openFloorRequested: true,
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(prompt.userMessage, generatorPrompt);
+  assert.match(prompt.systemPrompt, /Do not reuse the same opening, rhythm, or sentence frame/i);
+  assert.match(prompt.systemPrompt, /Same twenty minutes/);
+  assert.match(prompt.systemPrompt, /Current record first/);
+  assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
+  assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
+  assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
+  assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);
+  assert.match(prompt.systemPrompt, /Every intentionally quiet character needs a visible silence reason/i);
+  assert.match(prompt.systemPrompt, /Room Presence Summary: aisha:anchoring, leah:active, claudia:active, vanya:quiet, grok:quiet/i);
 });
 
 test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {
