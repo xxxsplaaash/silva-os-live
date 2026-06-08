@@ -3954,6 +3954,21 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.ok(thinLiveStress.issues.includes('frustration-ignored'));
   assert.ok(thinLiveStress.issues.includes('product-frustration-miss:stress-recovery'));
 
+  const recordTheaterStress = validateDirectorOutput({
+    roomBeat: 'The room turns stress into continuity theater.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'vanya', role: 'primary', tone: 'soft', text: "This is the feeling when the words don't land. It's a human signal that the connection is off." },
+      { speakerId: 'aisha', role: 'side', tone: 'precise', text: 'Current record: the room is abstract. Prior record: the room was direct.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'I am stressed and this is starting to feel dumb.' });
+
+  assert.equal(recordTheaterStress.ok, false);
+  assert.ok(recordTheaterStress.issues.includes('product-frustration-miss:stress-recovery'));
+
   const liveBurdenShiftStress = validateDirectorOutput({
     roomBeat: 'The room shifts effort back to the user after stress.',
     roomMood: 'focused',

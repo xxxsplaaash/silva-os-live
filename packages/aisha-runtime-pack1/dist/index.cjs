@@ -1235,6 +1235,8 @@ var FALLBACK_PROFILES = {
 var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Every spoken text must be blind-attributable without the speaker label.",
   "Do not reuse the same opening, rhythm, or sentence frame across speakers or recent room messages.",
+  "Treat recent assistant/card repeat risks as forbidden source shapes, not examples. Do not reuse their first three words, advice sequence, punctuation rhythm, or core metaphor.",
+  "Before writing a same-topic follow-up, choose a different first verb and a different concrete receipt from the current user turn.",
   "If a recent line already used 'Same twenty minutes', 'Fair.', 'Good.', 'Current record first', or a similar opener, choose a new shape.",
   "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",

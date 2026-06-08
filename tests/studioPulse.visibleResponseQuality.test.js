@@ -985,6 +985,16 @@ test('visible response quality rejects stress answers that dodge into tension an
 
   assert.ok(issueKeys(thinRecoveryIssues).includes('frustration-miss:stress-recovery'));
 
+  const recordTheaterIssues = evaluateVisibleResponse({
+    userMessage: 'I am stressed and this is starting to feel dumb.',
+    visibleText: [
+      "This is the feeling when the words don't land. It's a human signal that the connection is off.",
+      'Current record: the room is abstract. Prior record: the room was direct.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(recordTheaterIssues).includes('frustration-miss:stress-recovery'));
+
   const liveRoomTheatreIssues = evaluateVisibleResponse({
     userMessage: 'I am stressed and this is starting to feel dumb.',
     visibleText: [

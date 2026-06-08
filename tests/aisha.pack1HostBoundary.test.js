@@ -554,6 +554,9 @@ test('Pack 1 social-director built prompt separates recent assistant repeat risk
   assert.match(prompt.systemPrompt, /Recent assistant\/card repeat risks:/i);
   assert.match(prompt.systemPrompt, /vanya: Tiny vanity, clean discipline/i);
   assert.match(prompt.systemPrompt, /claudia: Start with three 20-minute sessions/i);
+  assert.match(prompt.systemPrompt, /forbidden source shapes/i);
+  assert.match(prompt.systemPrompt, /Do not reuse their first three words/i);
+  assert.match(prompt.systemPrompt, /choose a different first verb/i);
   assert.match(prompt.systemPrompt, /User recent lines are anchors, not answer text to imitate/i);
   assert.doesNotMatch(
     prompt.systemPrompt.match(/Recent assistant\/card repeat risks:[\s\S]*?Recent room messages:/)?.[0] || '',
