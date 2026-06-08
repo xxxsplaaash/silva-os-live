@@ -690,6 +690,27 @@ test('showcase prompt carries line-job, attribution, and continuity receipt cont
   assert.match(prompt, /Do not answer a continuity question by asking what changed/i);
 });
 
+test('showcase prompt carries food-design punt and operational-jargon rejection pressure', () => {
+  const input = buildRoomDirectorInput({
+    question: 'What should Leah and Claudia do with the dinner menu redesign tonight?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'The menu direction should feel black glass with a single red pulse.' },
+      { speakerId: 'claudia', role: 'side', text: 'We need to define the design brief and align the implementation parameters.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.ok(rubric.rejectFamilies.includes('food-design-punt'));
+  assert.ok(rubric.rejectFamilies.includes('operational-jargon'));
+  assert.ok(rubric.mustPass.includes('food/design asks answer with named options or visible design decisions'));
+  assert.ok(rubric.positiveTargets.some(item => /named food option or visual decision/i.test(item)));
+  assert.match(prompt, /Food\/design answers must land a named option or visible design decision/i);
+  assert.match(prompt, /Reject operational jargon like design brief, implementation parameters, status green, and current objectives/i);
+  assert.match(prompt, /dinner menu redesign/i);
+});
+
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
   const validation = validateDirectorOutput({
     roomBeat: 'The referenced workout card becomes a twenty-minute plan.',
@@ -1780,9 +1801,12 @@ test('social director fallback treats referenced exercise cards as fitness conte
 test('social director fallback changes short-session shape after referenced 20-minute plan', () => {
   const body = {
     recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'Start with three training days this week: one push, one pull, one legs. Log your reps before you stop.' },
+      { speakerId: 'vanya', role: 'side', text: 'Feed the session, not the performance; small enough to finish, real enough that tomorrow notices.' },
       { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
-      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity gets twenty minutes on the clock; no heroic rebrand, no ego trying to decorate it. Small enough to finish, real enough that you can feel it tomorrow.' },
-      { speakerId: 'claudia', role: 'side', text: 'Do three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off. Log one number so next week has a target.' }
+      { speakerId: 'vanya', role: 'primary', text: 'Twenty minutes is enough time to feel it tomorrow, if you start small today.' },
+      { speakerId: 'claudia', role: 'side', text: 'Two rounds: incline push-ups, backpack rows, split squats, hip hinges, and plank. Log your lowest rep count for each.' }
     ]
   };
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
@@ -1792,12 +1816,14 @@ test('social director fallback changes short-session shape after referenced 20-m
     recentTurns: body.recentTurns
   });
 
-  assert.match(text, /\bSet the timer\b/i);
-  assert.match(text, /\bFour stations\b/i);
-  assert.match(text, /\bchair squat\b/i);
-  assert.doesNotMatch(text, /\bTiny vanity gets twenty minutes on the clock\b/i);
-  assert.doesNotMatch(text, /\bTwenty minutes is enough if you stop negotiating\b/i);
-  assert.doesNotMatch(text, /\bDo three rounds: squat or hinge, push, pull, core\b/i);
+  assert.match(text, /\bLeave the ceremony outside\b/i);
+  assert.match(text, /\bRun the clock in quarters\b/i);
+  assert.match(text, /\blegs, push, pull, core\b/i);
+  assert.doesNotMatch(text, /\bSame twenty minutes\b/i);
+  assert.doesNotMatch(text, /\bclock do the arguing\b/i);
+  assert.doesNotMatch(text, /\bTwenty minutes is enough time to feel it tomorrow\b/i);
+  assert.doesNotMatch(text, /\bTwo rounds: incline push-ups\b/i);
+  assert.doesNotMatch(text, /\bFour stations: chair squat\b/i);
   assert.equal(validation.ok, true, validation.issues.join(', '));
   assertCleanVisible(fallback);
 });
@@ -1813,8 +1839,8 @@ test('social director fallback changes short-session shape after generated focus
   const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bSet the timer\b/i);
-  assert.match(text, /\bchair squat\b/i);
+  assert.match(text, /\bLeave the ceremony outside\b/i);
+  assert.match(text, /\bRun the clock in quarters\b/i);
   assert.doesNotMatch(text, /\bfocused session\b/i);
   assert.doesNotMatch(text, /\bRepeat the circuit three times\b/i);
   assertCleanVisible(fallback);

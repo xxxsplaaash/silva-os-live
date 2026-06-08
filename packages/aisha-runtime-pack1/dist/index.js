@@ -1201,6 +1201,8 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
+  "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
+  "Reject operational jargon such as design brief, implementation parameters, status green, and current objectives; translate it into visible taste, concrete options, or one next move.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
