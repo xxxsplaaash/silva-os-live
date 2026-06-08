@@ -340,6 +340,7 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Objective\/frustration recovery/);
   assert.match(promptSource, /Movie pivot after fitness/);
   assert.match(promptSource, /Food practical/);
+  assert.match(promptSource, /Quality challenge/);
   assert.match(promptSource, /Continuity receipt/);
   assert.match(adapterSource, /blind-attributable/i);
   assert.match(adapterSource, /different sentence shapes/i);
@@ -422,6 +423,7 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Under an hour: banana and yoghurt/i);
   assert.match(prompt.systemPrompt, /Pick a film with a point of view/i);
   assert.match(prompt.systemPrompt, /No slogan\. First rep/i);
+  assert.match(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);
   assert.match(prompt.systemPrompt, /Every intentionally quiet character needs a visible silence reason/i);

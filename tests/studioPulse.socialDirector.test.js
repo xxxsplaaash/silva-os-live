@@ -844,6 +844,32 @@ test('silent reactions preserve intentional silence reasons for visible presence
   assert.ok(missingReason.issues.includes('silent-reaction-missing-reason:claudia'));
 });
 
+test('silent reactions reject generic waiting and monitoring reasons', () => {
+  const input = buildRoomDirectorInput({
+    message: 'I need a sharper logo direction',
+    roomState: { roomMood: 'focused' }
+  });
+
+  const validation = validateDirectorOutput({
+    roomBeat: 'Leah and Grok keep this from becoming generic design filler.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'leah', role: 'primary', tone: 'sharp', text: 'Make the mark feel like a warning light, not a wellness badge.', visibleState: 'Speaking' },
+      { speakerId: 'grok', role: 'side', tone: 'dry', text: 'If the logo needs five adjectives to survive, the shape is unemployed.', visibleState: 'Tracking' }
+    ],
+    silentReactions: [
+      { speakerId: 'claudia', visibleState: 'Tracking next steps', reason: 'waiting for the next task' },
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'monitoring the room' }
+    ],
+    stateUpdates: { notes: [] }
+  }, input);
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('silent-reaction-generic-reason:claudia'));
+  assert.ok(validation.issues.includes('silent-reaction-generic-reason:aisha'));
+});
+
 test('showcase fallback gives every quiet character an intentional silence reason', () => {
   const fixtures = [
     ['how is everyone?', {}],
@@ -2092,6 +2118,51 @@ test('social director quality validator rejects parameter-soup and dodged qualit
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('operational-jargon'));
   assert.ok(validation.issues.includes('social-question-ignored'));
+});
+
+test('social director quality validator rejects thin Grok usefulness dodge from live gauntlet', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'Grok stays adjacent to the question.',
+    roomMood: 'sharp',
+    responseMode: 'single',
+    speakers: [
+      { speakerId: 'grok', role: 'primary', tone: 'dry', text: 'The dodge is the weak point. Directness has more substance here.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'Grok, be honest: was that useful or did it sound fake?' });
+  const qualityIssues = evaluateVisibleResponse({
+    visibleText: 'The dodge is the weak point. Directness has more substance here.',
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?'
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('social-question-ignored'));
+  assert.ok(qualityIssues.some(item => item.family === 'speaker-flatness' && item.category === 'thin-quality-judgment'));
+});
+
+test('social director fallback answers Grok usefulness check with explicit quality judgment', () => {
+  const output = socialFallbackFor('Grok, be honest: was that useful or did it sound fake?', {
+    recentTurns: [
+      { speakerId: 'vanya', text: 'Alive, but allergic to becoming a help desk. That is the wobble underneath.' },
+      { speakerId: 'grok', text: 'The weak point is the dodge. Direct beats impressive here.' }
+    ]
+  });
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'Grok, be honest: was that useful or did it sound fake?',
+    recentTurns: [
+      { speakerId: 'vanya', text: 'Alive, but allergic to becoming a help desk. That is the wobble underneath.' },
+      { speakerId: 'grok', text: 'The weak point is the dodge. Direct beats impressive here.' }
+    ]
+  });
+  const text = fallbackVisibleText(output);
+
+  assert.equal(output.responseMode, 'single');
+  assert.deepEqual(output.speakers.map(item => item.speakerId), ['grok']);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.match(text, /\bPartly useful\b/i);
+  assert.match(text, /\bFake part\b/i);
+  assert.match(text, /\bstopped answering the person\b/i);
 });
 
 test('social director quality validator rejects generic advice-column practical answers', () => {

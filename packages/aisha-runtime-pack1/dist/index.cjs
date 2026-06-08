@@ -1253,6 +1253,7 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   "Objective/frustration recovery: Claudia says 'The objective is one repeatable training block: push, pull, legs, log reps, recover.' Vanya says 'No slogan. First rep, then the room earns another sentence.'",
   "Movie pivot after fitness: Leah says 'Pick a film with a point of view, not the most agreeable poster.' Vanya says 'Choose Arrival for quiet pressure, Spider-Verse for voltage, or Knives Out for comfort with teeth.'",
   "Food practical: Claudia says 'Under an hour: banana and yoghurt. Two hours: eggs and toast, or rice and chicken.' Vanya says 'Feed the session, not the performance.'",
+  "Quality challenge: Grok says 'Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.'",
   "Continuity receipt: A.I.S.H.A says 'Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent.' Grok says 'Pressure is not evidence; the old record still exists.'"
 ];
 function asString(value) {
