@@ -906,6 +906,16 @@ test('visible response quality rejects bland accepted practical answers from liv
 
   assert.ok(issueKeys(lunchIssues).includes('weak-food-answer:food'));
   assert.ok(lunchIssues.some(item => item.family === 'generic-advice'));
+
+  const staleTrainingLunchIssues = evaluateVisibleResponse({
+    userMessage: 'quick help: what should I eat for lunch?',
+    visibleText: [
+      'For immediate fuel, a banana and yoghurt. If you have two hours before training, eggs and toast.',
+      'Feed the session, not the performance; keep it light if you need to move soon.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(staleTrainingLunchIssues).includes('stale-context:fitness'));
 });
 
 test('visible response quality rejects softer objective-speech residue', () => {

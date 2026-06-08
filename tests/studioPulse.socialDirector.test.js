@@ -707,6 +707,26 @@ test('showcase prompt tells social pivots to drop stale fitness context', () => 
   assert.match(prompt, /Do not answer with workouts, reps, food, recovery, or fitness motivation/i);
 });
 
+test('showcase prompt tells lunch pivots to drop stale fitness context', () => {
+  const input = buildRoomDirectorInput({
+    question: 'quick help: what should I eat for lunch?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank.' },
+      { speakerId: 'user', role: 'user', text: 'I am hungry before training, what should I eat?' },
+      { speakerId: 'vanya', role: 'primary', text: 'Feed the session, not the performance. Small if training is close; bigger if you have time.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+  const rubric = acceptanceRubricFor(input);
+
+  assert.ok(rubric.positiveTargets.some(item => /lunch\/meal ask, not a pre-training follow-up/i.test(item)));
+  assert.match(prompt, /This turn is a lunch\/meal ask, not a training-food follow-up/i);
+  assert.match(prompt, /Give lunch options; do not mention training, movement, performance, session fuel, or workout timing/i);
+  assert.match(prompt, /sandwich, rice bowl, eggs\/toast, leftovers, soup, salad with protein, or water/i);
+});
+
 test('showcase prompt carries line-job, attribution, and continuity receipt contracts', () => {
   const input = buildRoomDirectorInput({
     question: 'What changed?',
@@ -2056,11 +2076,17 @@ test('social director fallback treats training-adjacent food as nutrition, not s
 test('social director fallback answers lunch with concrete food direction', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', role: 'primary', text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down before you stop.' },
+        { speakerId: 'user', role: 'user', text: 'I am hungry before training, what should I eat?' },
+        { speakerId: 'claudia', role: 'side', text: 'Before training: under an hour, banana and yoghurt; two hours, eggs and toast or rice and chicken.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Feed the session, not the performance. Small if training is close; bigger if you have time.' },
+        { speakerId: 'user', role: 'user', text: 'new topic: I need help planning tomorrow' },
+        { speakerId: 'claudia', role: 'primary', text: 'Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery.' }
+      ];
       const { body } = await postSocial(baseUrl, 'quick help: what should I eat for lunch?', {
-        recentTurns: [
-          { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' },
-          { speakerId: 'vanya', role: 'primary', text: 'Fair. No more repeat loop.' }
-        ]
+        recentTurns
       });
       const text = visibleText(body);
       const validation = validateDirectorOutput({
@@ -2070,20 +2096,39 @@ test('social director fallback answers lunch with concrete food direction', asyn
         speakers: body.messageEvents,
         silentReactions: body.silentReactions,
         stateUpdates: { notes: [] }
-      }, { userMessage: 'quick help: what should I eat for lunch?', recentTurns: [
-        { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' },
-        { speakerId: 'vanya', role: 'primary', text: 'Fair. No more repeat loop.' }
-      ] });
+      }, { userMessage: 'quick help: what should I eat for lunch?', recentTurns });
 
       assert.equal(body.ok, true);
       assert.match(text, /\b(lunch|rice and chicken|eggs and toast|sandwich|leftovers|water)\b/i);
       assert.doesNotMatch(text, /\bMake it real\b/i);
       assert.doesNotMatch(text, /system warning|assigning ownership|debate/i);
-      assert.doesNotMatch(text, /\b(push-ups|split squats|progressive overload|training week)\b/i);
+      assert.doesNotMatch(text, /\b(push-ups|split squats|progressive overload|training week|before training|feed the session|performance|training is close|lets you move)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
     });
   });
+});
+
+test('social director quality validator rejects stale training-food bleed on lunch prompts', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'I am hungry before training, what should I eat?' },
+    { speakerId: 'vanya', role: 'primary', text: 'Feed the session, not the performance. Small if training is close; bigger if you have time.' },
+    { speakerId: 'user', role: 'user', text: 'new topic: I need help planning tomorrow' }
+  ];
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room mistakes lunch for training fuel.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'side', tone: 'practical', text: 'For immediate fuel, a banana and yoghurt. If you have two hours before training, eggs and toast.', visibleState: 'Tracking next steps' },
+      { speakerId: 'vanya', role: 'primary', tone: 'warm practical', text: 'Feed the session, not the performance; keep it light if you need to move soon.', visibleState: 'Reading the room' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'quick help: what should I eat for lunch?', recentTurns });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('stale-topic-answer:fitness') || validation.issues.includes('product-stale-context:fitness'), validation.issues.join(', '));
 });
 
 test('social director fallback does not let old fitness context hijack watch prompts', async () => {
