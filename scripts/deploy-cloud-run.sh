@@ -86,14 +86,23 @@ MSG
 fi
 
 gcloud builds submit --tag "$IMAGE" .
-gcloud run deploy "$SERVICE" \
-  --image "$IMAGE" \
-  --region "$REGION" \
-  --platform managed \
-  --allow-unauthenticated \
-  --memory "$MEMORY" \
-  --cpu "$CPU" \
-  --timeout "$TIMEOUT" \
-  --update-env-vars "$ENV_VARS" \
-  "${SECRET_ARGS[@]}" \
-  "${CLOUD_SQL_ARGS[@]}"
+
+DEPLOY_ARGS=(
+  "$SERVICE"
+  --image "$IMAGE"
+  --region "$REGION"
+  --platform managed
+  --allow-unauthenticated
+  --memory "$MEMORY"
+  --cpu "$CPU"
+  --timeout "$TIMEOUT"
+  --update-env-vars "$ENV_VARS"
+)
+if ((${#SECRET_ARGS[@]})); then
+  DEPLOY_ARGS+=("${SECRET_ARGS[@]}")
+fi
+if ((${#CLOUD_SQL_ARGS[@]})); then
+  DEPLOY_ARGS+=("${CLOUD_SQL_ARGS[@]}")
+fi
+
+gcloud run deploy "${DEPLOY_ARGS[@]}"
