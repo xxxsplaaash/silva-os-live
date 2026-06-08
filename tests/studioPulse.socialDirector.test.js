@@ -1668,6 +1668,35 @@ test('social director fallback changes shape after character-attributable start-
   });
 });
 
+test('social director fallback changes shape after live start-here recovery block', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'WHERE DO I START' },
+        { speakerId: 'claudia', role: 'side', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave; next week beat that number by one.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Start where the week can actually hold it: Monday, Wednesday, Friday; no identity speech required.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHAT IS THE OBJECTIVE?', { recentTurns });
+      const text = visibleText(body);
+      const validation = validateDirectorOutput({
+        roomBeat: body.roomBeat || 'The room changes shape after live start-here recovery.',
+        roomMood: body.roomMood || 'focused',
+        responseMode: body.responseMode || 'small_exchange',
+        speakers: body.messageEvents,
+        silentReactions: body.silentReactions,
+        stateUpdates: { notes: [] }
+      }, { userMessage: 'WHAT IS THE OBJECTIVE?', recentTurns });
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /Start where the week can actually hold it/i);
+      assert.doesNotMatch(text, /Mark one number before you leave/i);
+      assert.match(text, /\b(No slogan|push, pull, legs|proof talk after|log reps)\b/i);
+      assert.equal(validation.ok, true, validation.issues.join(', '));
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback treats referenced exercise cards as fitness context', () => {
   const body = {
     references: [
