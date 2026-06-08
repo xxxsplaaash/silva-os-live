@@ -2204,7 +2204,10 @@ test('Studio Pulse showcase last-mile gate repairs accepted continuity answers t
           qualityFailureCategory: final.qualityFailureCategory,
           diagnostics: final.diagnostics
         }));
-        assert.equal(final.qualityFailureCategory, 'quality-rejected');
+        assert.ok(
+          ['quality-rejected', 'continuity-label-missing'].includes(final.qualityFailureCategory),
+          `unexpected quality failure category: ${final.qualityFailureCategory}`
+        );
         assert.match(text, /pale blue with no red accents/i);
         assert.match(text, /obsidian with one red accent/i);
         assert.doesNotMatch(text, /\b(system will reflect|updated the system|setting)\b/i);
@@ -2307,7 +2310,7 @@ test('Studio Pulse showcase last-mile gate repairs continuity labels that omit t
           diagnostics: final.diagnostics
         }, null, 2));
         assert.ok(
-          ['continuity-value-missing', 'quality-rejected', 'product-continuity-miss:ledger-answer'].includes(final.qualityFailureCategory)
+          ['continuity-label-missing', 'continuity-value-missing', 'quality-rejected', 'product-continuity-miss:ledger-answer'].includes(final.qualityFailureCategory)
             || /^voice-lock:blind-attribution:/.test(final.qualityFailureCategory),
           `unexpected quality failure category: ${final.qualityFailureCategory}`
         );

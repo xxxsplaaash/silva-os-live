@@ -663,6 +663,29 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
 });
 
+test('showcase prompt carries concrete recent-line guard from visible history', () => {
+  const input = buildRoomDirectorInput({
+    question: 'how is everyone today?',
+    roomState: { roomMood: 'warm' },
+    recentTurns: [
+      { speakerId: 'vanya', role: 'primary', text: 'Tiny vanity, clean discipline. Twenty minutes: warm up, run the circuit, write one number down.' },
+      { speakerId: 'claudia', role: 'side', text: 'Start with three 20-minute sessions: push, squat, hinge, row. Same days every week.' },
+      { speakerId: 'leah', role: 'side', text: 'Pick the feeling first. The title is just the room admitting what mood it wants.' },
+      { speakerId: 'user', role: 'user', text: 'how is everyone today?' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /RECENT VISIBLE LINE GUARD/);
+  assert.match(prompt, /Do not reuse these recent assistant openings, phrase families, or advice shapes/i);
+  assert.match(prompt, /vanya: Tiny vanity, clean discipline/i);
+  assert.match(prompt, /claudia: Start with three 20-minute sessions/i);
+  assert.match(prompt, /leah: Pick the feeling first/i);
+  assert.match(prompt, /Avoid opening frames: Tiny vanity, clean discipline; Start with three 20-minute; Pick the feeling first/i);
+  assert.match(prompt, /For this turn, change the sentence shape before changing the speaker/i);
+  assert.doesNotMatch(prompt, /user: how is everyone today/i);
+});
+
 test('showcase prompt tells social pivots to drop stale fitness context', () => {
   const input = buildRoomDirectorInput({
     question: 'how is everyone actually feeling in here?',
@@ -3399,6 +3422,38 @@ test('deterministic continuity claim update ignores the current user turn when f
   assert.match(text, /\bCurrent record logged:\s*landing page style is white editorial with no red\b/i);
   assert.match(text, /\bPrior record remains landing page style is black glass with a single red pulse\b/i);
   assert.doesNotMatch(text, /\bold version stays visible instead of being quietly erased\b/i);
+  assert.equal(issues.some(item => item.family === 'repetition'), false);
+});
+
+test('deterministic continuity change fallback changes shape after a live dashboard supersession receipt', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Current record logged: dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'claudia', role: 'side', text: 'Make it real: if this changes, compare old and new before designing more. No quiet erasure.' },
+    { speakerId: 'user', role: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Current record logged: dashboard preference is pale blue with no red accents. Prior record remains dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'claudia', role: 'side', text: 'Current record first; prior record still visible. No quiet rewrite.' },
+    { speakerId: 'user', role: 'user', text: 'What changed?' },
+    { speakerId: 'aisha', role: 'primary', text: 'Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'claudia', role: 'side', text: 'One decision: current value leads. Keep the prior value visible; design from the current one.' }
+  ];
+  const output = socialFallbackFor('What changed?', {
+    recentTurns,
+    continuity: {
+      activeTruths: [{ canonicalText: 'User dashboard preference: pale blue with no red accents' }],
+      supersededTruths: [{ canonicalText: 'User dashboard preference: obsidian with one red accent' }]
+    }
+  });
+  const text = fallbackVisibleText(output);
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What changed?',
+    visibleText: text,
+    recentTurns,
+    continuity: { active: 1, superseded: 1 }
+  });
+
+  assert.match(text, /Changed: Prior record: dashboard preference is obsidian with one red accent\. Current record: dashboard preference is pale blue with no red accents/i);
+  assert.doesNotMatch(text, /Current record: dashboard preference is pale blue with no red accents\. Prior record: dashboard preference is obsidian with one red accent/i);
   assert.equal(issues.some(item => item.family === 'repetition'), false);
 });
 
