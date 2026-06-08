@@ -663,6 +663,27 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
 });
 
+test('showcase prompt tells social pivots to drop stale fitness context', () => {
+  const input = buildRoomDirectorInput({
+    question: 'how is everyone actually feeling in here?',
+    roomState: { roomMood: 'warm' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'I wanna grow my muscles.' },
+      { speakerId: 'claudia', role: 'side', text: 'Start with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+      { speakerId: 'vanya', role: 'side', text: 'Let the clock do the arguing; the ego can decorate later.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.equal(input.impulsePlan.topicClass, 'banter');
+  assert.ok(rubric.rejectFamilies.includes('stale-topic'));
+  assert.ok(rubric.positiveTargets.some(item => /social room check-in/i.test(item)));
+  assert.ok(rubric.positiveTargets.some(item => /not a training follow-up/i.test(item)));
+  assert.match(prompt, /social room check-in, not a training follow-up/i);
+  assert.match(prompt, /Do not answer with workouts, reps, food, recovery, or fitness motivation/i);
+});
+
 test('showcase prompt carries line-job, attribution, and continuity receipt contracts', () => {
   const input = buildRoomDirectorInput({
     question: 'What changed?',
@@ -736,6 +757,32 @@ test('showcase prompt carries Claudia planning-tomorrow target without invented 
   assert.match(prompt, /Make the afternoon stay human: one hard thing early/i);
   assert.doesNotMatch(prompt, /room earns another sentence/i);
   assert.doesNotMatch(prompt, /draft a preliminary schedule with key tasks and deadlines by EOD/i);
+});
+
+test('social director quality validator accepts concrete planning target from live gauntlet', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room gives tomorrow a bounded shape.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'direct',
+        text: 'Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery.'
+      },
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        tone: 'warm pressure',
+        text: 'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
 });
 
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
