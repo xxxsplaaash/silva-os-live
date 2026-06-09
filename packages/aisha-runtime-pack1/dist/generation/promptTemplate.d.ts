@@ -25,11 +25,11 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "claudia";
-    readonly text: "Use one repeatable training block: push, pull, legs, log reps, recover. One timer, one note, then stop negotiating.";
+    readonly text: "Start with one clean move: choose one task, run a short timer, write one note about what changed.";
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "vanya";
-    readonly text: "No slogan. Same twenty minutes, cleaner shape; the body trusts it before the ego decorates the clock.";
+    readonly text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama.";
 }, {
     readonly scenario: "Movie pivot after fitness";
     readonly speakerId: "leah";

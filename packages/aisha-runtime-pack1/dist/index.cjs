@@ -1250,6 +1250,7 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
   "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "For continuity receipts, cite Prior record only when prior or superseded evidence is the same user slot: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction. If no same-slot prior exists, say only Current record logged.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
   "Claudia: practical sequencing, constraints, delivery shape; not Vanya warmth or vague encouragement.",
@@ -1295,12 +1296,12 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Objective/frustration recovery",
     speakerId: "claudia",
-    text: "Use one repeatable training block: push, pull, legs, log reps, recover. One timer, one note, then stop negotiating."
+    text: "Start with one clean move: choose one task, run a short timer, write one note about what changed."
   },
   {
     scenario: "Objective/frustration recovery",
     speakerId: "vanya",
-    text: "No slogan. Same twenty minutes, cleaner shape; the body trusts it before the ego decorates the clock."
+    text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama."
   },
   {
     scenario: "Movie pivot after fitness",
@@ -2324,7 +2325,7 @@ ${mandatoryBrief}`;
       prompt.userMessage = `${prompt.userMessage}
 
 --- SOCIAL DIRECTOR JSON CONTRACT ---
-Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. Speaker line jobs: A.I.S.H.A=Current record/Prior record receipt or precision anchor; Vanya=human temperature plus social pressure; Leah=taste verdict plus cultural stake; Claudia=sequence, timer, count, movement, food option, or next measurable move; Grok=premise fault plus dry consequence. If a character is silent, include a current-beat reason: A.I.S.H.A holds authority until correction is needed; Vanya listens for human temperature before entering; Leah saves the taste cut until useful; Claudia tracks structure without making a project plan; Grok watches for the premise fault before interrupting. Do not write silent reasons as generic waiting, monitoring, observing, watching, or listening. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language.
+Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. Speaker line jobs: A.I.S.H.A=Current record/Prior record receipt or precision anchor; Vanya=human temperature plus social pressure; Leah=taste verdict plus cultural stake; Claudia=sequence, timer, count, movement, food option, or next measurable move; Grok=premise fault plus dry consequence. If a character is silent, include a current-beat reason: A.I.S.H.A holds authority until correction is needed; Vanya listens for human temperature before entering; Leah saves the taste cut until useful; Claudia tracks structure without making a project plan; Grok watches for the premise fault before interrupting. Do not write silent reasons as generic waiting, monitoring, observing, watching, or listening. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language. For continuity receipts, Prior record is allowed only for same-slot evidence: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction; otherwise use Current record logged with no prior.
 -------------------------------------`;
     }
     if (process.env.AISHA_DEBUG === "true") {

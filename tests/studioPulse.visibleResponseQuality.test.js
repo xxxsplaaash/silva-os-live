@@ -664,6 +664,39 @@ test('visible response quality rejects continuity answers from the wrong claim p
   assert.ok(issueKeys(issues).includes('continuity-miss:ledger-answer'));
 });
 
+test('visible response quality rejects cross-domain prior records on new continuity claims', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'My landing page style is black glass with a single red pulse.',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Current record logged: dashboard preference is obsidian with one red accent.' }
+    ],
+    continuity: {
+      active: 1,
+      superseded: 0
+    },
+    visibleText: 'Current record: landing page style is black glass with a single red pulse. Prior record: dashboard preference was obsidian with one red accent.'
+  });
+
+  assert.ok(issueKeys(issues).includes('continuity-conflict:cross-domain-prior'));
+});
+
+test('visible response quality allows evidence-backed old preference recall without repeated slot labels', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'What was my old dashboard preference?',
+    continuity: {
+      active: 1,
+      superseded: 1,
+      activeTexts: ['dashboard preference is pale blue with no red accents'],
+      supersededTexts: ['dashboard preference is obsidian with one red accent']
+    },
+    visibleText: 'Prior record: obsidian with one red accent. Current record: pale blue with no red accents.'
+  });
+
+  assert.equal(issueKeys(issues).includes('continuity-conflict:cross-domain-prior'), false);
+  assert.equal(issueKeys(issues).includes('continuity-miss:ledger-answer'), false);
+});
+
 test('visible response quality rejects invented project specifics on generic planning asks', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',

@@ -38,6 +38,7 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
   "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "For continuity receipts, cite Prior record only when prior or superseded evidence is the same user slot: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction. If no same-slot prior exists, say only Current record logged.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
   "Claudia: practical sequencing, constraints, delivery shape; not Vanya warmth or vague encouragement.",
@@ -86,12 +87,12 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Objective/frustration recovery",
     speakerId: "claudia",
-    text: "Use one repeatable training block: push, pull, legs, log reps, recover. One timer, one note, then stop negotiating.",
+    text: "Start with one clean move: choose one task, run a short timer, write one note about what changed.",
   },
   {
     scenario: "Objective/frustration recovery",
     speakerId: "vanya",
-    text: "No slogan. Same twenty minutes, cleaner shape; the body trusts it before the ego decorates the clock.",
+    text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama.",
   },
   {
     scenario: "Movie pivot after fitness",

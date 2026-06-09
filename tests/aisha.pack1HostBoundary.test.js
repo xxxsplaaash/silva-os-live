@@ -361,6 +361,7 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(adapterSource, /Do not write silent reasons as generic waiting/i);
   assert.match(adapterSource, /practical, food, design, or continuity asks/i);
   assert.match(adapterSource, /generic advice or operations language/i);
+  assert.match(adapterSource, /Prior record is allowed only for same-slot evidence/i);
   assert.match(promptSource, /Line quality rules: \$\{SOCIAL_DIRECTOR_LINE_QUALITY_RULES\.join\(" "\)\}/);
   assert.match(promptSource, /Line job contracts: \$\{SOCIAL_DIRECTOR_LINE_JOB_RULES\.join\(" "\)\}/);
   assert.match(promptSource, /Silence reason examples: \$\{SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS\.join\(" "\)\}/);
@@ -408,6 +409,8 @@ test('Pack 1 social-director frustration target lines avoid objective-slogan rej
   }).map(issue => issue.key || issue);
 
   assert.doesNotMatch(visibleText, /\bthe objective is\b/i);
+  assert.doesNotMatch(visibleText, /\b(training|push|pull|legs|log reps|recover|body|clock)\b/i);
+  assert.ok(!issues.includes('frustration-miss:stress-recovery'), issues.join(', '));
   assert.ok(!issues.includes('false-objective:command-posture'), issues.join(', '));
 });
 
@@ -483,6 +486,8 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
   assert.match(prompt.systemPrompt, /workflow alignment, deliverables, production readiness, and stakeholder language/i);
   assert.match(prompt.systemPrompt, /not process readiness or delivery theater/i);
+  assert.match(prompt.systemPrompt, /Prior record only when prior or superseded evidence is the same user slot/i);
+  assert.match(prompt.systemPrompt, /landing page style with landing page style/i);
   assert.match(prompt.systemPrompt, /For planning-tomorrow asks, give a plain day skeleton/i);
   assert.match(prompt.systemPrompt, /First step: 60-minute hardest-task block/i);
   assert.match(prompt.systemPrompt, /20-minute cleanup block/i);
@@ -494,7 +499,7 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Never copy an acceptance example verbatim/i);
   assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
-  assert.match(prompt.systemPrompt, /No slogan\. Same twenty minutes, cleaner shape/i);
+  assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
   assert.match(prompt.systemPrompt, /Useful half: it caught the dodge/i);
   assert.doesNotMatch(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
