@@ -56,7 +56,8 @@ test('showcase impulse planner gives ordinary lunch distinct Claudia and Vanya l
   assert.equal(plan.category, 'practical');
   assert.equal(plan.topicClass, 'food-choice');
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
-  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /named lunch options|eggs|rice bowl|sandwich|leftovers/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /at least two Claudia lunch anchors/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /one decision|boring baseline|eggs and toast|rice bowl|solid sandwich|leftovers with water/i);
   assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /lunch|afternoon|personality-test/i);
   assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /never movement or performance framing/i);
   assert.doesNotMatch(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /\btraining-food\b/i);

@@ -6266,8 +6266,9 @@ test('room director repair prompt gives ordinary lunch voice-lock guidance', () 
   });
 
   assert.match(prompt, /Ordinary-lunch voice repair/);
-  assert.match(prompt, /Claudia must open with named food options plus one decision rule/i);
-  assert.match(prompt, /eggs and toast, rice bowl, solid sandwich, leftovers with water/i);
+  assert.match(prompt, /Claudia must open with at least two Claudia anchors/i);
+  assert.match(prompt, /one decision, boring baseline, eggs and toast, rice bowl, solid sandwich, leftovers with water/i);
+  assert.match(prompt, /Name food options before any caveat/i);
   assert.match(prompt, /Vanya must make the lunch or afternoon feel human with playful bite/i);
   assert.match(prompt, /personality-test pressure/i);
   assert.match(prompt, /no movement, training, performance, session-fuel/i);
