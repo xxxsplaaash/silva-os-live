@@ -4469,6 +4469,29 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.ok(bruhObjectiveStart.issues.includes('frustration-ignored'));
   assert.ok(bruhObjectiveStart.issues.includes('product-false-objective:command-posture'));
 
+  const bruhGenericResetAfterFitness = validateDirectorOutput({
+    roomBeat: 'The room treats a workout frustration as a general reset.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'side', tone: 'flat', text: 'Start with a short reset: drink water, clear one surface, then stop; that is the whole move.' },
+      { speakerId: 'vanya', role: 'primary', tone: 'flat', text: 'The room heard the frustration. Let the afternoon stay human; one useful pass, less ceremony, enough air to stay present.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+      { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+      { speakerId: 'claudia', role: 'side', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave.' }
+    ]
+  });
+
+  assert.equal(bruhGenericResetAfterFitness.ok, false);
+  assert.ok(bruhGenericResetAfterFitness.issues.includes('product-topic-ignored:fitness-context'));
+
   const stressObjectiveSignal = validateDirectorOutput({
     roomBeat: 'The room answers stress with objective language and calls it useful.',
     roomMood: 'focused',
@@ -6708,8 +6731,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     if (/20 minute/i.test(userText) && /\b(Twenty minutes of training|one small circuit|clock honest)\b/i.test(recentText)) return 'Set a timer: five fast training rounds of chair squat, incline push-up, backpack row, and dead bug; stop at the buzzer.';
     if (/20 minute/i.test(userText)) return 'Twenty minutes of training: squat or hinge, push, pull, plank. Keep it moving, write reps down, then stop before it becomes a planning session.';
     if (/where do i start/i.test(userText)) return 'First muscle-training step: two rounds, slow tempo, mark completion, leave before you start negotiating.';
-    if (/what is the objective/i.test(userText)) return 'Narrow it to the muscle-training target: show up, track the work, recover, repeat.';
-    if (/bruh/i.test(userText)) return 'One blunt next move: do the baseline once, recover, then add one small progression.';
+    if (/what is the objective/i.test(userText)) return 'First step now: set a ten-minute timer, finish one circuit, write the rep count, repeat tomorrow.';
+    if (/bruh/i.test(userText)) return 'Plain reset, first step: set ten minutes, do push-ups or squats, write the rep count, stop.';
     if (/how is everyone/i.test(userText)) return 'The room is present, slightly restless, and still tracking the thread.';
     if (/hungry/i.test(userText)) return 'Before training, eat light enough to move: yogurt, eggs and toast, or rice and chicken if you have time.';
     if (/open floor/i.test(userText)) return 'Open floor: pick Knives Out for social teeth or Mad Max if the room wants spectacle.';
@@ -6747,8 +6770,8 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     if (/20 minute/i.test(userText) && /\b(Twenty minutes of training|one small circuit|clock honest)\b/i.test(recentText)) return 'Timer only; no accessory menu, no motivational garnish, no second plan.';
     if (/20 minute/i.test(userText)) return 'Keep the clock honest: one small circuit, no extra menu, no fake productivity.';
     if (/where do i start/i.test(userText)) return 'No gear purchases; make the calendar mark real before designing a system.';
-    if (/what is the objective/i.test(userText)) return 'Narrow it to the actual target: show up, track the work, recover, repeat.';
-    if (/bruh/i.test(userText)) return 'One blunt next move, then silence so the room stops chewing the same point.';
+    if (/what is the objective/i.test(userText)) return 'Narrow it to the actual target: reps logged today, same short session repeated this week.';
+    if (/bruh/i.test(userText)) return 'One set first, then silence so the room stops chewing the same point.';
     if (/muscle/i.test(userText)) return 'Keep the start repeatable: one short session, logged, then adjusted next time.';
     if (/never said/i.test(userText)) return 'Hold the denial against the trace: prior claim exists, current claim still stands.';
     if (/old dashboard preference/i.test(userText)) return 'Answer the archive cleanly: old value first, current value second.';

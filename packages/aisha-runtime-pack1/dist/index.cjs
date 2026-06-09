@@ -1301,14 +1301,14 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Let the clock do the arguing; the ego can decorate later."
   },
   {
-    scenario: "Objective/frustration recovery",
+    scenario: "Objective/frustration recovery after fitness",
     speakerId: "claudia",
-    text: "Start with a short reset: drink water, clear one surface, then stop; that is the whole move."
+    text: "First step: set a ten-minute timer, do push-ups or squats, write the rep count, then stop."
   },
   {
-    scenario: "Objective/frustration recovery",
+    scenario: "Objective/frustration recovery after fitness",
     speakerId: "vanya",
-    text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama."
+    text: "Make the first set human: less speech, more floor, and let the mood complain later."
   },
   {
     scenario: "Normal-answer recovery",
@@ -1443,7 +1443,7 @@ function speakerDisplayName(speakerId) {
 var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Fitness first ask: ${targetLinesForScenario("Fitness first ask")}`,
   `20-minute fitness follow-up: ${targetLinesForScenario("20-minute fitness follow-up")}`,
-  `Objective/frustration recovery: ${targetLinesForScenario("Objective/frustration recovery")}`,
+  `Objective/frustration recovery after fitness: ${targetLinesForScenario("Objective/frustration recovery after fitness")}`,
   `Normal-answer recovery: ${targetLinesForScenario("Normal-answer recovery")}`,
   `Movie pivot after fitness: ${targetLinesForScenario("Movie pivot after fitness")}`,
   `Food practical: ${targetLinesForScenario("Food practical")}`,
@@ -1577,7 +1577,9 @@ function formatSelectedSpeakerLineJobs(value) {
     selected.length ? `Selected line jobs: ${selected.join("; ")}` : "",
     "For practical fitness turns, Claudia must land the concrete movement/timer/reps line before Vanya adds social temperature.",
     "A Vanya-first generic encouragement line is a first-attempt failure for fitness asks.",
-    "For ordinary lunch turns, Claudia must list named foods first plus at least two anchors from one decision, boring baseline, eggs and toast, rice bowl, solid sandwich, leftovers with water; Vanya must use lunch/afternoon/personality-test pressure, not movement, fuel, training, or performance language."
+    "For terse frustration after recent fitness context (BRUH, WHAT IS THE OBJECTIVE, WHERE DO I START), keep the answer inside the workout thread: a movement, timer, rep count, or training-day line must be visible. Do not switch to water, clear-a-surface, generic reset, or emotional support advice.",
+    "For ordinary lunch turns, Claudia must list named foods first plus at least two anchors from one decision, boring baseline, eggs and toast, rice bowl, solid sandwich, leftovers with water; Vanya must use lunch/afternoon/personality-test pressure, not movement, fuel, training, or performance language.",
+    "For room-tension turns, at least one selected speaker must speak visible text naming the actual human pressure, safe-choice drift, consensus pressure, or premise dodge. Silence-only JSON is a first-attempt failure."
   ].filter(Boolean).join("\n");
 }
 function formatPresence(value) {

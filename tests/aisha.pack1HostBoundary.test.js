@@ -406,7 +406,7 @@ test('Pack 1 social-director target lines pass blind-attribution scoring', async
   }
 });
 
-test('Pack 1 social-director frustration target lines avoid objective-slogan rejects', async () => {
+test('Pack 1 social-director fitness frustration target lines avoid generic reset drift', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-objective-targets-'));
   const outfile = path.join(tempDir, 'promptTemplate.mjs');
   esbuild.buildSync({
@@ -418,20 +418,23 @@ test('Pack 1 social-director frustration target lines avoid objective-slogan rej
   });
   const { SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES } = await import(pathToFileURL(outfile).href);
   const targetLines = SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES
-    .filter(item => item.scenario === 'Objective/frustration recovery');
+    .filter(item => item.scenario === 'Objective/frustration recovery after fitness');
   const visibleText = targetLines.map(item => item.text).join('\n');
   const issues = evaluateVisibleResponse({
-    userMessage: 'I am stressed and this is starting to feel dumb.',
+    userMessage: 'BRUH...',
     visibleText,
+    recentTurns: [
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' }
+    ],
     speakerLines: targetLines.map(item => ({ speakerId: item.speakerId, text: item.text }))
   }).map(issue => issue.key || issue);
 
   assert.doesNotMatch(visibleText, /\bthe objective is\b/i);
-  assert.doesNotMatch(visibleText, /\b(training|push|pull|legs|log reps|recover|body|clock)\b/i);
+  assert.match(visibleText, /\b(push|squat|reps|set|body)\b/i);
   assert.doesNotMatch(visibleText, /\bwrite one note about what changed\b/i);
-  assert.match(visibleText, /\bdrink water\b/i);
-  assert.match(visibleText, /\bclear one surface\b/i);
-  assert.ok(!issues.includes('frustration-miss:stress-recovery'), issues.join(', '));
+  assert.doesNotMatch(visibleText, /\bdrink water\b/i);
+  assert.doesNotMatch(visibleText, /\bclear one surface\b/i);
+  assert.ok(!issues.includes('topic-ignored:fitness-context'), issues.join(', '));
   assert.ok(!issues.includes('false-objective:command-posture'), issues.join(', '));
 });
 
@@ -527,7 +530,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /without turning it into a personality test/i);
   assert.match(prompt.systemPrompt, /Ordinary lunch voice must be unmistakable/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
-  assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
+  assert.match(prompt.systemPrompt, /Objective\/frustration recovery after fitness:/i);
+  assert.match(prompt.systemPrompt, /set a ten-minute timer, do push-ups or squats/i);
+  assert.match(prompt.systemPrompt, /Make the first set human: less speech, more floor/i);
   assert.doesNotMatch(prompt.systemPrompt, /write one note about what changed/i);
   assert.match(prompt.systemPrompt, /Useful half: it caught the dodge/i);
   assert.match(prompt.systemPrompt, /Room tension:/);
@@ -746,10 +751,80 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
   assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego/i);
   assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
   assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
+  assert.match(prompt.systemPrompt, /For terse frustration after recent fitness context/i);
+  assert.match(prompt.systemPrompt, /Do not switch to water, clear-a-surface, generic reset/i);
   assert.ok(
     prompt.systemPrompt.indexOf('First-attempt speaker plan:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
     'first-attempt speaker plan should apply before softer acceptance examples'
   );
+});
+
+test('Pack 1 social-director prompt pressures room-tension first attempts to speak', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-room-tension-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = [
+    'Return roomBeat, speakers, silentReactions, and stateUpdates for the room tension question.',
+    'User asks: everyone, what is the actual tension in this room?'
+  ].join('\n');
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'everyone, what is the actual tension in this room?',
+      text: 'everyone, what is the actual tension in this room?',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'everyone, what is the actual tension in this room?' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'everyone, what is the actual tension in this room?',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          impulsePlan: {
+            category: 'everyone',
+            topicClass: 'everyone',
+            maxSpeakers: 5,
+            enforceSelectedSpeakers: false,
+            speakerOrder: ['aisha', 'vanya', 'leah', 'claudia', 'grok'],
+            selectedSpeakers: [
+              { speakerId: 'aisha', lineJob: 'anchor the room tension without turning it into diagnostics' },
+              { speakerId: 'vanya', lineJob: 'name the human pressure or warmth-versus-usefulness tension directly' },
+              { speakerId: 'leah', lineJob: 'name the taste, safe-choice, or consensus pressure in the room' },
+              { speakerId: 'claudia', lineJob: 'name one concrete next move after the room tension is stated' },
+              { speakerId: 'grok', lineJob: 'name the premise fault or dodge causing the room tension' },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /First-attempt speaker plan:/);
+  assert.match(prompt.systemPrompt, /Selected line jobs: aisha: anchor the room tension/i);
+  assert.match(prompt.systemPrompt, /vanya: name the human pressure/i);
+  assert.match(prompt.systemPrompt, /leah: name the taste, safe-choice, or consensus pressure/i);
+  assert.match(prompt.systemPrompt, /grok: name the premise fault or dodge/i);
+  assert.match(prompt.systemPrompt, /For room-tension turns, at least one selected speaker must speak visible text/i);
+  assert.match(prompt.systemPrompt, /Silence-only JSON is a first-attempt failure/i);
 });
 
 test('Pack 1 social-director prompt keeps Claudia practical line first when Vanya is the referenced card', async () => {

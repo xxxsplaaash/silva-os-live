@@ -23,13 +23,13 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly speakerId: "vanya";
     readonly text: "Let the clock do the arguing; the ego can decorate later.";
 }, {
-    readonly scenario: "Objective/frustration recovery";
+    readonly scenario: "Objective/frustration recovery after fitness";
     readonly speakerId: "claudia";
-    readonly text: "Start with a short reset: drink water, clear one surface, then stop; that is the whole move.";
+    readonly text: "First step: set a ten-minute timer, do push-ups or squats, write the rep count, then stop.";
 }, {
-    readonly scenario: "Objective/frustration recovery";
+    readonly scenario: "Objective/frustration recovery after fitness";
     readonly speakerId: "vanya";
-    readonly text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama.";
+    readonly text: "Make the first set human: less speech, more floor, and let the mood complain later.";
 }, {
     readonly scenario: "Normal-answer recovery";
     readonly speakerId: "claudia";

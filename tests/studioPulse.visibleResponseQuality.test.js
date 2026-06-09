@@ -520,6 +520,37 @@ test('visible response quality rejects ignored referenced fitness follow-up', ()
   assert.ok(issueKeys(issues).includes('topic-ignored:referenced-fitness'));
 });
 
+test('visible response quality rejects generic bruh recovery after fitness context', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+      { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+      { speakerId: 'claudia', role: 'side', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave.' }
+    ],
+    visibleText: [
+      'Start with a short reset: drink water, clear one surface, then stop; that is the whole move.',
+      'The room heard the frustration. Let the afternoon stay human; one useful pass, less ceremony, enough air to stay present.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('topic-ignored:fitness-context'));
+
+  const accepted = evaluateVisibleResponse({
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' }
+    ],
+    visibleText: [
+      'No slogan. Put ten minutes on the clock, move first, and let the proof talk after.',
+      'Action version: push, pull, legs; log reps, recover, repeat. Leave two reps in reserve.'
+    ].join('\n')
+  });
+
+  assert.equal(issueKeys(accepted).includes('topic-ignored:fitness-context'), false);
+});
+
 test('visible response quality rejects repeated short-session answer lines', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'ok but I only have 20 minutes',

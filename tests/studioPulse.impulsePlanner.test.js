@@ -62,3 +62,22 @@ test('showcase impulse planner gives ordinary lunch distinct Claudia and Vanya l
   assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /never movement or performance framing/i);
   assert.doesNotMatch(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /\btraining-food\b/i);
 });
+
+test('showcase impulse planner keeps terse frustration inside recent fitness context', () => {
+  const plan = buildShowcaseImpulsePlan({
+    userMessage: 'BRUH...',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'assistant', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+      { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+      { speakerId: 'claudia', role: 'assistant', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+
+  assert.equal(plan.category, 'practical');
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /workout move|timer|rep count|training-day/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /no water|clear-a-surface/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /frustration with bite|physical/i);
+});
