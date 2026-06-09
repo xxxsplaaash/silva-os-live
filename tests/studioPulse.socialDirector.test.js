@@ -2218,9 +2218,10 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const fallback = socialFallbackFor('turn that into a 20 minute version', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bFirst round proves the day is moving\b/i);
+  assert.match(text, /\bKeep it human: twenty minutes\b/i);
   assert.match(text, /\btwenty minutes\b/i);
   assert.match(text, /\bthree rounds\b/i);
+  assert.doesNotMatch(text, /\b(first round proves|second round earns|mirror can wait|day is moving)\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
   assertCleanVisible(fallback);
 });
@@ -3149,6 +3150,46 @@ test('social director quality validator rejects repeated Vanya phrase families',
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('voice-lock:repeated-vanya-phrase:tiny-vanity'));
+});
+
+test('social director quality validator rejects repeated Vanya first-round proof family', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room lets Vanya reuse the same proof rhythm.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'direct',
+        text: 'Run three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.'
+      },
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        tone: 'warm',
+        text: 'Set twenty minutes. First round proves the day is moving; second round earns the confidence.'
+      }
+    ],
+    silentReactions: [
+      { speakerId: 'aisha', visibleState: 'Watching', reason: 'quiet because no memory correction is needed yet' },
+      { speakerId: 'leah', visibleState: 'Holding critique', reason: 'saving the sharper cut until the first week exists' },
+      { speakerId: 'grok', visibleState: 'Tracking failure', reason: 'watching for a premise fault before interrupting' }
+    ],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'turn that into a 20 minute version',
+    recentTurns: [
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        text: 'First round proves the mood; the mirror can wait.'
+      }
+    ]
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('voice-lock:repeated-vanya-phrase:first-round-proof'));
 });
 
 test('turn acceptance smoke script fails public cards with voice-lock drift', async () => {

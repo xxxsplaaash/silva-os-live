@@ -715,7 +715,7 @@ test('Pack 1 social-director built prompt locks repeat phrase families', async (
 
   assert.match(prompt.systemPrompt, /Recent repeat family locks:/i);
   assert.match(prompt.systemPrompt, /Replace the family, not only the exact words/i);
-  assert.match(prompt.systemPrompt, /vanya: recent family 'tiny vanity \/ clock-arguing pressure'/i);
+  assert.match(prompt.systemPrompt, /vanya: recent family 'tiny vanity \/ clock \/ first-round pressure'/i);
   assert.match(prompt.systemPrompt, /Claudia must use a different structure shape/i);
   assert.match(prompt.systemPrompt, /do not invent owners or handoffs/i);
   assert.doesNotMatch(prompt.systemPrompt, /one owner/i);

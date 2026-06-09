@@ -13,7 +13,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Fitness first ask";
     readonly speakerId: "vanya";
-    readonly text: "First round proves the mood; the mirror can wait.";
+    readonly text: "Make the week human first; the mirror can join once the reps exist.";
 }, {
     readonly scenario: "20-minute fitness follow-up";
     readonly speakerId: "claudia";

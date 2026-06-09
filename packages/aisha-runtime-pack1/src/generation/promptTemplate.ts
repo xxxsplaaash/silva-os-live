@@ -26,7 +26,7 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Treat recent assistant/card repeat risks as forbidden source shapes, not examples. Do not reuse their first three words, advice sequence, punctuation rhythm, or core metaphor.",
   "Before writing a same-topic follow-up, choose a different first verb and a different concrete receipt from the current user turn.",
   "If a recent line already used 'Same twenty minutes', 'Fair.', 'Good.', 'Current record first', or a similar opener, choose a new shape.",
-  "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
+  "Vanya must not lean on stale charm families like 'small enough / real enough', 'first round proves', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
   "Fitness first asks must name the actual starter circuit: incline push-ups, backpack rows, split squats, hip hinges, plank, plus reps or a tracking action. No solid-goal, protein/sleep, consistency, habit, or progressive-overload boilerplate.",
@@ -76,7 +76,7 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Fitness first ask",
     speakerId: "vanya",
-    text: "First round proves the mood; the mirror can wait.",
+    text: "Make the week human first; the mirror can join once the reps exist.",
   },
   {
     scenario: "20-minute fitness follow-up",
@@ -284,9 +284,9 @@ function formatAssistantRepeatRisks(value: unknown): string {
 const RECENT_REPEAT_FAMILY_RULES = [
   {
     speakerId: "vanya",
-    label: "tiny vanity / clock-arguing pressure",
-    pattern: /\b(tiny vanity|massive discipline|let the clock do the arguing|ego can decorate|heroic rebrand|leave the ceremony outside|turn it into a thesis)\b/i,
-    instruction: "Vanya must choose a new human-pressure image and avoid discipline, clock, ceremony, and thesis phrasing.",
+    label: "tiny vanity / clock / first-round pressure",
+    pattern: /\b(tiny vanity|massive discipline|let the clock do the arguing|ego can decorate|first round proves|second round earns|mirror can wait|day is moving|heroic rebrand|leave the ceremony outside|turn it into a thesis)\b/i,
+    instruction: "Vanya must choose a new human-pressure image and avoid discipline, clock, first-round proof, ceremony, and thesis phrasing.",
   },
   {
     speakerId: "claudia",
