@@ -739,6 +739,18 @@ test('visible response quality rejects live generic planning handoff owner inven
   assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
 });
 
+test('visible response quality rejects generic planning owner handoff pairing from operator gauntlet', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      'Tomorrow: start with the most demanding task for the first block, then a cleanup session. Assign one specific owner for any handoff before you stop.',
+      'Keep the afternoon human by scheduling a short, breathable gap before the day gets too loud.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
 test('visible response quality rejects live planning invention and sterile execution voice', () => {
   const planningIssues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',

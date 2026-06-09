@@ -910,6 +910,28 @@ test('showcase prompt seeds continuity receipts from recent user claim changes',
   assert.doesNotMatch(prompt, /Current record candidate: Current record: obsidian dashboard/i);
 });
 
+test('showcase prompt locks continuity denial receipts to prior then current evidence', () => {
+  const input = buildRoomDirectorInput({
+    question: 'No, I never said black glass. Did I?',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Current record logged: landing page style is black glass with a single red pulse.' },
+      { speakerId: 'user', role: 'user', text: 'Actually my landing page style is white editorial with no red.' },
+      { speakerId: 'aisha', role: 'primary', text: 'Current record: landing page style is white editorial with no red. Prior record: landing page style is black glass with a single red pulse.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /CONTINUITY DENIAL LOCKS/);
+  assert.match(prompt, /For "never said" or "did I say" challenges, answer the denial directly/i);
+  assert.match(prompt, /Prior record first, then Current record/i);
+  assert.match(prompt, /Do not reverse the labels/i);
+  assert.match(prompt, /do not answer with only the active claim/i);
+  assert.match(prompt, /black glass with a single red pulse/i);
+  assert.match(prompt, /white editorial with no red/i);
+});
+
 test('showcase prompt carries minimum voice signatures for attribution drift families', () => {
   const input = buildRoomDirectorInput({
     question: 'Everyone give me one useful line on this landing page direction.',
@@ -995,6 +1017,7 @@ test('showcase prompt carries Claudia planning-tomorrow target without invented 
   assert.ok(rubric.positiveTargets.some(item => /first move, constraint, or proof point/i.test(item)));
   assert.match(prompt, /For planning-tomorrow asks, Claudia should give a plain day skeleton/i);
   assert.match(prompt, /Do not invent owners, handoffs, teams, agendas, clients, KPIs, deliverables, or EOD reporting/i);
+  assert.match(prompt, /Assign one specific owner for any handoff before you stop/i);
   assert.match(prompt, /Tomorrow: hardest task first, cleanup second, one checkpoint before you stop/i);
   assert.match(prompt, /Keep tomorrow human: one hard thing early/i);
   assert.doesNotMatch(prompt, /one named owner for the messy handoff/i);
@@ -1041,6 +1064,33 @@ test('social director quality validator rejects generic planning handoff owner i
         role: 'side',
         tone: 'warm pressure',
         text: 'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, { userMessage: 'new topic: I need help planning tomorrow' });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('product-invented-detail:project-planning'));
+});
+
+test('social director quality validator rejects generic planning owner handoff pairing from operator gauntlet', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room invents a handoff owner for a generic tomorrow ask.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'claudia',
+        role: 'primary',
+        tone: 'direct',
+        text: 'Tomorrow: start with the most demanding task for the first block, then a cleanup session. Assign one specific owner for any handoff before you stop.'
+      },
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        tone: 'warm pressure',
+        text: 'Keep the afternoon human by scheduling a short, breathable gap before the day gets too loud.'
       }
     ],
     silentReactions: [],
