@@ -6086,6 +6086,46 @@ test('room director repair prompt names valid schema and enum constraints', () =
   assert.match(prompt, /Every speaker must have concrete visible dialogue/);
 });
 
+test('room director repair prompt gives issue-specific acceptance guidance for fitness and repeat failures', () => {
+  const input = buildRoomDirectorInput({
+    message: 'turn that into a 20 minute version',
+    recentTurns: [
+      { speakerId: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down before you stop.' },
+      { speakerId: 'vanya', text: 'Let the clock do the arguing; the ego can decorate later.' }
+    ],
+    references: [
+      {
+        speakerId: 'claudia',
+        speakerName: 'Claudia Naidoo',
+        text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down before you stop.'
+      }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input, {
+    issues: [
+      'product-generic-advice:fitness',
+      'product-topic-ignored:referenced-fitness',
+      'recent-repeat-risk',
+      'voice-lock:blind-attribution:claudia',
+      'voice-lock:blind-attribution:vanya'
+    ]
+  });
+
+  assert.match(prompt, /Fitness generic-advice repair/);
+  assert.match(prompt, /incline push-ups, backpack rows, split squats, hip hinges, plank/);
+  assert.match(prompt, /Referenced fitness repair/);
+  assert.match(prompt, /Claudia must answer with a timed 20-minute mini-plan/);
+  assert.match(prompt, /Recent-repeat repair/);
+  assert.match(prompt, /first three words, metaphor, sentence rhythm, and line job/);
+  assert.match(prompt, /Claudia voice repair/);
+  assert.match(prompt, /timer, rounds, reps, sequence, checkpoint/);
+  assert.match(prompt, /Vanya voice repair/);
+  assert.match(prompt, /human temperature read with bite/);
+  assert.doesNotMatch(prompt, /provider payload|raw model|GEMINI_API_KEY|GOOGLE_API_KEY/);
+});
+
 test('social director defaults to fast structured model without changing main Pulse route', async () => {
   await withAishaFlag('true', async () => {
     await withEnvVar('SOCIAL_DIRECTOR_MODEL', null, async () => {
@@ -6790,6 +6830,81 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
     assert.match(result.stderr, /expand-effect: speaker=claudia/);
     assert.match(result.stderr, /Keep the starting move visible/);
     assert.doesNotMatch(result.stdout + result.stderr, /socialCues|generatorPrompt|aishaDiagnostics|GEMINI_API_KEY|GOOGLE_API_KEY/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('operator diagnostics summarizer strips prompts and visible card text', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-diagnostics-summary-'));
+  const fixturePath = path.join(dir, 'gauntlet.json');
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    backendUrl: 'https://silva-backend-799875816242.us-central1.run.app',
+    sessionId: 'summary-session',
+    counts: { accepted: 1, repaired: 1, fallback: 0 },
+    results: [
+      {
+        prompt: 'LOL I WANNA GROW MY MUSCLES',
+        mode: 'social_hierarchy_lab',
+        classification: 'repaired',
+        activeEngine: 'local-social-director',
+        acceptedByPack1: false,
+        repairedByRuntime: true,
+        latencyMs: 5012,
+        qualityFailureCategory: 'quality-rejected',
+        cards: [{ speakerId: 'claudia', text: 'Do incline push-ups and backpack rows.' }],
+        visiblePreview: 'Do incline push-ups and backpack rows.',
+        operatorDiagnostics: {
+          schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
+          firstAttemptStatus: 'parsed',
+          repairAttemptStatus: 'parsed',
+          firstAttemptIssues: ['product-generic-advice:fitness'],
+          repairAttemptIssues: ['recent-repeat-risk'],
+          providerValidationIssues: ['voice-lock:blind-attribution:vanya'],
+          publicQualityIssues: [],
+          plannedSpeakerOrder: ['claudia', 'vanya'],
+          actualSpeakerOrder: ['claudia', 'vanya'],
+          fallbackCategory: 'quality-rejected',
+          qualityFailureCategory: 'quality-rejected'
+        }
+      },
+      {
+        prompt: 'What changed?',
+        mode: 'continuity_breaker',
+        classification: 'accepted',
+        activeEngine: 'aisha-runtime-pack1',
+        acceptedByPack1: true,
+        repairedByRuntime: false,
+        latencyMs: 2100,
+        operatorDiagnostics: {
+          schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
+          firstAttemptStatus: 'parsed',
+          repairAttemptStatus: '',
+          firstAttemptIssues: [],
+          repairAttemptIssues: [],
+          providerValidationIssues: [],
+          publicQualityIssues: [],
+          plannedSpeakerOrder: ['aisha', 'claudia'],
+          actualSpeakerOrder: ['aisha', 'claudia'],
+          fallbackCategory: '',
+          qualityFailureCategory: ''
+        }
+      }
+    ]
+  }));
+
+  try {
+    const result = await runNodeScript(['scripts/summarize-pulse-operator-diagnostics.mjs', fixturePath]);
+    assert.equal(result.code, 0, result.stderr);
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.schemaVersion, 'studio-pulse.operator-diagnostics-summary.v0.1');
+    assert.equal(summary.acceptance.accepted, 1);
+    assert.equal(summary.acceptance.repaired, 1);
+    assert.equal(summary.turnsWithDiagnostics, 2);
+    assert.equal(summary.issueCounts.firstAttempt['product-generic-advice:fitness'], 1);
+    assert.equal(summary.issueCounts.repairAttempt['recent-repeat-risk'], 1);
+    assert.deepEqual(summary.attemptSummaries[0].plannedSpeakerOrder, ['claudia', 'vanya']);
+    assert.doesNotMatch(result.stdout, /LOL I WANNA GROW MY MUSCLES|incline push-ups|What changed|visiblePreview|cards|prompt|provider payload|raw model/i);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
