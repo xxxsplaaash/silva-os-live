@@ -670,6 +670,83 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
   );
 });
 
+test('Pack 1 social-director prompt keeps Claudia practical line first when Vanya is the referenced card', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-vanya-reference-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = [
+    'Return roomBeat, speakers, silentReactions, and stateUpdates for the Vanya-referenced workout follow-up.',
+    'For a referenced fitness follow-up asking for a 20-minute version, answer exactly that: Claudia first with a timed mini-plan.',
+    'Vanya second only if she adds a fresh social pressure line.'
+  ].join('\n');
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'turn that into a 20 minute version',
+      text: 'turn that into a 20 minute version',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'vanya', content: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+        { speakerId: 'claudia', content: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'turn that into a 20 minute version',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          references: [
+            {
+              speakerId: 'vanya',
+              speakerName: 'Vanya Khumalo',
+              role: 'primary',
+              text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+            }
+          ],
+          impulsePlan: {
+            category: 'practical',
+            topicClass: 'reference-follow-up',
+            maxSpeakers: 2,
+            enforceSelectedSpeakers: true,
+            speakerOrder: ['claudia', 'vanya'],
+            selectedSpeakers: [
+              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using movement categories, not the prior starter list' },
+              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery' },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /Speaker order: claudia -> vanya/);
+  assert.match(prompt.systemPrompt, /Use only selected speakers on the first attempt/i);
+  assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
+  assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
+  assert.match(prompt.systemPrompt, /vanya: Start at home this week\. Three short sessions; no heroic rebrand required/i);
+  assert.match(prompt.systemPrompt, /claudia: Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
+  assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
+  assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery/i);
+});
+
 test('Pack 1 social-director built prompt locks repeat phrase families', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-family-'));
   const outfile = path.join(tempDir, 'promptTemplate.mjs');

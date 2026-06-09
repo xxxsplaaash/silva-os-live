@@ -2278,6 +2278,33 @@ test('social director fallback changes short-session shape after generated focus
   assertCleanVisible(fallback);
 });
 
+test('social director fallback changes short-session shape after accepted compressed Pack 1 plan', () => {
+  const body = {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down; next week add one rep or slow the lowering.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: warm up for three, then two rounds of push, pull, hinge, and core. Log the lowest rep count.' },
+      { speakerId: 'vanya', role: 'side', text: 'Let the clock do the arguing; the ego can decorate later.' }
+    ]
+  };
+  const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
+  const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: body.recentTurns
+  });
+
+  assert.match(text, /\bKeep the body honest, not dramatic\b/i);
+  assert.match(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
+  assert.doesNotMatch(text, /\bDo three rounds: squat or hinge, push, pull, core\b/i);
+  assert.doesNotMatch(text, /\bForty seconds on, twenty off\b/i);
+  assert.doesNotMatch(text, /\bclock do the arguing\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assertCleanVisible(fallback);
+});
+
 test('social director fallback changes shape again after the no-more-loop recovery', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
