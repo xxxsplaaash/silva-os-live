@@ -412,6 +412,42 @@ function formatSelectedSpeakerLineJobs(value: unknown): string {
   ].filter(Boolean).join("\n");
 }
 
+function formatCurrentTurnAcceptanceTarget(value: unknown): string {
+  const socialDirector = asRecord(value);
+  if (!socialDirector) return "";
+
+  const impulsePlan = asRecord(socialDirector["impulsePlan"]);
+  const topicClass = String(readString(impulsePlan, "topicClass") ?? readString(impulsePlan, "category") ?? "").toLowerCase();
+  const currentTurn = [
+    readString(socialDirector, "userMessage"),
+    readString(socialDirector, "generatorPrompt"),
+  ].filter(Boolean).join("\n").toLowerCase();
+
+  const targets: string[] = [];
+  if (/\b(actual tension|tension in this room|room tension)\b/.test(currentTurn)) {
+    targets.push("room-tension: return visible speaker text naming the actual pressure, friction, dodge, safe-choice drift, or consensus problem; empty speakers, silence-only JSON, role summaries, and diagnostics are invalid.");
+  }
+  if (/\b(stressed|stress|this feels dumb|starting to feel dumb|frustrated|annoyed|this sucks)\b/.test(currentTurn)) {
+    targets.push("stress-recovery: lower the temperature in visible dialogue and land one reset move; Vanya may answer alone if the line is concrete, and Claudia may add a timer or checkable next move. No objective slogans, ask-finding loops, or room-theater critique.");
+  }
+  if (/\b(repeating yourself|keep repeating|stop repeating|same answer|same thing again|you are looping|youre looping)\b/.test(currentTurn)) {
+    targets.push("repetition-recovery: acknowledge the loop once, change the answer shape, then give one direct useful line. Do not ask the user to restate the problem and do not invent owner, handoff, team, or project logistics.");
+  }
+  if (/\b(answer normally|respond normally|talk normally)\b/.test(currentTurn)) {
+    targets.push("normal-answer recovery: if the current turn contains a practical task, answer that task directly; only make the line about repetition when the user actually mentions repeating, looping, or the same answer.");
+  }
+  if (/\b(what changed|what was changed|what did .* change|what was my old|old .*preference|prior record|previous)\b/.test(currentTurn) || topicClass === "contradiction") {
+    targets.push("continuity-receipt: when same-slot active and prior/superseded evidence exists, A.I.S.H.A must name both sides as Current record and Prior record; never ask what changed, never return only the active record, and never go silence-only.");
+  }
+
+  if (!targets.length) return "";
+  return [
+    "Current turn acceptance target:",
+    ...targets.map(item => `- ${item}`),
+    "This target is closer than the example bank: satisfy it before writing any softer room color.",
+  ].join("\n");
+}
+
 function formatPresence(value: unknown): string | null {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   const record = asRecord(value);
@@ -533,6 +569,10 @@ function buildStudioPulseContextBlock(input: GeneratorInput): string | null {
     const selectedSpeakerLineJobs = formatSelectedSpeakerLineJobs(socialDirector);
     if (selectedSpeakerLineJobs) {
       lines.push(selectedSpeakerLineJobs);
+    }
+    const currentTurnAcceptanceTarget = formatCurrentTurnAcceptanceTarget(socialDirector);
+    if (currentTurnAcceptanceTarget) {
+      lines.push(currentTurnAcceptanceTarget);
     }
     lines.push("Acceptance examples are pattern pressure, not scripts. Never copy an acceptance example verbatim into visible dialogue.");
     lines.push(`Acceptance examples: ${SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES.join(" ")}`);

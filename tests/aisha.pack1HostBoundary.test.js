@@ -832,6 +832,71 @@ test('Pack 1 social-director prompt pressures room-tension first attempts to spe
   assert.match(prompt.systemPrompt, /grok: name the premise fault or dodge/i);
   assert.match(prompt.systemPrompt, /For room-tension turns, at least one selected speaker must speak visible text/i);
   assert.match(prompt.systemPrompt, /Silence-only JSON is a first-attempt failure/i);
+  assert.match(prompt.systemPrompt, /Current turn acceptance target:/);
+  assert.match(prompt.systemPrompt, /room-tension: return visible speaker text naming the actual pressure/i);
+  assert.match(prompt.systemPrompt, /empty speakers, silence-only JSON, role summaries, and diagnostics are invalid/i);
+  assert.ok(
+    prompt.systemPrompt.indexOf('Current turn acceptance target:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
+    'current-turn acceptance target should steer before softer examples'
+  );
+});
+
+test('Pack 1 social-director prompt gives current-turn targets for stress and normal-answer recovery', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-current-turn-target-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+
+  function promptFor(userMessage, generatorPrompt = `Return roomBeat, speakers, silentReactions, and stateUpdates. User asks: ${userMessage}`) {
+    return buildGenerationPrompt({
+      turn: { rawText: userMessage, text: userMessage },
+      snapshot: { expressiveEnvelope: { certainty: 0.7, load: 0.2, tension: 0.1 } },
+      studioPulseContext: {
+        roomId: 'studio-pulse-social-director',
+        activeSpeakerId: 'aisha',
+        recentMessages: [{ speakerId: 'user', content: userMessage }],
+        projectContext: {
+          socialDirectorV1: {
+            schemaVersion: 'studio-pulse.social-director.v1',
+            userMessage,
+            generatorPrompt,
+            structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+            impulsePlan: {
+              category: 'emotional',
+              topicClass: 'emotional',
+              maxSpeakers: 2,
+              enforceSelectedSpeakers: true,
+              speakerOrder: ['vanya', 'claudia'],
+              selectedSpeakers: [
+                { speakerId: 'vanya', lineJob: 'lower the social temperature in one concrete line' },
+                { speakerId: 'claudia', lineJob: 'add one checkable reset move without project logistics' },
+              ],
+            },
+          },
+        },
+      },
+    });
+  }
+
+  const stressPrompt = promptFor('I am stressed and this is starting to feel dumb.');
+  assert.match(stressPrompt.systemPrompt, /Current turn acceptance target:/);
+  assert.match(stressPrompt.systemPrompt, /stress-recovery: lower the temperature in visible dialogue/i);
+  assert.match(stressPrompt.systemPrompt, /Vanya may answer alone if the line is concrete/i);
+  assert.match(stressPrompt.systemPrompt, /No objective slogans, ask-finding loops, or room-theater critique/i);
+  assert.ok(
+    stressPrompt.systemPrompt.indexOf('Current turn acceptance target:') < stressPrompt.systemPrompt.indexOf('Acceptance examples:'),
+    'stress current-turn target should be before examples'
+  );
+
+  const normalPrompt = promptFor('answer normally, what should I do today?', 'Return a normal answer. User asks: answer normally, what should I do today?');
+  assert.match(normalPrompt.systemPrompt, /normal-answer recovery: if the current turn contains a practical task, answer that task directly/i);
+  assert.match(normalPrompt.systemPrompt, /only make the line about repetition when the user actually mentions repeating/i);
 });
 
 test('Pack 1 social-director prompt keeps Claudia practical line first when Vanya is the referenced card', async () => {
