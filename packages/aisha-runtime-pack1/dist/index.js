@@ -1502,6 +1502,31 @@ ${compactText(content, 260)}`);
     "A different opening that keeps the same metaphor, advice rhythm, or line job still counts as recent-repeat-risk."
   ].join("\n");
 }
+function formatSelectedSpeakerLineJobs(value) {
+  const socialDirector = asRecord(value);
+  if (!socialDirector) return "";
+  const impulsePlan = asRecord(socialDirector["impulsePlan"]);
+  if (!impulsePlan) return "";
+  const selected = Array.isArray(impulsePlan["selectedSpeakers"]) ? impulsePlan["selectedSpeakers"].map((item) => {
+    const speaker = asRecord(item);
+    const speakerId = readString(speaker, "speakerId");
+    const lineJob = readString(speaker, "lineJob");
+    return speakerId && lineJob ? `${speakerId}: ${lineJob}` : "";
+  }).filter(Boolean) : [];
+  const order = Array.isArray(impulsePlan["speakerOrder"]) ? impulsePlan["speakerOrder"].map((item) => asString(item)).filter(Boolean) : [];
+  const maxSpeakers = Number(impulsePlan["maxSpeakers"] || 0);
+  const enforceSelected = impulsePlan["enforceSelectedSpeakers"] === true;
+  if (!selected.length && !order.length && !maxSpeakers && !enforceSelected) return "";
+  return [
+    "First-attempt speaker plan:",
+    order.length ? `Speaker order: ${order.join(" -> ")}` : "",
+    maxSpeakers ? `Max speakers: ${Math.max(1, Math.min(5, maxSpeakers))}` : "",
+    enforceSelected ? "Use only selected speakers on the first attempt; do not add a generic helper voice." : "Prefer selected speakers on the first attempt.",
+    selected.length ? `Selected line jobs: ${selected.join("; ")}` : "",
+    "For practical fitness turns, Claudia must land the concrete movement/timer/reps line before Vanya adds social temperature.",
+    "A Vanya-first generic encouragement line is a first-attempt failure for fitness asks."
+  ].filter(Boolean).join("\n");
+}
 function formatPresence(value) {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   const record = asRecord(value);
@@ -1597,6 +1622,10 @@ function buildStudioPulseContextBlock(input) {
     lines.push(`Line quality rules: ${SOCIAL_DIRECTOR_LINE_QUALITY_RULES.join(" ")}`);
     lines.push(`Line job contracts: ${SOCIAL_DIRECTOR_LINE_JOB_RULES.join(" ")}`);
     lines.push(`Silence reason examples: ${SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS.join(" ")}`);
+    const selectedSpeakerLineJobs = formatSelectedSpeakerLineJobs(socialDirector);
+    if (selectedSpeakerLineJobs) {
+      lines.push(selectedSpeakerLineJobs);
+    }
     lines.push("Acceptance examples are pattern pressure, not scripts. Never copy an acceptance example verbatim into visible dialogue.");
     lines.push(`Acceptance examples: ${SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES.join(" ")}`);
     const flags = asRecord(socialDirector["flags"]);

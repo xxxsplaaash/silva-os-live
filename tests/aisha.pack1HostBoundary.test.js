@@ -599,6 +599,74 @@ test('Pack 1 social-director built prompt separates recent assistant repeat risk
   );
 });
 
+test('Pack 1 social-director built prompt carries first-attempt selected speaker jobs', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-speaker-plan-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = 'Return roomBeat, speakers, silentReactions, and stateUpdates for the referenced workout follow-up.';
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'turn that into a 20 minute version',
+      text: 'turn that into a 20 minute version',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', content: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'turn that into a 20 minute version',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          impulsePlan: {
+            category: 'practical',
+            topicClass: 'reference-follow-up',
+            maxSpeakers: 2,
+            enforceSelectedSpeakers: true,
+            speakerOrder: ['claudia', 'vanya'],
+            selectedSpeakers: [
+              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan with named moves' },
+              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia, no generic encouragement' },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /First-attempt speaker plan:/);
+  assert.match(prompt.systemPrompt, /Speaker order: claudia -> vanya/);
+  assert.match(prompt.systemPrompt, /Max speakers: 2/);
+  assert.match(prompt.systemPrompt, /Use only selected speakers on the first attempt/i);
+  assert.match(prompt.systemPrompt, /claudia: compress the referenced workout into a 20-minute timer plan/i);
+  assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
+  assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
+  assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
+  assert.ok(
+    prompt.systemPrompt.indexOf('First-attempt speaker plan:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
+    'first-attempt speaker plan should apply before softer acceptance examples'
+  );
+});
+
 test('Pack 1 social-director built prompt locks repeat phrase families', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-family-'));
   const outfile = path.join(tempDir, 'promptTemplate.mjs');

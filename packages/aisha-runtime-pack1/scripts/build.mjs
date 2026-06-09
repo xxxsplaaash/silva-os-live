@@ -9,7 +9,7 @@ const repoRoot = path.resolve(packageRoot, "..", "..");
 const distDir = path.join(packageRoot, "dist");
 const tmpDir = path.join(packageRoot, ".tmp-build");
 const declarationTsconfig = path.join(tmpDir, "tsconfig.declarations.json");
-const entryPoint = path.join(packageRoot, "src", "index.ts");
+const entryPoint = "src/index.ts";
 const tscBin = path.join(repoRoot, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
 
 fs.rmSync(distDir, { recursive: true, force: true });
@@ -21,6 +21,7 @@ const external = ["@google/generative-ai", "@google/genai", "pg"];
 
 await build({
   entryPoints: [entryPoint],
+  absWorkingDir: packageRoot,
   bundle: true,
   platform: "node",
   target: "node22",
@@ -32,6 +33,7 @@ await build({
 
 await build({
   entryPoints: [entryPoint],
+  absWorkingDir: packageRoot,
   bundle: true,
   platform: "node",
   target: "node22",
