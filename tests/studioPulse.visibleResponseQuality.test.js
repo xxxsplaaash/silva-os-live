@@ -1110,6 +1110,19 @@ test('visible response quality accepts concrete useful-versus-fake quality split
   });
 
   assert.equal(issueKeys(issues).includes('speaker-flatness:thin-quality-judgment'), false);
+  assert.equal(issueKeys(issues).includes('example-leak:quality-check'), false);
+});
+
+test('visible response quality rejects useful-fake example leakage on design prompts', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.',
+    visibleText: [
+      'Black glass and one red pulse is a mood; generic SaaS is the compromise trying to look premium.',
+      'Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('example-leak:quality-check'));
 });
 
 test('visible response quality rejects live fake planning action promises', () => {

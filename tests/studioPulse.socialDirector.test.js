@@ -722,7 +722,7 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Let the clock do the arguing/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough/i);
   assert.match(prompt, /A\.I\.S\.H\.A: receipt or continuity anchor/i);
-  assert.match(prompt, /Claudia: concrete sequence, owner, timer, movement, or measurable next step/i);
+  assert.match(prompt, /Claudia: concrete sequence, checkpoint, timer, movement, or measurable next step/i);
   assert.match(prompt, /Every silence reason must explain why that character is quiet in this current beat/i);
 });
 
@@ -766,7 +766,7 @@ test('showcase prompt locks recent phrase families before they become repeat ris
   assert.match(prompt, /RECENT REPEAT FAMILY LOCKS/);
   assert.match(prompt, /Vanya recent family: tiny vanity \/ clock-arguing pressure/i);
   assert.match(prompt, /Claudia recent family: three-session timer structure/i);
-  assert.match(prompt, /Grok recent family: track-reps \/ narrative-ambition fault/i);
+  assert.match(prompt, /Grok recent family: track-reps \/ useful-fake fault/i);
   assert.match(prompt, /Leah recent family: pick-the-feeling \/ title-mood verdict/i);
   assert.match(prompt, /Replace the family, not only the exact words/i);
   assert.doesNotMatch(prompt, /user recent family/i);
@@ -877,7 +877,7 @@ test('showcase prompt carries line-job, attribution, and continuity receipt cont
   assert.match(prompt, /A\.I\.S\.H\.A continuity receipt format: Current record:/i);
   assert.match(prompt, /Vanya line job: human signal plus one specific social pressure/i);
   assert.match(prompt, /Leah line job: taste verdict plus one cultural or visual stake/i);
-  assert.match(prompt, /Claudia line job: sequence, owner, timer, count, or next measurable move/i);
+  assert.match(prompt, /Claudia line job: sequence, checkpoint, timer, count, or next measurable move/i);
   assert.match(prompt, /Grok line job: premise fault plus one dry consequence/i);
   assert.match(prompt, /Do not borrow Claudia's timers or counts for Vanya/i);
   assert.match(prompt, /A\.I\.S\.H\.A silence example: holding authority until the room needs correction/i);
@@ -950,7 +950,7 @@ test('showcase prompt carries minimum voice signatures for attribution drift fam
   assert.match(prompt, /A\.I\.S\.H\.A floor: record, receipt, evidence, current\/prior, or grounded distinction/i);
   assert.match(prompt, /Vanya floor: temperature, dignity, human pressure, breathable reset, or room warmth/i);
   assert.match(prompt, /Leah floor: taste, status, edge, boredom, cultural pressure, or visual stake/i);
-  assert.match(prompt, /Claudia floor: first step, timer, owner, sequence, count, or measurable next move/i);
+  assert.match(prompt, /Claudia floor: first step, timer, checkpoint, sequence, count, constraint, or measurable next move/i);
   assert.match(prompt, /Grok floor: premise, fault line, useful\/fake judgment, evidence, or dry consequence/i);
   assert.match(prompt, /If a line could be moved to another speaker without changing words, rewrite it/i);
 });
@@ -970,7 +970,7 @@ test('showcase prompt locks speaker-specific attribution borrow families', () =>
 
   assert.match(prompt, /ATTRIBUTION DRIFT LOCKS/i);
   assert.match(prompt, /blind reading can identify the speaker without the speakerId/i);
-  assert.match(prompt, /Do not give Vanya Claudia machinery: timers, owners, numbered blocks, measurable next moves, or handoff logistics/i);
+  assert.match(prompt, /Do not give Vanya Claudia machinery: timers, numbered blocks, measurable next moves, or handoff logistics/i);
   assert.match(prompt, /Do not give Claudia Vanya warmth: temperature, room dignity, breathable reset, social pressure, or emotional landing/i);
   assert.match(prompt, /Do not give Leah Grok machinery or Claudia plans/i);
   assert.match(prompt, /Do not give Grok Leah taste or A\.I\.S\.H\.A receipts/i);
@@ -1099,6 +1099,35 @@ test('social director quality validator rejects generic planning owner handoff p
 
   assert.equal(validation.ok, false);
   assert.ok(validation.issues.includes('product-invented-detail:project-planning'));
+});
+
+test('social director quality validator rejects useful-fake example leakage on design prompts', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The design turn borrows a prior Grok quality check.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'leah',
+        role: 'primary',
+        tone: 'sharp taste',
+        text: 'Black glass and one red pulse is a mood; generic SaaS is the compromise trying to look premium.'
+      },
+      {
+        speakerId: 'grok',
+        role: 'side',
+        tone: 'dry',
+        text: 'Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I need a sharper landing page direction for Silva: black glass, one red pulse, no generic SaaS look.'
+  });
+
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('product-example-leak:quality-check'));
 });
 
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {

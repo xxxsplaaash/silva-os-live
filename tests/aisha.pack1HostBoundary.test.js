@@ -484,14 +484,19 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /workflow alignment, deliverables, production readiness, and stakeholder language/i);
   assert.match(prompt.systemPrompt, /not process readiness or delivery theater/i);
   assert.match(prompt.systemPrompt, /For planning-tomorrow asks, give a plain day skeleton/i);
-  assert.match(prompt.systemPrompt, /Tomorrow: first block for the hardest task/i);
+  assert.match(prompt.systemPrompt, /First step: 60-minute hardest-task block/i);
+  assert.match(prompt.systemPrompt, /20-minute cleanup block/i);
+  assert.match(prompt.systemPrompt, /one checkpoint before you stop/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human: one hard thing early/i);
   assert.doesNotMatch(prompt.systemPrompt, /room earns another sentence/i);
   assert.match(prompt.systemPrompt, /Acceptance examples:/);
+  assert.match(prompt.systemPrompt, /Acceptance examples are pattern pressure, not scripts/i);
+  assert.match(prompt.systemPrompt, /Never copy an acceptance example verbatim/i);
   assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
   assert.match(prompt.systemPrompt, /No slogan\. Same twenty minutes, cleaner shape/i);
-  assert.match(prompt.systemPrompt, /Partly useful: it named the dodge/i);
+  assert.match(prompt.systemPrompt, /Useful half: it caught the dodge/i);
+  assert.doesNotMatch(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);
   assert.match(prompt.systemPrompt, /Line job contracts:/i);
@@ -562,6 +567,65 @@ test('Pack 1 social-director built prompt separates recent assistant repeat risk
     prompt.systemPrompt.match(/Recent assistant\/card repeat risks:[\s\S]*?Recent room messages:/)?.[0] || '',
     /Do not treat my line as an assistant answer/i
   );
+});
+
+test('Pack 1 social-director built prompt locks repeat phrase families', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-family-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = 'Return roomBeat, speakers, silentReactions, and stateUpdates without repeating the prior card.';
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'Same topic, but stop sounding like the last card.',
+      text: 'Same topic, but stop sounding like the last card.',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'This user line is a conversational anchor, not a repeat-risk family.' },
+        { speakerId: 'vanya', content: 'Let the clock do the arguing; the ego can decorate later.' },
+        { speakerId: 'claudia', content: 'Start with three 20-minute sessions and write the reps down before you stop.' },
+        { speakerId: 'leah', content: 'One strong world, not wallpaper; pick the feeling first.' },
+        { speakerId: 'grok', content: 'Track reps, because narrative ambition is not a training plan.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'Same topic, but stop sounding like the last card.',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /Recent repeat family locks:/i);
+  assert.match(prompt.systemPrompt, /Replace the family, not only the exact words/i);
+  assert.match(prompt.systemPrompt, /vanya: recent family 'tiny vanity \/ clock-arguing pressure'/i);
+  assert.match(prompt.systemPrompt, /Claudia must use a different structure shape/i);
+  assert.match(prompt.systemPrompt, /do not invent owners or handoffs/i);
+  assert.doesNotMatch(prompt.systemPrompt, /one owner/i);
+  assert.match(prompt.systemPrompt, /Leah must use a fresh taste verdict/i);
+  assert.match(prompt.systemPrompt, /Grok must name a new premise consequence/i);
+  assert.match(prompt.systemPrompt, /useful\/fake self-review language/i);
+  assert.match(prompt.systemPrompt, /same metaphor, advice rhythm, or line job still counts as recent-repeat-risk/i);
+  assert.doesNotMatch(prompt.systemPrompt, /user: recent family/i);
 });
 
 test('Pack 1 host surfaces same-turn memory follow-up writes when store summary is empty', async () => {

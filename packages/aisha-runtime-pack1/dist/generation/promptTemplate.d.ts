@@ -49,7 +49,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Work planning";
     readonly speakerId: "claudia";
-    readonly text: "Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery.";
+    readonly text: "First step: 60-minute hardest-task block, 20-minute cleanup block, one checkpoint before you stop. Leave one real gap.";
 }, {
     readonly scenario: "Work planning";
     readonly speakerId: "vanya";
@@ -65,7 +65,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Quality challenge";
     readonly speakerId: "grok";
-    readonly text: "Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.";
+    readonly text: "Useful half: it caught the dodge. Fake half: it became critique instead of answer.";
 }, {
     readonly scenario: "Continuity receipt";
     readonly speakerId: "aisha";

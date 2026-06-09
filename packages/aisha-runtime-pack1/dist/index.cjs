@@ -1241,7 +1241,7 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
-  "For planning-tomorrow asks, give a plain day skeleton with blocks, owner/risk, and a recovery gap; do not invent client agendas, KPI decks, deliverables, or EOD reporting.",
+  "For planning-tomorrow asks, give a plain day skeleton with blocks, a checkpoint/risk, and a recovery gap; do not invent owners, handoffs, client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
   "Reject operational jargon such as design brief, implementation parameters, status green, current objectives, workflow alignment, deliverables, production readiness, and stakeholder language; translate it into visible taste, concrete options, or one next move.",
@@ -1261,7 +1261,7 @@ var SOCIAL_DIRECTOR_LINE_JOB_RULES = [
   "A.I.S.H.A line job: continuity receipt, contradiction correction, or precision anchor; use Current record/Prior record when evidence exists.",
   "Vanya line job: human temperature plus one specific social pressure; no timers, counts, project steps, or therapy-script validation.",
   "Leah line job: taste verdict plus cultural or visual stake; no project-management advice and no empty insult-comic cruelty.",
-  "Claudia line job: sequence, owner, timer, count, movement, food option, or next measurable move; no emotional landing.",
+  "Claudia line job: sequence, checkpoint, timer, count, movement, food option, or next measurable move; no emotional landing and no invented owner/handoff.",
   "Grok line job: premise fault plus one dry consequence; no random joke, no generic tech commentary, no receipt format unless challenging a rewrite."
 ];
 var SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS = [
@@ -1325,7 +1325,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Work planning",
     speakerId: "claudia",
-    text: "Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery."
+    text: "First step: 60-minute hardest-task block, 20-minute cleanup block, one checkpoint before you stop. Leave one real gap."
   },
   {
     scenario: "Work planning",
@@ -1345,7 +1345,7 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Quality challenge",
     speakerId: "grok",
-    text: "Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person."
+    text: "Useful half: it caught the dodge. Fake half: it became critique instead of answer."
   },
   {
     scenario: "Continuity receipt",
@@ -1426,6 +1426,65 @@ function formatAssistantRepeatRisks(value) {
     const content = readString(record, "content") ?? "";
     return content ? `${speaker}: ${compactText(content, 180)}` : "";
   }).filter(Boolean).join("\n");
+}
+var RECENT_REPEAT_FAMILY_RULES = [
+  {
+    speakerId: "vanya",
+    label: "tiny vanity / clock-arguing pressure",
+    pattern: /\b(tiny vanity|massive discipline|let the clock do the arguing|ego can decorate|heroic rebrand|leave the ceremony outside|turn it into a thesis)\b/i,
+    instruction: "Vanya must choose a new human-pressure image and avoid discipline, clock, ceremony, and thesis phrasing."
+  },
+  {
+    speakerId: "claudia",
+    label: "three-session timer structure",
+    pattern: /\b(start with three|three 20-minute sessions|same days every week|write (one|the) number down|write reps down|run the clock|warm up for)\b/i,
+    instruction: "Claudia must use a different structure shape: one clear constraint, one checkpoint, or one next measurable move; do not invent owners or handoffs."
+  },
+  {
+    speakerId: "grok",
+    label: "track-reps / useful-fake fault",
+    pattern: /\b(track reps|narrative ambition|otherwise you are just|premise fault|fault line|evidence beats|prove a point|partly useful|useful half|useful part|fake part|fake half|it named the dodge|stopped answering the person)\b/i,
+    instruction: "Grok must name a new premise consequence without track, proof, narrative-ambition, or useful/fake self-review language unless the current user asks for that judgment."
+  },
+  {
+    speakerId: "leah",
+    label: "pick-the-feeling / title-mood verdict",
+    pattern: /\b(pick the feeling first|title is just|mood it wants|one strong world|not wallpaper|status pressure|cultural fault line)\b/i,
+    instruction: "Leah must use a fresh taste verdict and avoid title, mood, world, and status-pressure phrasing."
+  },
+  {
+    speakerId: "aisha",
+    label: "current-prior receipt frame",
+    pattern: /\b(current record|prior record|active record|superseded|no quiet rewrite|ledger|receipt)\b/i,
+    instruction: "A.I.S.H.A may use receipts only for continuity asks; otherwise move to a concise authority line."
+  }
+];
+function normalizeSpeakerId(value) {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (text === "gerhard") return "grok";
+  if (text === "a.i.s.h.a" || text === "aisha-runtime-pack1") return "aisha";
+  return ["aisha", "vanya", "leah", "claudia", "grok", "user"].includes(text) ? text : "";
+}
+function formatRecentRepeatFamilyLocks(value) {
+  if (!Array.isArray(value)) return "";
+  const textBySpeaker = /* @__PURE__ */ new Map();
+  for (const item of value) {
+    const record = asRecord(item);
+    const speakerId = normalizeSpeakerId(readString(record, "speakerId") ?? readString(record, "role") ?? "");
+    if (!speakerId || speakerId === "user") continue;
+    const content = readString(record, "content") ?? readString(record, "text") ?? "";
+    if (!content) continue;
+    textBySpeaker.set(speakerId, `${textBySpeaker.get(speakerId) ?? ""}
+${compactText(content, 260)}`);
+  }
+  const locks = RECENT_REPEAT_FAMILY_RULES.filter((rule) => rule.pattern.test(textBySpeaker.get(rule.speakerId) ?? "")).map((rule) => `${rule.speakerId}: recent family '${rule.label}'. ${rule.instruction}`);
+  if (!locks.length) return "";
+  return [
+    "Recent repeat family locks:",
+    "Recent output used these phrase families. Replace the family, not only the exact words.",
+    ...locks,
+    "A different opening that keeps the same metaphor, advice rhythm, or line job still counts as recent-repeat-risk."
+  ].join("\n");
 }
 function formatPresence(value) {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
@@ -1522,6 +1581,7 @@ function buildStudioPulseContextBlock(input) {
     lines.push(`Line quality rules: ${SOCIAL_DIRECTOR_LINE_QUALITY_RULES.join(" ")}`);
     lines.push(`Line job contracts: ${SOCIAL_DIRECTOR_LINE_JOB_RULES.join(" ")}`);
     lines.push(`Silence reason examples: ${SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS.join(" ")}`);
+    lines.push("Acceptance examples are pattern pressure, not scripts. Never copy an acceptance example verbatim into visible dialogue.");
     lines.push(`Acceptance examples: ${SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES.join(" ")}`);
     const flags = asRecord(socialDirector["flags"]);
     if (flags) {
@@ -1536,6 +1596,10 @@ function buildStudioPulseContextBlock(input) {
         lines.push(`Recent assistant/card repeat risks:
 ${repeatRisks}
 User recent lines are anchors, not answer text to imitate.`);
+      }
+      const repeatFamilyLocks = formatRecentRepeatFamilyLocks(recentMessages2);
+      if (repeatFamilyLocks) {
+        lines.push(repeatFamilyLocks);
       }
       const recent = recentMessages2.slice(-6).map((item) => {
         const record = asRecord(item);
