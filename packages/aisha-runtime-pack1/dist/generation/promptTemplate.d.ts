@@ -55,6 +55,14 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly speakerId: "vanya";
     readonly text: "Feed the session, not the performance; small if training is close, human if the day is messy.";
 }, {
+    readonly scenario: "Ordinary lunch practical";
+    readonly speakerId: "claudia";
+    readonly text: "One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water. Choose the boring baseline and stop.";
+}, {
+    readonly scenario: "Ordinary lunch practical";
+    readonly speakerId: "vanya";
+    readonly text: "Keep lunch boring in the useful way; feed the afternoon without turning it into a personality test.";
+}, {
     readonly scenario: "Work planning";
     readonly speakerId: "claudia";
     readonly text: "First step: 60-minute hardest-task block, 20-minute cleanup block, one checkpoint before you stop. Leave one real gap.";

@@ -335,6 +335,8 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /No solid-goal, protein\/sleep, consistency, habit, or progressive-overload boilerplate/i);
   assert.match(promptSource, /incline push-ups, backpack rows, split squats, hip hinges, plank/i);
   assert.match(promptSource, /food or design direction directly/i);
+  assert.match(promptSource, /Ordinary lunch or meal asks are not training-food asks/i);
+  assert.match(promptSource, /do not mention training, movement, performance, session fuel, or workout timing/i);
   assert.match(promptSource, /contrast current and prior claims/i);
   assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);
   assert.match(promptSource, /For repetition complaints, acknowledge the loop once/i);
@@ -356,6 +358,7 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Normal-answer recovery/);
   assert.match(promptSource, /Movie pivot after fitness/);
   assert.match(promptSource, /Food practical/);
+  assert.match(promptSource, /Ordinary lunch practical/);
   assert.match(promptSource, /Design direction/);
   assert.match(promptSource, /Quality challenge/);
   assert.match(promptSource, /Room tension/);
@@ -517,6 +520,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Acceptance examples are pattern pressure, not scripts/i);
   assert.match(prompt.systemPrompt, /Never copy an acceptance example verbatim/i);
   assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
+  assert.match(prompt.systemPrompt, /Ordinary lunch practical:/i);
+  assert.match(prompt.systemPrompt, /One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water/i);
+  assert.match(prompt.systemPrompt, /without turning it into a personality test/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
   assert.doesNotMatch(prompt.systemPrompt, /write one note about what changed/i);
@@ -541,6 +547,74 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /For stress\/frustration turns, do not answer with objective slogans/i);
   assert.match(prompt.systemPrompt, /questions that shift the burden back to the user/i);
   assert.match(prompt.systemPrompt, /A movie prompt after fitness is a movie prompt/i);
+});
+
+test('Pack 1 social-director prompt separates ordinary lunch from training fuel', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-lunch-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = 'Return roomBeat, speakers, silentReactions, and stateUpdates for an ordinary lunch ask.';
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'quick help: what should I eat for lunch?',
+      text: 'quick help: what should I eat for lunch?',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', content: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' },
+        { speakerId: 'vanya', content: 'Feed the session, not the performance. Small if training is close; bigger if you have time.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'quick help: what should I eat for lunch?',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          impulsePlan: {
+            category: 'practical',
+            topicClass: 'food choice',
+            maxSpeakers: 2,
+            enforceSelectedSpeakers: true,
+            speakerOrder: ['claudia', 'vanya'],
+            selectedSpeakers: [
+              { speakerId: 'claudia', lineJob: 'answer ordinary lunch with named food options first; no workout timing or fuel framing' },
+              { speakerId: 'vanya', lineJob: 'add human temperature without performance, training, movement, or session-fuel language' },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /Ordinary lunch or meal asks are not training-food asks/i);
+  assert.match(prompt.systemPrompt, /For ordinary lunch, name lunch options first/i);
+  assert.match(prompt.systemPrompt, /do not mention training, movement, performance, session fuel, or workout timing/i);
+  assert.match(prompt.systemPrompt, /Ordinary lunch practical:/i);
+  assert.match(prompt.systemPrompt, /One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water/i);
+  assert.match(prompt.systemPrompt, /Keep lunch boring in the useful way/i);
+  assert.match(prompt.systemPrompt, /claudia: answer ordinary lunch with named food options first/i);
+  assert.match(prompt.systemPrompt, /vanya: add human temperature without performance, training, movement/i);
+  assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
+  assert.match(prompt.systemPrompt, /vanya: Feed the session, not the performance/i);
+  assert.match(prompt.systemPrompt, /Recent assistant\/card repeat risks:/i);
 });
 
 test('Pack 1 social-director built prompt separates recent assistant repeat risks from user anchors', async () => {

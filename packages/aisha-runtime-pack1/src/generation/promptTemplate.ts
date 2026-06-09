@@ -34,6 +34,7 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "For planning-tomorrow asks, give a plain day skeleton with blocks, a checkpoint/risk, and a recovery gap; do not invent owners, handoffs, client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
+  "Ordinary lunch or meal asks are not training-food asks unless the user says training, workout, gym, lifting, before, after, pre, or post. For ordinary lunch, name lunch options first and do not mention training, movement, performance, session fuel, or workout timing.",
   "Reject operational jargon such as design brief, implementation parameters, status green, current objectives, workflow alignment, deliverables, production readiness, and stakeholder language; translate it into visible taste, concrete options, or one next move.",
   "For design, food, planning, and room-social asks, answer the visible choice or next action, not process readiness or delivery theater.",
   "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
@@ -128,6 +129,16 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     scenario: "Food practical",
     speakerId: "vanya",
     text: "Feed the session, not the performance; small if training is close, human if the day is messy.",
+  },
+  {
+    scenario: "Ordinary lunch practical",
+    speakerId: "claudia",
+    text: "One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water. Choose the boring baseline and stop.",
+  },
+  {
+    scenario: "Ordinary lunch practical",
+    speakerId: "vanya",
+    text: "Keep lunch boring in the useful way; feed the afternoon without turning it into a personality test.",
   },
   {
     scenario: "Work planning",
@@ -226,6 +237,7 @@ const SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Normal-answer recovery: ${targetLinesForScenario("Normal-answer recovery")}`,
   `Movie pivot after fitness: ${targetLinesForScenario("Movie pivot after fitness")}`,
   `Food practical: ${targetLinesForScenario("Food practical")}`,
+  `Ordinary lunch practical: ${targetLinesForScenario("Ordinary lunch practical")}`,
   `Work planning: ${targetLinesForScenario("Work planning")}`,
   `Design direction: ${targetLinesForScenario("Design direction")}`,
   `Quality challenge: ${targetLinesForScenario("Quality challenge")}`,
