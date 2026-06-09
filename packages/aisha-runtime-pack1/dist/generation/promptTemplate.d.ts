@@ -39,6 +39,14 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly speakerId: "vanya";
     readonly text: "Make the day smaller: one useful pass, less ceremony, enough air to stay human.";
 }, {
+    readonly scenario: "Stress recovery";
+    readonly speakerId: "vanya";
+    readonly text: "Make the room human again: water first, one clear surface, and let the drama wait outside.";
+}, {
+    readonly scenario: "Stress recovery";
+    readonly speakerId: "claudia";
+    readonly text: "First step: close the noisy tab, set a ten-minute timer, mark one visible result, then stop.";
+}, {
     readonly scenario: "Movie pivot after fitness";
     readonly speakerId: "leah";
     readonly text: "One strong world, not wallpaper; consensus is where taste goes to get sleepy.";
@@ -114,6 +122,10 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly scenario: "Continuity receipt";
     readonly speakerId: "grok";
     readonly text: "Track the contradiction; otherwise the old record gets erased by pressure.";
+}, {
+    readonly scenario: "Continuity change receipt";
+    readonly speakerId: "aisha";
+    readonly text: "Changed: Prior record: landing page style is black glass with a single red pulse. Current record: landing page style is white editorial with no red.";
 }, {
     readonly scenario: "Old preference receipt";
     readonly speakerId: "aisha";

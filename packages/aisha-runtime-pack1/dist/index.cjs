@@ -1321,6 +1321,16 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Make the day smaller: one useful pass, less ceremony, enough air to stay human."
   },
   {
+    scenario: "Stress recovery",
+    speakerId: "vanya",
+    text: "Make the room human again: water first, one clear surface, and let the drama wait outside."
+  },
+  {
+    scenario: "Stress recovery",
+    speakerId: "claudia",
+    text: "First step: close the noisy tab, set a ten-minute timer, mark one visible result, then stop."
+  },
+  {
     scenario: "Movie pivot after fitness",
     speakerId: "leah",
     text: "One strong world, not wallpaper; consensus is where taste goes to get sleepy."
@@ -1416,6 +1426,11 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Track the contradiction; otherwise the old record gets erased by pressure."
   },
   {
+    scenario: "Continuity change receipt",
+    speakerId: "aisha",
+    text: "Changed: Prior record: landing page style is black glass with a single red pulse. Current record: landing page style is white editorial with no red."
+  },
+  {
     scenario: "Old preference receipt",
     speakerId: "aisha",
     text: "Old record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents."
@@ -1445,6 +1460,7 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `20-minute fitness follow-up: ${targetLinesForScenario("20-minute fitness follow-up")}`,
   `Objective/frustration recovery after fitness: ${targetLinesForScenario("Objective/frustration recovery after fitness")}`,
   `Normal-answer recovery: ${targetLinesForScenario("Normal-answer recovery")}`,
+  `Stress recovery: ${targetLinesForScenario("Stress recovery")}`,
   `Movie pivot after fitness: ${targetLinesForScenario("Movie pivot after fitness")}`,
   `Food practical: ${targetLinesForScenario("Food practical")}`,
   `Ordinary lunch practical: ${targetLinesForScenario("Ordinary lunch practical")}`,
@@ -1454,6 +1470,7 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Room tension: ${targetLinesForScenario("Room tension")}`,
   `Repetition complaint: ${targetLinesForScenario("Repetition complaint")}`,
   `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`,
+  `Continuity change receipt: ${targetLinesForScenario("Continuity change receipt")}`,
   `Old preference receipt: ${targetLinesForScenario("Old preference receipt")}`
 ];
 function asString(value) {

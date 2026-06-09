@@ -522,6 +522,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Normal-answer recovery:/i);
   assert.match(prompt.systemPrompt, /First step: set a twenty-minute timer/i);
   assert.match(prompt.systemPrompt, /Make the day smaller: one useful pass/i);
+  assert.match(prompt.systemPrompt, /Stress recovery:/i);
+  assert.match(prompt.systemPrompt, /Make the room human again: water first/i);
+  assert.match(prompt.systemPrompt, /First step: close the noisy tab, set a ten-minute timer/i);
   assert.doesNotMatch(prompt.systemPrompt, /room earns another sentence/i);
   assert.match(prompt.systemPrompt, /Acceptance examples:/);
   assert.match(prompt.systemPrompt, /Acceptance examples are pattern pressure, not scripts/i);
@@ -541,6 +544,8 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Taste problem: the safe choice is too neat/i);
   assert.match(prompt.systemPrompt, /Repetition complaint:/);
   assert.match(prompt.systemPrompt, /one concrete action, one short reason, one checkable result/i);
+  assert.match(prompt.systemPrompt, /Continuity change receipt:/);
+  assert.match(prompt.systemPrompt, /Changed: Prior record: landing page style is black glass with a single red pulse/i);
   assert.match(prompt.systemPrompt, /Old preference receipt:/);
   assert.match(prompt.systemPrompt, /Old record: dashboard preference is obsidian with one red accent/i);
   assert.doesNotMatch(prompt.systemPrompt, /Partly useful: it named the dodge/i);
