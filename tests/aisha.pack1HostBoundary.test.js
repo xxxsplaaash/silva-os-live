@@ -336,6 +336,8 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /food or design direction directly/i);
   assert.match(promptSource, /contrast current and prior claims/i);
   assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);
+  assert.match(promptSource, /For repetition complaints, acknowledge the loop once/i);
+  assert.match(promptSource, /For room-tension asks, at least one speaker must name the actual social pressure/i);
   assert.match(promptSource, /ask-finding loops/i);
   assert.match(promptSource, /visible silence reason/i);
   assert.match(promptSource, /Vanya:/);
@@ -355,7 +357,10 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Food practical/);
   assert.match(promptSource, /Design direction/);
   assert.match(promptSource, /Quality challenge/);
+  assert.match(promptSource, /Room tension/);
+  assert.match(promptSource, /Repetition complaint/);
   assert.match(promptSource, /Continuity receipt/);
+  assert.match(promptSource, /Old preference receipt/);
   assert.match(adapterSource, /blind-attributable/i);
   assert.match(adapterSource, /different sentence shapes/i);
   assert.match(adapterSource, /current-beat reason/i);
@@ -365,7 +370,10 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(adapterSource, /Do not write silent reasons as generic waiting/i);
   assert.match(adapterSource, /practical, food, design, or continuity asks/i);
   assert.match(adapterSource, /generic advice or operations language/i);
+  assert.match(adapterSource, /room-tension asks/i);
+  assert.match(adapterSource, /repetition complaints/i);
   assert.match(adapterSource, /Prior record is allowed only for same-slot evidence/i);
+  assert.match(adapterSource, /What changed or old-preference asks/i);
   assert.match(promptSource, /Line quality rules: \$\{SOCIAL_DIRECTOR_LINE_QUALITY_RULES\.join\(" "\)\}/);
   assert.match(promptSource, /Line job contracts: \$\{SOCIAL_DIRECTOR_LINE_JOB_RULES\.join\(" "\)\}/);
   assert.match(promptSource, /Silence reason examples: \$\{SOCIAL_DIRECTOR_SILENCE_REASON_TARGETS\.join\(" "\)\}/);
@@ -512,6 +520,12 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
   assert.doesNotMatch(prompt.systemPrompt, /write one note about what changed/i);
   assert.match(prompt.systemPrompt, /Useful half: it caught the dodge/i);
+  assert.match(prompt.systemPrompt, /Room tension:/);
+  assert.match(prompt.systemPrompt, /Taste problem: the safe choice is too neat/i);
+  assert.match(prompt.systemPrompt, /Repetition complaint:/);
+  assert.match(prompt.systemPrompt, /one concrete action, one short reason, one checkable result/i);
+  assert.match(prompt.systemPrompt, /Old preference receipt:/);
+  assert.match(prompt.systemPrompt, /Old record: dashboard preference is obsidian with one red accent/i);
   assert.doesNotMatch(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);
   assert.match(prompt.systemPrompt, /Claudia: practical sequencing, constraints, delivery shape/i);

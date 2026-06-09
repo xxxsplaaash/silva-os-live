@@ -1761,6 +1761,14 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics l
         assert.equal(final.ok, true);
         assert.equal(final.acceptedByPack1, true);
         assert.equal(final.operatorDiagnostics.schemaVersion, 'studio-pulse.operator-diagnostics.v0.1');
+        assert.equal(final.operatorDiagnostics.firstAttemptCategory, 'quality-rejected');
+        assert.equal(final.operatorDiagnostics.repairAttemptCategory, '');
+        assert.equal(final.operatorDiagnostics.firstAttemptAccepted, false);
+        assert.equal(final.operatorDiagnostics.repairAttemptAccepted, true);
+        assert.equal(final.operatorDiagnostics.firstAttemptResponseMode, 'small_exchange');
+        assert.equal(final.operatorDiagnostics.repairAttemptResponseMode, 'small_exchange');
+        assert.deepEqual(final.operatorDiagnostics.firstAttemptSpeakerOrder, ['vanya']);
+        assert.deepEqual(final.operatorDiagnostics.repairAttemptSpeakerOrder, ['claudia', 'vanya']);
         assert.ok(final.operatorDiagnostics.firstAttemptIssues.includes('product-topic-ignored:referenced-fitness'));
         assert.ok(final.operatorDiagnostics.firstAttemptIssues.includes('voice-lock:blind-attribution:vanya'));
         assert.deepEqual(final.operatorDiagnostics.actualSpeakerOrder, ['claudia', 'vanya']);
@@ -1827,6 +1835,8 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics l
         assert.equal(productionDiagnosticsResponse.status, 200);
         const productionDiagnosticsFinal = parseSseEvents(await productionDiagnosticsResponse.text()).find(item => item.event === 'final').data;
         assert.equal(productionDiagnosticsFinal.operatorDiagnostics.schemaVersion, 'studio-pulse.operator-diagnostics.v0.1');
+        assert.equal(productionDiagnosticsFinal.operatorDiagnostics.firstAttemptCategory, 'quality-rejected');
+        assert.equal(typeof productionDiagnosticsFinal.operatorDiagnostics.repairAttemptAccepted, 'boolean');
         assert.ok(productionDiagnosticsFinal.operatorDiagnostics.firstAttemptIssues.includes('product-topic-ignored:referenced-fitness'));
       });
     } finally {

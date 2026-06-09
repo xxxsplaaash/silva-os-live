@@ -2876,6 +2876,22 @@ function pulseShowcaseOperatorDiagnostics({
     activeEngine: safeShowcaseText(activeEngine || payload.activeEngine || '', 80),
     firstAttemptStatus: safeShowcaseText(validation.firstAttemptStatus || '', 80),
     repairAttemptStatus: safeShowcaseText(validation.repairAttemptStatus || '', 80),
+    firstAttemptCategory: safeShowcaseText(validation.firstAttemptCategory || '', 80),
+    repairAttemptCategory: safeShowcaseText(validation.repairAttemptCategory || '', 80),
+    firstAttemptAccepted: validation.firstAttemptAccepted === true,
+    repairAttemptAccepted: validation.repairAttemptAccepted === true,
+    firstAttemptIssueCount: Math.max(0, Math.min(50, Math.round(Number(validation.firstAttemptIssueCount || 0) || 0))),
+    repairAttemptIssueCount: Math.max(0, Math.min(50, Math.round(Number(validation.repairAttemptIssueCount || 0) || 0))),
+    firstAttemptResponseMode: safeShowcaseText(validation.firstAttemptResponseMode || '', 40),
+    repairAttemptResponseMode: safeShowcaseText(validation.repairAttemptResponseMode || '', 40),
+    firstAttemptSpeakerOrder: (Array.isArray(validation.firstAttemptSpeakerOrder) ? validation.firstAttemptSpeakerOrder : [])
+      .map(item => safeShowcaseText(item, 40))
+      .filter(Boolean)
+      .slice(0, 5),
+    repairAttemptSpeakerOrder: (Array.isArray(validation.repairAttemptSpeakerOrder) ? validation.repairAttemptSpeakerOrder : [])
+      .map(item => safeShowcaseText(item, 40))
+      .filter(Boolean)
+      .slice(0, 5),
     firstAttemptIssues: safePulseShowcaseIssueList(validation.firstAttemptIssues || []),
     repairAttemptIssues: safePulseShowcaseIssueList(validation.repairAttemptIssues || []),
     providerValidationIssues: safePulseShowcaseIssueList(validation.issues || []),

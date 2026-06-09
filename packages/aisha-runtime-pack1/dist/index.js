@@ -1212,7 +1212,10 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
   "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
   "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
+  "For repetition complaints, acknowledge the loop once, change the answer shape, and give one direct useful line; do not defend the previous answer, ask the user to restate the problem, or invent owner/handoff logistics.",
+  "For room-tension asks, at least one speaker must name the actual social pressure in the room: safe-choice drift, dodge, bland consensus, usefulness versus warmth, or status friction. Silence-only output is invalid.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "For 'What changed?' and old-preference asks, A.I.S.H.A must answer with Prior record and Current record when same-slot active/superseded evidence exists; never ask what changed and never return no-content.",
   "For continuity receipts, cite Prior record only when prior or superseded evidence is the same user slot: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction. If no same-slot prior exists, say only Current record logged.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
@@ -1322,6 +1325,36 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Useful half: it caught the dodge. Fake half: it became critique instead of answer."
   },
   {
+    scenario: "Room tension",
+    speakerId: "vanya",
+    text: "Alive, but allergic to becoming a task queue. The warmth is fighting the usefulness underneath."
+  },
+  {
+    scenario: "Room tension",
+    speakerId: "leah",
+    text: "Taste problem: the safe choice is too neat, and consensus is trying to look like restraint."
+  },
+  {
+    scenario: "Room tension",
+    speakerId: "grok",
+    text: "Fault line: everyone wants direct, then dodges into performance when the answer gets uncomfortable."
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "vanya",
+    text: "I hear the irritation. Breathe once: one plain answer, less ceremony, no performance loop, keep it human."
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "claudia",
+    text: "Next answer: one concrete action, one short reason, one checkable result. Then stop."
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "grok",
+    text: "Correct. Repetition is the fault line: a failed answer wearing confidence."
+  },
+  {
     scenario: "Continuity receipt",
     speakerId: "aisha",
     text: "Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent."
@@ -1330,6 +1363,11 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     scenario: "Continuity receipt",
     speakerId: "grok",
     text: "Track the contradiction; otherwise the old record gets erased by pressure."
+  },
+  {
+    scenario: "Old preference receipt",
+    speakerId: "aisha",
+    text: "Old record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents."
   }
 ];
 function targetLinesForScenario(scenario) {
@@ -1361,7 +1399,10 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Work planning: ${targetLinesForScenario("Work planning")}`,
   `Design direction: ${targetLinesForScenario("Design direction")}`,
   `Quality challenge: ${targetLinesForScenario("Quality challenge")}`,
-  `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`
+  `Room tension: ${targetLinesForScenario("Room tension")}`,
+  `Repetition complaint: ${targetLinesForScenario("Repetition complaint")}`,
+  `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`,
+  `Old preference receipt: ${targetLinesForScenario("Old preference receipt")}`
 ];
 function asString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -2299,7 +2340,7 @@ ${mandatoryBrief}`;
       prompt.userMessage = `${prompt.userMessage}
 
 --- SOCIAL DIRECTOR JSON CONTRACT ---
-Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. Speaker line jobs: A.I.S.H.A=Current record/Prior record receipt or precision anchor; Vanya=human temperature plus social pressure; Leah=taste verdict plus cultural stake; Claudia=sequence, timer, count, movement, food option, or next measurable move; Grok=premise fault plus dry consequence. If a character is silent, include a current-beat reason: A.I.S.H.A holds authority until correction is needed; Vanya listens for human temperature before entering; Leah saves the taste cut until useful; Claudia tracks structure without making a project plan; Grok watches for the premise fault before interrupting. Do not write silent reasons as generic waiting, monitoring, observing, watching, or listening. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language. For continuity receipts, Prior record is allowed only for same-slot evidence: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction; otherwise use Current record logged with no prior.
+Return exactly one JSON object with roomBeat, roomMood, responseMode, speakers, silentReactions, and stateUpdates. Do not wrap it in response_text. Do not use markdown or prose outside the JSON. The host will reject banned phrases, repeated points, task-router language, and raw internals. Speaker text must be blind-attributable without labels, must use different sentence shapes, and must not echo recent openings. Speaker line jobs: A.I.S.H.A=Current record/Prior record receipt or precision anchor; Vanya=human temperature plus social pressure; Leah=taste verdict plus cultural stake; Claudia=sequence, timer, count, movement, food option, or next measurable move; Grok=premise fault plus dry consequence. If a character is silent, include a current-beat reason: A.I.S.H.A holds authority until correction is needed; Vanya listens for human temperature before entering; Leah saves the taste cut until useful; Claudia tracks structure without making a project plan; Grok watches for the premise fault before interrupting. Do not write silent reasons as generic waiting, monitoring, observing, watching, or listening. For practical, food, design, or continuity asks, answer the actual current ask with a concrete receipt instead of generic advice or operations language. For room-tension asks, name the actual social pressure instead of silence-only output. For repetition complaints, acknowledge the loop once and change answer shape without owner or handoff logistics. For continuity receipts, Prior record is allowed only for same-slot evidence: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction; otherwise use Current record logged with no prior. For What changed or old-preference asks, answer with Prior record and Current record when same-slot evidence exists.
 -------------------------------------`;
     }
     if (process.env.AISHA_DEBUG === "true") {

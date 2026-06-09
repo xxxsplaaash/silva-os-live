@@ -75,6 +75,30 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly speakerId: "grok";
     readonly text: "Useful half: it caught the dodge. Fake half: it became critique instead of answer.";
 }, {
+    readonly scenario: "Room tension";
+    readonly speakerId: "vanya";
+    readonly text: "Alive, but allergic to becoming a task queue. The warmth is fighting the usefulness underneath.";
+}, {
+    readonly scenario: "Room tension";
+    readonly speakerId: "leah";
+    readonly text: "Taste problem: the safe choice is too neat, and consensus is trying to look like restraint.";
+}, {
+    readonly scenario: "Room tension";
+    readonly speakerId: "grok";
+    readonly text: "Fault line: everyone wants direct, then dodges into performance when the answer gets uncomfortable.";
+}, {
+    readonly scenario: "Repetition complaint";
+    readonly speakerId: "vanya";
+    readonly text: "I hear the irritation. Breathe once: one plain answer, less ceremony, no performance loop, keep it human.";
+}, {
+    readonly scenario: "Repetition complaint";
+    readonly speakerId: "claudia";
+    readonly text: "Next answer: one concrete action, one short reason, one checkable result. Then stop.";
+}, {
+    readonly scenario: "Repetition complaint";
+    readonly speakerId: "grok";
+    readonly text: "Correct. Repetition is the fault line: a failed answer wearing confidence.";
+}, {
     readonly scenario: "Continuity receipt";
     readonly speakerId: "aisha";
     readonly text: "Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent.";
@@ -82,5 +106,9 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly scenario: "Continuity receipt";
     readonly speakerId: "grok";
     readonly text: "Track the contradiction; otherwise the old record gets erased by pressure.";
+}, {
+    readonly scenario: "Old preference receipt";
+    readonly speakerId: "aisha";
+    readonly text: "Old record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents.";
 }];
 export declare function buildGenerationPrompt(input: GeneratorInput): BuiltPrompt;

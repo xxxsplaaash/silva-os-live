@@ -38,7 +38,10 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
   "Never invent an objective for the user, and never answer benign asks with objective/current-priority refusal language.",
   "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
+  "For repetition complaints, acknowledge the loop once, change the answer shape, and give one direct useful line; do not defend the previous answer, ask the user to restate the problem, or invent owner/handoff logistics.",
+  "For room-tension asks, at least one speaker must name the actual social pressure in the room: safe-choice drift, dodge, bland consensus, usefulness versus warmth, or status friction. Silence-only output is invalid.",
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
+  "For 'What changed?' and old-preference asks, A.I.S.H.A must answer with Prior record and Current record when same-slot active/superseded evidence exists; never ask what changed and never return no-content.",
   "For continuity receipts, cite Prior record only when prior or superseded evidence is the same user slot: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction. If no same-slot prior exists, say only Current record logged.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
@@ -151,6 +154,36 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Useful half: it caught the dodge. Fake half: it became critique instead of answer.",
   },
   {
+    scenario: "Room tension",
+    speakerId: "vanya",
+    text: "Alive, but allergic to becoming a task queue. The warmth is fighting the usefulness underneath.",
+  },
+  {
+    scenario: "Room tension",
+    speakerId: "leah",
+    text: "Taste problem: the safe choice is too neat, and consensus is trying to look like restraint.",
+  },
+  {
+    scenario: "Room tension",
+    speakerId: "grok",
+    text: "Fault line: everyone wants direct, then dodges into performance when the answer gets uncomfortable.",
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "vanya",
+    text: "I hear the irritation. Breathe once: one plain answer, less ceremony, no performance loop, keep it human.",
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "claudia",
+    text: "Next answer: one concrete action, one short reason, one checkable result. Then stop.",
+  },
+  {
+    scenario: "Repetition complaint",
+    speakerId: "grok",
+    text: "Correct. Repetition is the fault line: a failed answer wearing confidence.",
+  },
+  {
     scenario: "Continuity receipt",
     speakerId: "aisha",
     text: "Current record: dashboard preference is pale blue with no red accents. Prior record: dashboard preference is obsidian with one red accent.",
@@ -159,6 +192,11 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     scenario: "Continuity receipt",
     speakerId: "grok",
     text: "Track the contradiction; otherwise the old record gets erased by pressure.",
+  },
+  {
+    scenario: "Old preference receipt",
+    speakerId: "aisha",
+    text: "Old record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents.",
   },
 ] as const;
 
@@ -190,7 +228,10 @@ const SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Work planning: ${targetLinesForScenario("Work planning")}`,
   `Design direction: ${targetLinesForScenario("Design direction")}`,
   `Quality challenge: ${targetLinesForScenario("Quality challenge")}`,
-  `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`
+  `Room tension: ${targetLinesForScenario("Room tension")}`,
+  `Repetition complaint: ${targetLinesForScenario("Repetition complaint")}`,
+  `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`,
+  `Old preference receipt: ${targetLinesForScenario("Old preference receipt")}`
 ];
 
 function asString(value: unknown): string | null {

@@ -6764,6 +6764,16 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
         activeEngine: accepted ? 'aisha-runtime-pack1' : 'local-social-director',
         firstAttemptStatus: 'parsed',
         repairAttemptStatus: accepted ? '' : 'parsed',
+        firstAttemptCategory: accepted ? '' : 'quality-rejected',
+        repairAttemptCategory: accepted ? '' : 'quality-rejected',
+        firstAttemptAccepted: accepted,
+        repairAttemptAccepted: false,
+        firstAttemptIssueCount: accepted ? 0 : 1,
+        repairAttemptIssueCount: accepted ? 0 : 1,
+        firstAttemptResponseMode: 'single',
+        repairAttemptResponseMode: accepted ? '' : 'single',
+        firstAttemptSpeakerOrder: [primarySpeakerId],
+        repairAttemptSpeakerOrder: accepted ? [] : [primarySpeakerId],
         firstAttemptIssues: accepted ? [] : ['voice-lock:blind-attribution:vanya'],
         repairAttemptIssues: accepted ? [] : ['product-topic-ignored:referenced-fitness'],
         providerValidationIssues: accepted ? [] : ['voice-lock:blind-attribution:vanya'],
@@ -6911,6 +6921,16 @@ test('operator diagnostics summarizer strips prompts and visible card text', asy
           schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
           firstAttemptStatus: 'parsed',
           repairAttemptStatus: 'parsed',
+          firstAttemptCategory: 'quality-rejected',
+          repairAttemptCategory: 'quality-rejected',
+          firstAttemptAccepted: false,
+          repairAttemptAccepted: false,
+          firstAttemptIssueCount: 1,
+          repairAttemptIssueCount: 1,
+          firstAttemptResponseMode: 'small_exchange',
+          repairAttemptResponseMode: 'single',
+          firstAttemptSpeakerOrder: ['claudia', 'vanya'],
+          repairAttemptSpeakerOrder: ['claudia'],
           firstAttemptIssues: ['product-generic-advice:fitness'],
           repairAttemptIssues: ['recent-repeat-risk'],
           providerValidationIssues: ['voice-lock:blind-attribution:vanya'],
@@ -6933,6 +6953,16 @@ test('operator diagnostics summarizer strips prompts and visible card text', asy
           schemaVersion: 'studio-pulse.operator-diagnostics.v0.1',
           firstAttemptStatus: 'parsed',
           repairAttemptStatus: '',
+          firstAttemptCategory: '',
+          repairAttemptCategory: '',
+          firstAttemptAccepted: true,
+          repairAttemptAccepted: false,
+          firstAttemptIssueCount: 0,
+          repairAttemptIssueCount: 0,
+          firstAttemptResponseMode: 'small_exchange',
+          repairAttemptResponseMode: '',
+          firstAttemptSpeakerOrder: ['aisha', 'claudia'],
+          repairAttemptSpeakerOrder: [],
           firstAttemptIssues: [],
           repairAttemptIssues: [],
           providerValidationIssues: [],
@@ -6956,6 +6986,12 @@ test('operator diagnostics summarizer strips prompts and visible card text', asy
     assert.equal(summary.turnsWithDiagnostics, 2);
     assert.equal(summary.issueCounts.firstAttempt['product-generic-advice:fitness'], 1);
     assert.equal(summary.issueCounts.repairAttempt['recent-repeat-risk'], 1);
+    assert.equal(summary.attemptOutcomes.firstAccepted, 1);
+    assert.equal(summary.attemptOutcomes.repairAccepted, 0);
+    assert.equal(summary.issueCounts.firstAttemptCategory['quality-rejected'], 1);
+    assert.equal(summary.issueCounts.repairAttemptCategory['quality-rejected'], 1);
+    assert.deepEqual(summary.attemptSummaries[0].firstAttemptSpeakerOrder, ['claudia', 'vanya']);
+    assert.deepEqual(summary.attemptSummaries[0].repairAttemptSpeakerOrder, ['claudia']);
     assert.deepEqual(summary.attemptSummaries[0].plannedSpeakerOrder, ['claudia', 'vanya']);
     assert.doesNotMatch(result.stdout, /LOL I WANNA GROW MY MUSCLES|incline push-ups|What changed|visiblePreview|cards|prompt|provider payload|raw model/i);
   } finally {

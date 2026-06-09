@@ -64,6 +64,16 @@ const attempts = results.map((item, index) => {
     latencyMs: Number(item.latencyMs) || 0,
     firstAttemptStatus: safeToken(diagnostics.firstAttemptStatus),
     repairAttemptStatus: safeToken(diagnostics.repairAttemptStatus),
+    firstAttemptCategory: safeToken(diagnostics.firstAttemptCategory),
+    repairAttemptCategory: safeToken(diagnostics.repairAttemptCategory),
+    firstAttemptAccepted: diagnostics.firstAttemptAccepted === true,
+    repairAttemptAccepted: diagnostics.repairAttemptAccepted === true,
+    firstAttemptIssueCount: Math.max(0, Math.min(50, Math.round(Number(diagnostics.firstAttemptIssueCount || 0) || 0))),
+    repairAttemptIssueCount: Math.max(0, Math.min(50, Math.round(Number(diagnostics.repairAttemptIssueCount || 0) || 0))),
+    firstAttemptResponseMode: safeToken(diagnostics.firstAttemptResponseMode),
+    repairAttemptResponseMode: safeToken(diagnostics.repairAttemptResponseMode),
+    firstAttemptSpeakerOrder: safeSpeakerList(diagnostics.firstAttemptSpeakerOrder),
+    repairAttemptSpeakerOrder: safeSpeakerList(diagnostics.repairAttemptSpeakerOrder),
     firstAttemptIssues: safeIssueList(diagnostics.firstAttemptIssues),
     repairAttemptIssues: safeIssueList(diagnostics.repairAttemptIssues),
     providerValidationIssues: safeIssueList(diagnostics.providerValidationIssues),
@@ -95,9 +105,17 @@ const summary = {
   issueCounts: {
     firstAttempt: countBy(attempts.flatMap(item => item.firstAttemptIssues)),
     repairAttempt: countBy(attempts.flatMap(item => item.repairAttemptIssues)),
+    firstAttemptCategory: countBy(attempts.map(item => item.firstAttemptCategory).filter(Boolean)),
+    repairAttemptCategory: countBy(attempts.map(item => item.repairAttemptCategory).filter(Boolean)),
     providerValidation: countBy(attempts.flatMap(item => item.providerValidationIssues)),
     publicQuality: countBy(attempts.flatMap(item => item.publicQualityIssues)),
     finalQualityCategory: countBy(attempts.map(item => item.qualityFailureCategory).filter(Boolean))
+  },
+  attemptOutcomes: {
+    firstAccepted: attempts.filter(item => item.firstAttemptAccepted).length,
+    repairAccepted: attempts.filter(item => item.repairAttemptAccepted).length,
+    firstRejected: attempts.filter(item => item.firstAttemptStatus && !item.firstAttemptAccepted).length,
+    repairRejected: attempts.filter(item => item.repairAttemptStatus && !item.repairAttemptAccepted).length
   },
   attemptSummaries: attempts
 };
