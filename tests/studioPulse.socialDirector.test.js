@@ -1247,7 +1247,15 @@ test('showcase impulse planner treats referenced practical cards as cap-enforced
   assert.equal(vanyaReference.impulsePlan.category, 'practical');
   assert.equal(vanyaReference.impulsePlan.maxSpeakers, 2);
   assert.equal(vanyaReference.impulsePlan.enforceSelectedSpeakers, true);
-  assert.deepEqual(vanyaReference.impulsePlan.speakerOrder, ['vanya', 'claudia']);
+  assert.deepEqual(vanyaReference.impulsePlan.speakerOrder, ['claudia', 'vanya']);
+  assert.match(
+    vanyaReference.impulsePlan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob,
+    /20-minute workout|timer|named moves/i
+  );
+  assert.match(
+    vanyaReference.impulsePlan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob,
+    /without taking over the practical line|human temperature/i
+  );
 });
 
 test('showcase impulse planner keeps casual everyone check-ins out of all-five pile-ons', () => {

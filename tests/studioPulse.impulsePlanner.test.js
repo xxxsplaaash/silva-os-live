@@ -22,3 +22,22 @@ test('showcase impulse planner gives exact no-content recovery turns concrete li
   assert.match(repeat.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /concrete next action|checkable result/i);
   assert.match(repeat.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /lower the social temperature|change the answer shape/i);
 });
+
+test('showcase impulse planner keeps Claudia first for Vanya-referenced 20-minute fitness compression', () => {
+  const plan = buildShowcaseImpulsePlan({
+    userMessage: 'turn that into a 20 minute version',
+    references: [{
+      speakerId: 'vanya',
+      text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+    }],
+    recentTurns: [
+      { speakerId: 'claudia', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+
+  assert.equal(plan.category, 'practical');
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute workout|timer|named moves/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /without taking over the practical line|human temperature/i);
+});
