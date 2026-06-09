@@ -3836,7 +3836,7 @@ test('deterministic continuity claim update ignores unrelated visible preference
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
     { speakerId: 'aisha', role: 'primary', text: 'Current record logged: dashboard preference is obsidian with one red accent.' },
-    { speakerId: 'claudia', role: 'side', text: 'One decision if this changes later: compare old and new before designing more. No quiet erasure.' }
+    { speakerId: 'claudia', role: 'side', text: 'First step if this changes later: compare old and new before designing more. No quiet erasure.' }
   ];
   const output = socialFallbackFor('My landing page style is black glass with a single red pulse.', { recentTurns });
   const text = fallbackVisibleText(output);
@@ -3880,10 +3880,16 @@ test('deterministic continuity change fallback changes shape after a live dashbo
     recentTurns,
     continuity: { active: 1, superseded: 1 }
   });
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'What changed?',
+    recentTurns,
+    continuity: { active: 1, superseded: 1 }
+  });
 
   assert.match(text, /Changed: Prior record: dashboard preference is obsidian with one red accent\. Current record: dashboard preference is pale blue with no red accents/i);
   assert.doesNotMatch(text, /Current record: dashboard preference is pale blue with no red accents\. Prior record: dashboard preference is obsidian with one red accent/i);
   assert.equal(issues.some(item => item.family === 'repetition'), false);
+  assert.equal(validation.issues.includes('voice-lock:blind-attribution:claudia'), false, validation.issues.join(', '));
 });
 
 test('deterministic continuity change fallback does not replay the previous ledger side note', () => {
