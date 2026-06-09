@@ -4366,6 +4366,20 @@ test('social director quality validator rejects stress turns answered with meta 
   assert.ok(stressObjectiveSignal.issues.includes('product-false-objective:command-posture'));
 });
 
+test('social director stress fallback avoids generic scaffold after frustration', () => {
+  const output = socialFallbackFor('I am stressed and this is starting to feel dumb.', { recentTurns: [] });
+  const text = output.speakers.map(item => item.text).join(' ');
+
+  assert.doesNotMatch(text, /\breps done, file opened, or one decision made\b/i);
+  assert.doesNotMatch(text, /\bwrite what changed\b/i);
+  assert.match(text, /\b(reset|ten minutes|water|surface|next move|timer)\b/i);
+
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'I am stressed and this is starting to feel dumb.'
+  });
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+});
+
 test('social director quality validator rejects food prompts that dodge before answering', () => {
   const objectiveEnergy = validateDirectorOutput({
     roomBeat: 'The room turns lunch into an objective slogan.',
