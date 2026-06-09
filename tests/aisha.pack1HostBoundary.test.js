@@ -503,8 +503,10 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Do not reuse the same opening, rhythm, or sentence frame/i);
   assert.match(prompt.systemPrompt, /Same twenty minutes/);
   assert.match(prompt.systemPrompt, /Vanya must not lean on stale charm families/i);
-  assert.match(prompt.systemPrompt, /Let the clock do the arguing/i);
+  assert.match(prompt.systemPrompt, /no victory speech until the towel is wet/i);
+  assert.doesNotMatch(prompt.systemPrompt, /GOOD:[^\n]*Let the clock do the arguing/i);
   assert.doesNotMatch(prompt.systemPrompt, /Small enough to finish, real enough/i);
+  assert.doesNotMatch(prompt.systemPrompt, /small enough to finish, then let the room get loud/i);
   assert.match(prompt.systemPrompt, /Current record first/);
   assert.match(prompt.systemPrompt, /Fair\. The page still looks like a template/);
   assert.match(prompt.systemPrompt, /For food or design asks, answer the food or design direction directly/i);
@@ -902,6 +904,10 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
   assert.match(prompt.systemPrompt, /claudia: Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
   assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery/i);
+  assert.doesNotMatch(
+    prompt.systemPrompt,
+    /20-minute fitness follow-up:[\s\S]*Let the clock do the arguing|GOOD:[^\n]*Let the clock do the arguing/i
+  );
 });
 
 test('Pack 1 social-director built prompt locks repeat phrase families', async () => {

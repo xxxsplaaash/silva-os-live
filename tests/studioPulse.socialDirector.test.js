@@ -695,7 +695,8 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.ok(rubric.positiveTargets.some(item => /movement categories, timer blocks/i.test(item)));
   assert.match(prompt, /Twenty minutes: warm up for 3/i);
   assert.match(prompt, /push, pull, legs, hinge, core/i);
-  assert.match(prompt, /Let the clock do the arguing; the ego can decorate later/i);
+  assert.match(prompt, /no victory speech until the towel is wet/i);
+  assert.doesNotMatch(prompt, /GOOD:[^\n]*Let the clock do the arguing/i);
   assert.doesNotMatch(prompt, /GOOD: Claudia says "Twenty minutes: warm up for 3, then two rounds of incline push-ups, backpack rows, split squats, hip hinges, and plank/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
   assert.match(prompt, /Do not answer with generic habit talk/i);
@@ -722,7 +723,8 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Do not reuse recent line openings, catchphrases, sentence frames, or advice shapes/i);
   assert.match(prompt, /Use different sentence shapes across speakers/i);
   assert.match(prompt, /Vanya must not live on one catchphrase/i);
-  assert.match(prompt, /Let the clock do the arguing/i);
+  assert.match(prompt, /no victory speech until the towel is wet/i);
+  assert.doesNotMatch(prompt, /GOOD:[^\n]*Let the clock do the arguing/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough/i);
   assert.match(prompt, /A\.I\.S\.H\.A: receipt or continuity anchor/i);
   assert.match(prompt, /Claudia: concrete sequence, checkpoint, timer, movement, or measurable next step/i);

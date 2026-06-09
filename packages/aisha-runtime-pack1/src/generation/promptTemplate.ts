@@ -89,7 +89,7 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "20-minute fitness follow-up",
     speakerId: "vanya",
-    text: "Let the clock do the arguing; the ego can decorate later.",
+    text: "Keep it human: no victory speech until the towel is wet.",
   },
   {
     scenario: "Objective/frustration recovery after fitness",
