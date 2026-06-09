@@ -692,11 +692,12 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.equal(input.impulsePlan.topicClass, 'reference-follow-up');
   assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
   assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
-  assert.ok(rubric.positiveTargets.some(item => /minute blocks, named movements/i.test(item)));
+  assert.ok(rubric.positiveTargets.some(item => /movement categories, timer blocks/i.test(item)));
   assert.match(prompt, /Twenty minutes: warm up for 3/i);
   assert.match(prompt, /Let the clock do the arguing; the ego can decorate later/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
   assert.match(prompt, /Do not answer with generic habit talk/i);
+  assert.match(prompt, /Do not restate the prior starter list/i);
 });
 
 test('showcase prompt carries anti-repeat and voice-contract acceptance pressure', () => {
@@ -1250,11 +1251,11 @@ test('showcase impulse planner treats referenced practical cards as cap-enforced
   assert.deepEqual(vanyaReference.impulsePlan.speakerOrder, ['claudia', 'vanya']);
   assert.match(
     vanyaReference.impulsePlan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob,
-    /20-minute workout|timer|named moves/i
+    /20-minute timer plan|movement categories|prior starter list/i
   );
   assert.match(
     vanyaReference.impulsePlan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob,
-    /without taking over the practical line|human temperature/i
+    /fresh human pressure|avoid recent mirror|first-round/i
   );
 });
 
@@ -6200,7 +6201,10 @@ test('room director repair prompt gives issue-specific acceptance guidance for f
   assert.match(prompt, /incline push-ups, backpack rows, split squats, hip hinges, plank/);
   assert.match(prompt, /Referenced fitness repair/);
   assert.match(prompt, /Claudia must answer with a timed 20-minute mini-plan/);
+  assert.match(prompt, /compresses the referenced moves into categories/i);
+  assert.match(prompt, /do not restate the prior starter list/i);
   assert.match(prompt, /Recent-repeat repair/);
+  assert.match(prompt, /compress the prior starter list into categories/i);
   assert.match(prompt, /first three words, metaphor, sentence rhythm, and line job/);
   assert.match(prompt, /Claudia voice repair/);
   assert.match(prompt, /timer, rounds, reps, sequence, checkpoint/);

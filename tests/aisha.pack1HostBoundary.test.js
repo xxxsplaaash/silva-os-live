@@ -331,6 +331,7 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /small enough \/ real enough/i);
   assert.match(promptSource, /concrete first move/i);
   assert.match(promptSource, /Fitness first asks must name the actual starter circuit/i);
+  assert.match(promptSource, /20-minute fitness follow-ups must compress the recent starter list/i);
   assert.match(promptSource, /No solid-goal, protein\/sleep, consistency, habit, or progressive-overload boilerplate/i);
   assert.match(promptSource, /incline push-ups, backpack rows, split squats, hip hinges, plank/i);
   assert.match(promptSource, /food or design direction directly/i);
@@ -644,8 +645,8 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
             enforceSelectedSpeakers: true,
             speakerOrder: ['claudia', 'vanya'],
             selectedSpeakers: [
-              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan with named moves' },
-              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia, no generic encouragement' },
+              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using movement categories, not the prior starter list' },
+              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery' },
             ],
           },
         },
@@ -657,8 +658,10 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
   assert.match(prompt.systemPrompt, /Speaker order: claudia -> vanya/);
   assert.match(prompt.systemPrompt, /Max speakers: 2/);
   assert.match(prompt.systemPrompt, /Use only selected speakers on the first attempt/i);
-  assert.match(prompt.systemPrompt, /claudia: compress the referenced workout into a 20-minute timer plan/i);
+  assert.match(prompt.systemPrompt, /claudia: compress the referenced workout into a 20-minute timer plan using movement categories/i);
+  assert.match(prompt.systemPrompt, /not the prior starter list/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
+  assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego/i);
   assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
   assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
   assert.ok(

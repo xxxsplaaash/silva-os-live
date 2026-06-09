@@ -38,6 +38,6 @@ test('showcase impulse planner keeps Claudia first for Vanya-referenced 20-minut
 
   assert.equal(plan.category, 'practical');
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
-  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute workout|timer|named moves/i);
-  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /without taking over the practical line|human temperature/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute timer plan|movement categories|prior starter list/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /fresh human pressure|avoid recent mirror|first-round/i);
 });

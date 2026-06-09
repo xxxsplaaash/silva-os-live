@@ -30,6 +30,7 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
   "Fitness first asks must name the actual starter circuit: incline push-ups, backpack rows, split squats, hip hinges, plank, plus reps or a tracking action. No solid-goal, protein/sleep, consistency, habit, or progressive-overload boilerplate.",
+  "20-minute fitness follow-ups must compress the recent starter list instead of restating it: use movement categories like push, pull, legs, hinge, core, plus timer/count. Do not repeat incline push-ups, backpack rows, split squats, hip hinges, and plank as the whole answer.",
   "For planning-tomorrow asks, give a plain day skeleton with blocks, a checkpoint/risk, and a recovery gap; do not invent owners, handoffs, client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
