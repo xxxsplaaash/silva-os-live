@@ -3832,6 +3832,28 @@ test('deterministic continuity claim update ignores the current user turn when f
   assert.equal(issues.some(item => item.family === 'repetition'), false);
 });
 
+test('deterministic continuity claim update ignores unrelated visible preference slots', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'aisha', role: 'primary', text: 'Current record logged: dashboard preference is obsidian with one red accent.' },
+    { speakerId: 'claudia', role: 'side', text: 'One decision if this changes later: compare old and new before designing more. No quiet erasure.' }
+  ];
+  const output = socialFallbackFor('My landing page style is black glass with a single red pulse.', { recentTurns });
+  const text = fallbackVisibleText(output);
+  const notes = output.stateUpdates?.notes || [];
+  const validation = validateDirectorOutput(output, {
+    userMessage: 'My landing page style is black glass with a single red pulse.',
+    recentTurns,
+    continuity: { active: 1, superseded: 0, disputed: 0 }
+  });
+
+  assert.match(text, /\bCurrent record logged:\s*landing page style is black glass with a single red pulse\b/i);
+  assert.doesNotMatch(text, /\bPrior record\b/i);
+  assert.doesNotMatch(text, /\bdashboard preference\b/i);
+  assert.equal(notes.some(note => /\bPrior record\b/i.test(note)), false);
+  assert.equal(validation.issues.includes('product-continuity-conflict:cross-domain-prior'), false, validation.issues.join(', '));
+});
+
 test('deterministic continuity change fallback changes shape after a live dashboard supersession receipt', () => {
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },

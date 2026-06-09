@@ -1097,6 +1097,18 @@ test('visible response quality rejects generic action-flick movie answers', () =
   assert.ok(issueKeys(issues).includes('speaker-flatness:movie'));
 });
 
+test('visible response quality rejects live movie mood-without-decision fallback', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: what movie should we watch tonight?',
+    visibleText: [
+      'One strong world, not wallpaper. Pick the feeling first; the title just admits the mood.',
+      'Skip consensus. Choose the film with teeth, not the one everyone can tolerate.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('speaker-flatness:thin-movie-choice'));
+});
+
 test('visible response quality rejects too-thin quality judgments', () => {
   const issues = evaluateVisibleResponse({
     userMessage: 'Grok, be honest: was that useful or did it sound fake?',
