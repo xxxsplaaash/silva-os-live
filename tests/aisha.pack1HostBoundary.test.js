@@ -347,6 +347,7 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Fitness first ask/);
   assert.match(promptSource, /20-minute fitness follow-up/);
   assert.match(promptSource, /Objective\/frustration recovery/);
+  assert.match(promptSource, /Normal-answer recovery/);
   assert.match(promptSource, /Movie pivot after fitness/);
   assert.match(promptSource, /Food practical/);
   assert.match(promptSource, /Design direction/);
@@ -410,6 +411,9 @@ test('Pack 1 social-director frustration target lines avoid objective-slogan rej
 
   assert.doesNotMatch(visibleText, /\bthe objective is\b/i);
   assert.doesNotMatch(visibleText, /\b(training|push|pull|legs|log reps|recover|body|clock)\b/i);
+  assert.doesNotMatch(visibleText, /\bwrite one note about what changed\b/i);
+  assert.match(visibleText, /\bdrink water\b/i);
+  assert.match(visibleText, /\bclear one surface\b/i);
   assert.ok(!issues.includes('frustration-miss:stress-recovery'), issues.join(', '));
   assert.ok(!issues.includes('false-objective:command-posture'), issues.join(', '));
 });
@@ -493,6 +497,9 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /20-minute cleanup block/i);
   assert.match(prompt.systemPrompt, /one checkpoint before you stop/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human: one hard thing early/i);
+  assert.match(prompt.systemPrompt, /Normal-answer recovery:/i);
+  assert.match(prompt.systemPrompt, /First step: set a twenty-minute timer/i);
+  assert.match(prompt.systemPrompt, /Make the day smaller: one useful pass/i);
   assert.doesNotMatch(prompt.systemPrompt, /room earns another sentence/i);
   assert.match(prompt.systemPrompt, /Acceptance examples:/);
   assert.match(prompt.systemPrompt, /Acceptance examples are pattern pressure, not scripts/i);
@@ -500,6 +507,7 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Before training, eat light enough to move/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
+  assert.doesNotMatch(prompt.systemPrompt, /write one note about what changed/i);
   assert.match(prompt.systemPrompt, /Useful half: it caught the dodge/i);
   assert.doesNotMatch(prompt.systemPrompt, /Partly useful: it named the dodge/i);
   assert.match(prompt.systemPrompt, /Leah: taste, cultural judgment, aesthetic edge/i);

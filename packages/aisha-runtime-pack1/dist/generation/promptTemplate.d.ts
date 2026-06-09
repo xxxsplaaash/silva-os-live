@@ -25,11 +25,19 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "claudia";
-    readonly text: "Start with one clean move: choose one task, run a short timer, write one note about what changed.";
+    readonly text: "Start with a short reset: drink water, clear one surface, then stop; that is the whole move.";
 }, {
     readonly scenario: "Objective/frustration recovery";
     readonly speakerId: "vanya";
     readonly text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama.";
+}, {
+    readonly scenario: "Normal-answer recovery";
+    readonly speakerId: "claudia";
+    readonly text: "First step: set a twenty-minute timer, finish one rough pass, then write the visible result before switching tasks.";
+}, {
+    readonly scenario: "Normal-answer recovery";
+    readonly speakerId: "vanya";
+    readonly text: "Make the day smaller: one useful pass, less ceremony, enough air to stay human.";
 }, {
     readonly scenario: "Movie pivot after fitness";
     readonly speakerId: "leah";

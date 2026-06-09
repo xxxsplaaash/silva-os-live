@@ -1258,12 +1258,22 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "Objective/frustration recovery",
     speakerId: "claudia",
-    text: "Start with one clean move: choose one task, run a short timer, write one note about what changed."
+    text: "Start with a short reset: drink water, clear one surface, then stop; that is the whole move."
   },
   {
     scenario: "Objective/frustration recovery",
     speakerId: "vanya",
     text: "Make the afternoon stay human. Breathe once, then let the messy part stop auditioning for drama."
+  },
+  {
+    scenario: "Normal-answer recovery",
+    speakerId: "claudia",
+    text: "First step: set a twenty-minute timer, finish one rough pass, then write the visible result before switching tasks."
+  },
+  {
+    scenario: "Normal-answer recovery",
+    speakerId: "vanya",
+    text: "Make the day smaller: one useful pass, less ceremony, enough air to stay human."
   },
   {
     scenario: "Movie pivot after fitness",
@@ -1344,6 +1354,7 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Fitness first ask: ${targetLinesForScenario("Fitness first ask")}`,
   `20-minute fitness follow-up: ${targetLinesForScenario("20-minute fitness follow-up")}`,
   `Objective/frustration recovery: ${targetLinesForScenario("Objective/frustration recovery")}`,
+  `Normal-answer recovery: ${targetLinesForScenario("Normal-answer recovery")}`,
   `Movie pivot after fitness: ${targetLinesForScenario("Movie pivot after fitness")}`,
   `Food practical: ${targetLinesForScenario("Food practical")}`,
   `Work planning: ${targetLinesForScenario("Work planning")}`,
