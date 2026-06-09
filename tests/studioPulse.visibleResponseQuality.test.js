@@ -727,6 +727,18 @@ test('visible response quality rejects live generic planning build invention', (
   assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
 });
 
+test('visible response quality rejects live generic planning handoff owner invention', () => {
+  const issues = evaluateVisibleResponse({
+    userMessage: 'new topic: I need help planning tomorrow',
+    visibleText: [
+      'Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff. Leave one gap for recovery.',
+      'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(issues).includes('invented-detail:project-planning'));
+});
+
 test('visible response quality rejects live planning invention and sterile execution voice', () => {
   const planningIssues = evaluateVisibleResponse({
     userMessage: 'new topic: I need help planning tomorrow',

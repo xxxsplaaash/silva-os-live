@@ -933,6 +933,28 @@ test('showcase prompt carries minimum voice signatures for attribution drift fam
   assert.match(prompt, /If a line could be moved to another speaker without changing words, rewrite it/i);
 });
 
+test('showcase prompt locks speaker-specific attribution borrow families', () => {
+  const input = buildRoomDirectorInput({
+    question: 'Everyone give me one useful line on planning tomorrow without sounding fake.',
+    roomState: { roomMood: 'focused' },
+    recentTurns: [
+      { speakerId: 'vanya', role: 'side', text: 'Make the afternoon stay human: one hard thing early, one cleanup block, and a breathable gap before the day gets loud.' },
+      { speakerId: 'claudia', role: 'primary', text: 'Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff.' },
+      { speakerId: 'grok', role: 'side', text: 'Partly useful: it named the dodge. Fake part: it got abstract and stopped answering the person.' },
+      { speakerId: 'leah', role: 'side', text: 'The taste problem is pretending a safe plan has any edge.' }
+    ]
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.match(prompt, /ATTRIBUTION DRIFT LOCKS/i);
+  assert.match(prompt, /blind reading can identify the speaker without the speakerId/i);
+  assert.match(prompt, /Do not give Vanya Claudia machinery: timers, owners, numbered blocks, measurable next moves, or handoff logistics/i);
+  assert.match(prompt, /Do not give Claudia Vanya warmth: temperature, room dignity, breathable reset, social pressure, or emotional landing/i);
+  assert.match(prompt, /Do not give Leah Grok machinery or Claudia plans/i);
+  assert.match(prompt, /Do not give Grok Leah taste or A\.I\.S\.H\.A receipts/i);
+  assert.match(prompt, /Do not give A\.I\.S\.H\.A generic advice or social hosting/i);
+});
+
 test('showcase prompt carries food-design punt and operational-jargon rejection pressure', () => {
   const input = buildRoomDirectorInput({
     question: 'What should Leah and Claudia do with the dinner menu redesign tonight?',
@@ -972,9 +994,10 @@ test('showcase prompt carries Claudia planning-tomorrow target without invented 
   assert.ok(rubric.rejectFamilies.includes('speaker-attribution-drift'));
   assert.ok(rubric.positiveTargets.some(item => /first move, constraint, or proof point/i.test(item)));
   assert.match(prompt, /For planning-tomorrow asks, Claudia should give a plain day skeleton/i);
-  assert.match(prompt, /not invented agendas, clients, KPIs, deliverables, or EOD reporting/i);
-  assert.match(prompt, /Tomorrow: first block for the hardest task, second block for cleanup, one named owner for the messy handoff/i);
-  assert.match(prompt, /Make the afternoon stay human: one hard thing early/i);
+  assert.match(prompt, /Do not invent owners, handoffs, teams, agendas, clients, KPIs, deliverables, or EOD reporting/i);
+  assert.match(prompt, /Tomorrow: hardest task first, cleanup second, one checkpoint before you stop/i);
+  assert.match(prompt, /Keep tomorrow human: one hard thing early/i);
+  assert.doesNotMatch(prompt, /one named owner for the messy handoff/i);
   assert.doesNotMatch(prompt, /room earns another sentence/i);
   assert.doesNotMatch(prompt, /draft a preliminary schedule with key tasks and deadlines by EOD/i);
 });
@@ -1001,9 +1024,9 @@ test('showcase prompt tells stress turns to avoid objective slogans and burden-s
   assert.doesNotMatch(prompt, /No other objectives/i);
 });
 
-test('social director quality validator accepts concrete planning target from live gauntlet', () => {
+test('social director quality validator rejects generic planning handoff owner invention from live gauntlet', () => {
   const validation = validateDirectorOutput({
-    roomBeat: 'The room gives tomorrow a bounded shape.',
+    roomBeat: 'The room invents a team handoff for a generic tomorrow ask.',
     roomMood: 'focused',
     responseMode: 'small_exchange',
     speakers: [
@@ -1024,7 +1047,8 @@ test('social director quality validator accepts concrete planning target from li
     stateUpdates: { notes: [] }
   }, { userMessage: 'new topic: I need help planning tomorrow' });
 
-  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.equal(validation.ok, false);
+  assert.ok(validation.issues.includes('product-invented-detail:project-planning'));
 });
 
 test('social director quality validator accepts concrete referenced 20-minute fitness follow-up', () => {
