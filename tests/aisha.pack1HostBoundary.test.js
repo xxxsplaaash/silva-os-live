@@ -330,6 +330,9 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /Vanya must not lean on stale charm families/i);
   assert.match(promptSource, /small enough \/ real enough/i);
   assert.match(promptSource, /concrete first move/i);
+  assert.match(promptSource, /Fitness first asks must name the actual starter circuit/i);
+  assert.match(promptSource, /No solid-goal, protein\/sleep, consistency, habit, or progressive-overload boilerplate/i);
+  assert.match(promptSource, /incline push-ups, backpack rows, split squats, hip hinges, plank/i);
   assert.match(promptSource, /food or design direction directly/i);
   assert.match(promptSource, /contrast current and prior claims/i);
   assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);

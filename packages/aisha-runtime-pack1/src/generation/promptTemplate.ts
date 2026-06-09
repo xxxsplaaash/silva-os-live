@@ -29,6 +29,7 @@ export const SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Vanya must not lean on stale charm families like 'small enough / real enough', 'tiny vanity', 'heroic rebrand', 'leave the ceremony outside', or 'thesis'. Rotate to a fresh temperature or pressure shape.",
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
+  "Fitness first asks must name the actual starter circuit: incline push-ups, backpack rows, split squats, hip hinges, plank, plus reps or a tracking action. No solid-goal, protein/sleep, consistency, habit, or progressive-overload boilerplate.",
   "For planning-tomorrow asks, give a plain day skeleton with blocks, a checkpoint/risk, and a recovery gap; do not invent owners, handoffs, client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
