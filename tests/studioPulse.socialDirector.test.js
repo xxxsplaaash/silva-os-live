@@ -694,7 +694,9 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
   assert.ok(rubric.positiveTargets.some(item => /movement categories, timer blocks/i.test(item)));
   assert.match(prompt, /Twenty minutes: warm up for 3/i);
+  assert.match(prompt, /push, pull, legs, hinge, core/i);
   assert.match(prompt, /Let the clock do the arguing; the ego can decorate later/i);
+  assert.doesNotMatch(prompt, /GOOD: Claudia says "Twenty minutes: warm up for 3, then two rounds of incline push-ups, backpack rows, split squats, hip hinges, and plank/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
   assert.match(prompt, /Do not answer with generic habit talk/i);
   assert.match(prompt, /Do not restate the prior starter list/i);
@@ -1141,7 +1143,7 @@ test('social director quality validator accepts concrete referenced 20-minute fi
         speakerId: 'claudia',
         role: 'primary',
         tone: 'direct',
-        text: 'Twenty minutes: warm up for 3, then two rounds of incline push-ups, backpack rows, split squats, hip hinges, and plank. Write the lowest rep count down.'
+        text: 'Twenty minutes: warm up for 3, then two rounds of push, pull, legs, hinge, and core. Write the lowest rep count down.'
       },
       {
         speakerId: 'vanya',
@@ -1465,6 +1467,12 @@ test('showcase impulse planner classifies contradiction, banter, creative, and r
       category: 'practical',
       topicClass: 'reference-follow-up',
       speakerOrder: ['leah', 'grok']
+    },
+    {
+      prompt: 'quick help: what should I eat for lunch?',
+      category: 'practical',
+      topicClass: 'food-choice',
+      speakerOrder: ['claudia', 'vanya']
     },
     {
       prompt: 'turn that into a 20 minute version',
@@ -6237,6 +6245,34 @@ test('room director repair prompt gives issue-specific acceptance guidance for f
   assert.match(prompt, /timer, rounds, reps, sequence, checkpoint/);
   assert.match(prompt, /Vanya voice repair/);
   assert.match(prompt, /human temperature read with bite/);
+  assert.doesNotMatch(prompt, /provider payload|raw model|GEMINI_API_KEY|GOOGLE_API_KEY/);
+});
+
+test('room director repair prompt gives ordinary lunch voice-lock guidance', () => {
+  const input = buildRoomDirectorInput({
+    message: 'quick help: what should I eat for lunch?',
+    recentTurns: [
+      { speakerId: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', text: 'Start this week with incline push-ups, backpack rows, split squats, hip hinges, and a plank.' },
+      { speakerId: 'vanya', text: 'Feed the session, not the performance.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input, {
+    issues: [
+      'voice-lock:blind-attribution:claudia',
+      'voice-lock:blind-attribution:vanya'
+    ]
+  });
+
+  assert.match(prompt, /Ordinary-lunch voice repair/);
+  assert.match(prompt, /Claudia must open with named food options plus one decision rule/i);
+  assert.match(prompt, /eggs and toast, rice bowl, solid sandwich, leftovers with water/i);
+  assert.match(prompt, /Vanya must make the lunch or afternoon feel human with playful bite/i);
+  assert.match(prompt, /personality-test pressure/i);
+  assert.match(prompt, /no movement, training, performance, session-fuel/i);
+  assert.match(prompt, /Claudia voice repair/);
+  assert.match(prompt, /Vanya voice repair/);
   assert.doesNotMatch(prompt, /provider payload|raw model|GEMINI_API_KEY|GOOGLE_API_KEY/);
 });
 

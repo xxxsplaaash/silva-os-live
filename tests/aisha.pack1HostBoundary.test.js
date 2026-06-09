@@ -337,6 +337,8 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /food or design direction directly/i);
   assert.match(promptSource, /Ordinary lunch or meal asks are not training-food asks/i);
   assert.match(promptSource, /do not mention training, movement, performance, session fuel, or workout timing/i);
+  assert.match(promptSource, /Ordinary lunch voice must be unmistakable/i);
+  assert.match(promptSource, /Claudia opens with named food options plus one decision rule/i);
   assert.match(promptSource, /contrast current and prior claims/i);
   assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);
   assert.match(promptSource, /For repetition complaints, acknowledge the loop once/i);
@@ -523,6 +525,7 @@ test('Pack 1 social-director built prompt carries line-quality fixture pressure'
   assert.match(prompt.systemPrompt, /Ordinary lunch practical:/i);
   assert.match(prompt.systemPrompt, /One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water/i);
   assert.match(prompt.systemPrompt, /without turning it into a personality test/i);
+  assert.match(prompt.systemPrompt, /Ordinary lunch voice must be unmistakable/i);
   assert.match(prompt.systemPrompt, /One strong world, not wallpaper/i);
   assert.match(prompt.systemPrompt, /Make the afternoon stay human\. Breathe once/i);
   assert.doesNotMatch(prompt.systemPrompt, /write one note about what changed/i);
@@ -607,11 +610,15 @@ test('Pack 1 social-director prompt separates ordinary lunch from training fuel'
   assert.match(prompt.systemPrompt, /Ordinary lunch or meal asks are not training-food asks/i);
   assert.match(prompt.systemPrompt, /For ordinary lunch, name lunch options first/i);
   assert.match(prompt.systemPrompt, /do not mention training, movement, performance, session fuel, or workout timing/i);
+  assert.match(prompt.systemPrompt, /Claudia opens with named food options plus one decision rule/i);
+  assert.match(prompt.systemPrompt, /Vanya adds lunch\/afternoon human pressure with playful bite/i);
   assert.match(prompt.systemPrompt, /Ordinary lunch practical:/i);
   assert.match(prompt.systemPrompt, /One decision: eggs and toast, a rice bowl, a solid sandwich, or leftovers with water/i);
   assert.match(prompt.systemPrompt, /Keep lunch boring in the useful way/i);
   assert.match(prompt.systemPrompt, /claudia: answer ordinary lunch with named food options first/i);
   assert.match(prompt.systemPrompt, /vanya: add human temperature without performance, training, movement/i);
+  assert.match(prompt.systemPrompt, /For ordinary lunch turns, Claudia must list named foods first and one decision rule/i);
+  assert.match(prompt.systemPrompt, /Vanya must use lunch\/afternoon\/personality-test pressure/i);
   assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
   assert.match(prompt.systemPrompt, /vanya: Feed the session, not the performance/i);
   assert.match(prompt.systemPrompt, /Recent assistant\/card repeat risks:/i);

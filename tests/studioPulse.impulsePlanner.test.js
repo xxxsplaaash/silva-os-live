@@ -41,3 +41,23 @@ test('showcase impulse planner keeps Claudia first for Vanya-referenced 20-minut
   assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute timer plan|movement categories|prior starter list/i);
   assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /fresh human pressure|avoid recent mirror|first-round/i);
 });
+
+test('showcase impulse planner gives ordinary lunch distinct Claudia and Vanya line jobs', () => {
+  const plan = buildShowcaseImpulsePlan({
+    userMessage: 'quick help: what should I eat for lunch?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'assistant', text: 'Start this week with incline push-ups and backpack rows.' },
+      { speakerId: 'vanya', role: 'assistant', text: 'Feed the session, not the performance.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+
+  assert.equal(plan.category, 'practical');
+  assert.equal(plan.topicClass, 'food-choice');
+  assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /named lunch options|eggs|rice bowl|sandwich|leftovers/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /lunch|afternoon|personality-test/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /never movement or performance framing/i);
+  assert.doesNotMatch(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /\btraining-food\b/i);
+});

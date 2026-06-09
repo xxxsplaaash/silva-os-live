@@ -1209,6 +1209,7 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
   "Ordinary lunch or meal asks are not training-food asks unless the user says training, workout, gym, lifting, before, after, pre, or post. For ordinary lunch, name lunch options first and do not mention training, movement, performance, session fuel, or workout timing.",
+  "Ordinary lunch voice must be unmistakable: Claudia opens with named food options plus one decision rule; Vanya adds lunch/afternoon human pressure with playful bite. Do not write two generic nutrition-assistant lines.",
   "Reject operational jargon such as design brief, implementation parameters, status green, current objectives, workflow alignment, deliverables, production readiness, and stakeholder language; translate it into visible taste, concrete options, or one next move.",
   "For design, food, planning, and room-social asks, answer the visible choice or next action, not process readiness or delivery theater.",
   "If the user changes topic, drop stale context immediately. A movie prompt after fitness is a movie prompt, not a training recap.",
@@ -1537,7 +1538,8 @@ function formatSelectedSpeakerLineJobs(value) {
     enforceSelected ? "Use only selected speakers on the first attempt; do not add a generic helper voice." : "Prefer selected speakers on the first attempt.",
     selected.length ? `Selected line jobs: ${selected.join("; ")}` : "",
     "For practical fitness turns, Claudia must land the concrete movement/timer/reps line before Vanya adds social temperature.",
-    "A Vanya-first generic encouragement line is a first-attempt failure for fitness asks."
+    "A Vanya-first generic encouragement line is a first-attempt failure for fitness asks.",
+    "For ordinary lunch turns, Claudia must list named foods first and one decision rule; Vanya must use lunch/afternoon/personality-test pressure, not movement, fuel, training, or performance language."
   ].filter(Boolean).join("\n");
 }
 function formatPresence(value) {
