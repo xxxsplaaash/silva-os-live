@@ -2557,6 +2557,43 @@ test('deterministic logo fallback keeps Claudia blind-attributable and not silen
   assert.equal(validation.ok, true, validation.issues.join(', '));
 });
 
+test('social director validator accepts concrete logo direction without planning vocabulary', () => {
+  const validation = validateDirectorOutput({
+    roomBeat: 'The room keeps the Silva logo direction sharp.',
+    roomMood: 'sharp',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'leah',
+        role: 'primary',
+        tone: 'sharp',
+        text: 'Silva needs a logo that feels less like a generic tech template and more like a sharp, singular statement. Think stark contrast, not a gradient fade.',
+        visibleState: 'Holding critique'
+      },
+      {
+        speakerId: 'grok',
+        role: 'side',
+        tone: 'dry',
+        text: 'The premise that tech template is inherently weak needs pressure. Is the goal to be different, or to be effective?',
+        visibleState: 'Tracking failure'
+      }
+    ],
+    silentReactions: [
+      { speakerId: 'vanya', visibleState: 'Reading the room', reason: 'holding warmth while the logo direction gets sharper pressure' },
+      { speakerId: 'claudia', visibleState: 'Tracking next steps', reason: 'tracking structure until the logo direction needs a concrete next move' },
+      { speakerId: 'aisha', visibleState: 'Anchoring', reason: 'holding the record while the logo direction gets the useful voice' }
+    ],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'I need a sharper logo direction for Silva',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'quick help: what should I eat for lunch?' }
+    ]
+  });
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+});
+
 test('social director fallback answers landing-page design direction instead of generic room banter', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
