@@ -3854,6 +3854,40 @@ test('deterministic continuity claim update ignores unrelated visible preference
   assert.equal(validation.issues.includes('product-continuity-conflict:cross-domain-prior'), false, validation.issues.join(', '));
 });
 
+test('deterministic continuity first-claim side cards vary by evidence slot', () => {
+  const landingOutput = socialFallbackFor('My landing page style is black glass with a single red pulse.', { recentTurns: [] });
+  const dashboardOutput = socialFallbackFor('My dashboard preference is obsidian with one red accent.', { recentTurns: [] });
+  const landingClaudia = landingOutput.speakers.find(item => item.speakerId === 'claudia')?.text || '';
+  const dashboardClaudia = dashboardOutput.speakers.find(item => item.speakerId === 'claudia')?.text || '';
+
+  assert.ok(landingClaudia, fallbackVisibleText(landingOutput));
+  assert.ok(dashboardClaudia, fallbackVisibleText(dashboardOutput));
+  assert.notEqual(landingClaudia, dashboardClaudia);
+  assert.match(landingClaudia, /\blanding|hero|page\b/i);
+  assert.match(dashboardClaudia, /\bdashboard|surface|accent\b/i);
+});
+
+test('deterministic continuity update side cards do not repeat across landing and dashboard changes', () => {
+  const landingOutput = socialFallbackFor('Actually my landing page style is white editorial with no red.', {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My landing page style is black glass with a single red pulse.' }
+    ]
+  });
+  const dashboardOutput = socialFallbackFor('Actually my dashboard preference is pale blue with no red accents.', {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' }
+    ]
+  });
+  const landingClaudia = landingOutput.speakers.find(item => item.speakerId === 'claudia')?.text || '';
+  const dashboardClaudia = dashboardOutput.speakers.find(item => item.speakerId === 'claudia')?.text || '';
+
+  assert.ok(landingClaudia, fallbackVisibleText(landingOutput));
+  assert.ok(dashboardClaudia, fallbackVisibleText(dashboardOutput));
+  assert.notEqual(landingClaudia, dashboardClaudia);
+  assert.match(landingClaudia, /\blanding|hero|page\b/i);
+  assert.match(dashboardClaudia, /\bdashboard|surface|accent\b/i);
+});
+
 test('deterministic continuity change fallback changes shape after a live dashboard supersession receipt', () => {
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
@@ -6124,6 +6158,25 @@ test('room director repair prompt gives issue-specific acceptance guidance for f
   assert.match(prompt, /Vanya voice repair/);
   assert.match(prompt, /human temperature read with bite/);
   assert.doesNotMatch(prompt, /provider payload|raw model|GEMINI_API_KEY|GOOGLE_API_KEY/);
+});
+
+test('room director repair prompt tells Pack 1 how to recover old-preference no-content turns', () => {
+  const input = buildRoomDirectorInput({
+    message: 'What was my old dashboard preference?',
+    recentTurns: [
+      { speakerId: 'user', text: 'My dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'aisha', text: 'Current record logged: dashboard preference is obsidian with one red accent.' },
+      { speakerId: 'user', text: 'Actually my dashboard preference is pale blue with no red accents.' },
+      { speakerId: 'aisha', text: 'Current record logged: dashboard preference is pale blue with no red accents. Prior record remains dashboard preference is obsidian with one red accent.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input, { issues: ['no-content'] });
+
+  assert.match(prompt, /Old-preference no-content repair/);
+  assert.match(prompt, /Old record: \[prior claim\]\. Current record: \[active claim\]/);
+  assert.match(prompt, /dashboard preference is obsidian with one red accent/i);
+  assert.match(prompt, /dashboard preference is pale blue with no red accents/i);
 });
 
 test('social director defaults to fast structured model without changing main Pulse route', async () => {
