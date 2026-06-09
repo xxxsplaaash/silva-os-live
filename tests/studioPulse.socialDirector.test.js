@@ -4380,6 +4380,26 @@ test('social director stress fallback avoids generic scaffold after frustration'
   assert.equal(validation.ok, true, validation.issues.join(', '));
 });
 
+test('social director normal-answer fallback avoids repeating Vanya plain-version opener', () => {
+  const first = socialFallbackFor('you keep repeating yourself', { recentTurns: [] });
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'you keep repeating yourself' },
+    ...first.speakers.map(item => ({ speakerId: item.speakerId, role: item.role, text: item.text }))
+  ];
+  const second = socialFallbackFor('answer normally, what should I do today?', { recentTurns });
+  const text = second.speakers.map(item => item.text).join(' ');
+
+  assert.match(first.speakers.map(item => item.text).join(' '), /\bPlain version:/i);
+  assert.doesNotMatch(text, /\bPlain version:/i);
+  assert.match(text, /\bMake the day smaller\b/i);
+
+  const validation = validateDirectorOutput(second, {
+    userMessage: 'answer normally, what should I do today?',
+    recentTurns
+  });
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+});
+
 test('social director quality validator rejects food prompts that dodge before answering', () => {
   const objectiveEnergy = validateDirectorOutput({
     roomBeat: 'The room turns lunch into an objective slogan.',
