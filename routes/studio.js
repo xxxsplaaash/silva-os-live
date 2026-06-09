@@ -2824,7 +2824,7 @@ function pulseShowcaseOperatorDiagnosticsTokenAccepted(req = null) {
 function pulseShowcaseOperatorDiagnosticsEnabled(req = null) {
   if (process.env.NODE_ENV !== 'production') return true;
   if (pulseShowcaseOperatorDiagnosticsTokenAccepted(req)) return true;
-  return String(process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS || '').trim().toLowerCase() === 'true';
+  return false;
 }
 
 function parsePulseShowcaseTurnRequest(body = {}, req = null) {

@@ -1676,6 +1676,7 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics l
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
     const originalNodeEnv = process.env.NODE_ENV;
+    const originalDiagnosticsFlag = process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS;
     const originalDiagnosticsToken = process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN;
     process.env.GEMINI_API_KEY = 'test-room-provider-key';
     delete process.env.NODE_ENV;
@@ -1788,6 +1789,17 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics l
         const productionQuietFinal = parseSseEvents(await productionQuietResponse.text()).find(item => item.event === 'final').data;
         assert.equal(Object.prototype.hasOwnProperty.call(productionQuietFinal, 'operatorDiagnostics'), false);
 
+        process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS = 'true';
+        callCount = 0;
+        const productionFlagOnlyResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({ ...baseBody, operatorDiagnostics: true })
+        });
+        assert.equal(productionFlagOnlyResponse.status, 200);
+        const productionFlagOnlyFinal = parseSseEvents(await productionFlagOnlyResponse.text()).find(item => item.event === 'final').data;
+        assert.equal(Object.prototype.hasOwnProperty.call(productionFlagOnlyFinal, 'operatorDiagnostics'), false);
+
         callCount = 0;
         const productionWrongTokenResponse = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
           method: 'POST',
@@ -1822,6 +1834,8 @@ test('Studio Pulse showcase turn-stream exposes sanitized operator diagnostics l
       else process.env.GEMINI_API_KEY = originalGemini;
       if (originalNodeEnv == null) delete process.env.NODE_ENV;
       else process.env.NODE_ENV = originalNodeEnv;
+      if (originalDiagnosticsFlag == null) delete process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS;
+      else process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS = originalDiagnosticsFlag;
       if (originalDiagnosticsToken == null) delete process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN;
       else process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN = originalDiagnosticsToken;
     }
