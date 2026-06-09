@@ -1420,6 +1420,47 @@ function pulseShowcaseLedgerValuesEquivalent(a = '', b = '') {
   return overlap >= Math.min(2, smaller.size);
 }
 
+function pulseShowcaseLedgerRowDisplayRank(row = {}) {
+  const sourceRank = row.source === 'pack1-memory' ? 0 : 1;
+  const text = safeShowcaseText(row.text || '', 240);
+  const decoratedRank = /^(?:active|current|prior|previous|superseded)\s+record(?:\s+logged)?\s*:/i.test(text) ? 1 : 0;
+  const userRank = /^user\s+/i.test(text) ? 0 : 1;
+  return [sourceRank, decoratedRank, userRank, text.length];
+}
+
+function pulseShowcaseLedgerRowPreferred(candidate = {}, existing = {}) {
+  const a = pulseShowcaseLedgerRowDisplayRank(candidate);
+  const b = pulseShowcaseLedgerRowDisplayRank(existing);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] < b[index]) return true;
+    if (a[index] > b[index]) return false;
+  }
+  return false;
+}
+
+function dedupePulseShowcaseLedgerRows(rows = []) {
+  const output = [];
+  for (const row of sanitizePulseShowcaseLedgerRows(rows)) {
+    const rowSlot = pulseShowcaseLedgerSlot(row.text);
+    const duplicateIndex = output.findIndex(existing => {
+      if (existing.status !== row.status) return false;
+      const existingSlot = pulseShowcaseLedgerSlot(existing.text);
+      if (rowSlot && existingSlot && rowSlot === existingSlot) {
+        return pulseShowcaseLedgerValuesEquivalent(existing.text, row.text);
+      }
+      return safeShowcaseText(existing.text, 240).toLowerCase() === safeShowcaseText(row.text, 240).toLowerCase();
+    });
+    if (duplicateIndex === -1) {
+      output.push(row);
+      continue;
+    }
+    if (pulseShowcaseLedgerRowPreferred(row, output[duplicateIndex])) {
+      output[duplicateIndex] = row;
+    }
+  }
+  return output.slice(0, 12);
+}
+
 function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
   const rows = sanitizePulseShowcaseLedgerRows(currentRows);
   const prior = sanitizePulseShowcaseLedgerRows(priorRows);
@@ -1466,7 +1507,7 @@ function enrichPulseShowcasePack1LedgerRows(currentRows = [], priorRows = []) {
     }
   }
 
-  return rows.slice(0, 12);
+  return dedupePulseShowcaseLedgerRows(rows);
 }
 
 function pulseShowcaseSessionPack1Ledger(sessionId = '') {
@@ -2625,7 +2666,7 @@ function pulseShowcaseLedgerFrom(memorySummary = {}, stateUpdates = {}, priorPac
     pack1Rows = enrichPulseShowcasePack1LedgerRows(rows, priorPack1Rows);
   }
 
-  return (pack1Rows.length ? pack1Rows : rows).slice(0, 12);
+  return dedupePulseShowcaseLedgerRows(pack1Rows.length ? pack1Rows : rows);
 }
 
 function sanitizeShowcaseMessages(items = []) {

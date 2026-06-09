@@ -3921,6 +3921,35 @@ test('Studio Pulse ledger demotes stale Pack 1 active row from current visible c
   assert.ok(!ledger.some(item => item.status === 'active' && /black glass with a single red pulse/i.test(item.text)));
 });
 
+test('Studio Pulse ledger dedupes Pack 1 supersededPriorText and supersededTruths for the same slot', () => {
+  assert.equal(typeof studioRouter.__buildPulseShowcaseLedgerFromForTests, 'function');
+  const ledger = studioRouter.__buildPulseShowcaseLedgerFromForTests(
+    {
+      activeTruths: [{
+        noteId: 'note-white-editorial-active',
+        canonicalText: 'User landing page style: white editorial with no red',
+        status: 'active',
+        supersededPriorText: 'Prior record: landing page style is black glass with a single red pulse.'
+      }],
+      supersededTruths: [{
+        noteId: 'note-black-glass-superseded',
+        canonicalText: 'User landing page style: black glass with a single red pulse',
+        status: 'superseded'
+      }],
+      memoryCandidates: []
+    },
+    {},
+    []
+  );
+
+  const activeStyleRows = ledger.filter(item => item.status === 'active' && /white editorial with no red/i.test(item.text));
+  const supersededStyleRows = ledger.filter(item => item.status === 'superseded' && /black glass with a single red pulse/i.test(item.text));
+  assert.equal(activeStyleRows.length, 1);
+  assert.equal(supersededStyleRows.length, 1);
+  assert.equal(supersededStyleRows[0].source, 'pack1-memory');
+  assert.match(supersededStyleRows[0].text, /^User landing page style:/i);
+});
+
 test('Studio Pulse ledger demotes stale prior Pack 1 row when fallback carries the current correction', () => {
   assert.equal(typeof studioRouter.__buildPulseShowcaseLedgerFromForTests, 'function');
   const ledger = studioRouter.__buildPulseShowcaseLedgerFromForTests(
