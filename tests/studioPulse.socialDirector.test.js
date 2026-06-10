@@ -7265,6 +7265,153 @@ test('turn acceptance smoke script summarizes accepted and repaired turns safely
   }
 });
 
+test('turn acceptance smoke script can run the dashboard continuity tail as a bounded slice', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-gauntlet-slice-'));
+  const fixturePath = path.join(dir, 'fixture.json');
+  const socialSignals = {
+    tension: 28,
+    continuityPressure: 44,
+    hierarchy: [],
+    alliances: [],
+    interruptions: [],
+    roomMove: 'anchor',
+    statusEvents: [],
+    socialMemory: { statusMomentum: [], pairPressure: [], recentRoomMoves: ['anchor'], interruptionPressure: 0 }
+  };
+  const silence = ['vanya', 'leah', 'grok'].map(speakerId => ({
+    speakerId,
+    visibleState: speakerId === 'vanya' ? 'Reading the room' : speakerId === 'leah' ? 'Holding critique' : 'Tracking',
+    reason: speakerId === 'vanya'
+      ? 'staying quiet because the continuity answer already has enough human pressure'
+      : speakerId === 'leah'
+        ? 'saving the sharper taste cut until the continuity answer needs another edge'
+        : 'watching for the premise fault inside the continuity answer'
+  }));
+  const finalFor = ({ prompt, cards, ledger }) => ({
+    ok: true,
+    sessionId: 'script-slice-session',
+    mode: 'continuity_breaker',
+    activeEngine: 'aisha-runtime-pack1',
+    aishaEngineConnected: true,
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    messageEvents: cards,
+    silentReactions: silence,
+    continuityLedger: ledger,
+    continuityProof: {
+      active: ledger.some(row => row.status === 'active'),
+      activeTruths: ledger.filter(row => row.status === 'active').length,
+      supersededTruths: ledger.filter(row => row.status === 'superseded').length,
+      disputedTruths: 0
+    },
+    socialSignals,
+    acceptedByPack1: true,
+    qualityAccepted: true,
+    repairedByRuntime: false,
+    qualityFailureCategory: '',
+    fallbackCategory: '',
+    runtimePhase: 'final',
+    diagnostics: { runtimeConnected: true, persistenceConnected: true, traceStatus: 'succeeded' },
+    prompt
+  });
+  const active = { id: 'mock-dashboard-pale-blue', text: 'User dashboard preference: pale blue with no red accents', status: 'active', source: 'pack1-memory' };
+  const prior = { id: 'mock-dashboard-obsidian-prior', text: 'User dashboard preference: obsidian with one red accent', status: 'superseded', source: 'pack1-memory' };
+  fs.writeFileSync(fixturePath, JSON.stringify({
+    status: {
+      ok: true,
+      activeEngine: 'aisha-runtime-pack1',
+      aishaEngineConnected: true,
+      aishaEngineMode: 'production',
+      persistence: { connected: true, active: true },
+      maxUserTextLength: 1500
+    },
+    reaction: {
+      ok: true,
+      reaction: 'more_like',
+      reactionSummary: { counts: { more_like: 1 }, lastReaction: 'more_like', lastSpeakerId: 'aisha' },
+      socialSignals: { ...socialSignals, reactionSummary: { counts: { more_like: 1 }, lastReaction: 'more_like', lastSpeakerId: 'aisha', lastMessageId: 'slice-message' } }
+    },
+    expand: {
+      ok: true,
+      speakerId: 'aisha',
+      bullets: [
+        'Old dashboard value stays visible.',
+        'Current dashboard value leads the next answer.',
+        'No quiet rewrite.'
+      ]
+    },
+    turnStreams: [
+      {
+        final: finalFor({
+          prompt: 'My dashboard preference is obsidian with one red accent.',
+          ledger: [{ id: 'mock-dashboard-obsidian', text: 'User dashboard preference: obsidian with one red accent', status: 'active', source: 'pack1-memory' }],
+          cards: [
+            { speakerId: 'aisha', speakerName: 'Aisha Motsepe', role: 'primary', tone: 'precise continuity', visibleState: 'Anchoring', text: 'Current record logged: dashboard preference is obsidian with one red accent.' },
+            { speakerId: 'claudia', speakerName: 'Claudia Naidoo', role: 'side', tone: 'dry practical', visibleState: 'Tracking next steps', text: 'Dashboard structure: one surface rule, one accent rule, comparison note only if it changes.' }
+          ]
+        })
+      },
+      {
+        final: finalFor({
+          prompt: 'Actually my dashboard preference is pale blue with no red accents.',
+          ledger: [active, prior],
+          cards: [
+            { speakerId: 'aisha', speakerName: 'Aisha Motsepe', role: 'primary', tone: 'precise continuity', visibleState: 'Anchoring', text: 'Current record logged: dashboard preference is pale blue with no red accents. Prior record remains dashboard preference is obsidian with one red accent.' },
+            { speakerId: 'claudia', speakerName: 'Claudia Naidoo', role: 'side', tone: 'dry practical', visibleState: 'Tracking next steps', text: 'Dashboard structure: current surface rule first; prior accent rule stays visible only for comparison.' }
+          ]
+        })
+      },
+      {
+        final: finalFor({
+          prompt: 'What changed?',
+          ledger: [active, prior],
+          cards: [
+            { speakerId: 'aisha', speakerName: 'Aisha Motsepe', role: 'primary', tone: 'precise continuity', visibleState: 'Anchoring', text: 'Changed: Prior record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents.' },
+            { speakerId: 'claudia', speakerName: 'Claudia Naidoo', role: 'side', tone: 'dry practical', visibleState: 'Tracking next steps', text: 'Change structure: prior dashboard value, current dashboard value, one rule going forward.' }
+          ]
+        })
+      },
+      {
+        final: finalFor({
+          prompt: 'What was my old dashboard preference?',
+          ledger: [active, prior],
+          cards: [
+            { speakerId: 'aisha', speakerName: 'Aisha Motsepe', role: 'primary', tone: 'precise continuity', visibleState: 'Anchoring', text: 'Old record: dashboard preference is obsidian with one red accent. Current record: dashboard preference is pale blue with no red accents.' },
+            { speakerId: 'claudia', speakerName: 'Claudia Naidoo', role: 'side', tone: 'dry practical', visibleState: 'Tracking next steps', text: 'Archive structure: old dashboard value first, current dashboard value second; stop there.' }
+          ]
+        })
+      }
+    ]
+  }));
+  try {
+    const result = await runNodeScript(['scripts/smoke-pulse-showcase-turn-acceptance.mjs'], {
+      BACKEND_URL: 'http://fixture.local',
+      CHECK_FRONTEND_VERSION: '0',
+      GAUNTLET_FIXTURE_FILE: fixturePath,
+      GAUNTLET_TURN_DELAY_MS: '0',
+      GAUNTLET_PROMPT_START: '24',
+      SESSION_ID: 'script-slice-session'
+    });
+    assert.equal(result.code, 0, result.stderr || result.stdout);
+    const summary = JSON.parse(result.stdout);
+    assert.equal(summary.selection.totalPrompts, 27);
+    assert.equal(summary.selection.selectedPrompts, 4);
+    assert.equal(summary.selection.start, 24);
+    assert.equal(summary.counts.accepted, 4);
+    assert.equal(summary.counts.repaired, 0);
+    assert.equal(summary.counts.fallback, 0);
+    assert.deepEqual(summary.results.map(item => item.prompt), [
+      'My dashboard preference is obsidian with one red accent.',
+      'Actually my dashboard preference is pale blue with no red accents.',
+      'What changed?',
+      'What was my old dashboard preference?'
+    ]);
+    assert.match(result.stderr, /ledger: superseded pack1-memory mock-dashboard-obsidian-prior/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('operator diagnostics summarizer strips prompts and visible card text', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-diagnostics-summary-'));
   const fixturePath = path.join(dir, 'gauntlet.json');

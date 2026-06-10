@@ -22,6 +22,9 @@ const ALLOW_LOCAL_FALLBACK = process.env.ALLOW_LOCAL_FALLBACK === '1';
 const OPERATOR_DIAGNOSTICS = /^(1|true|yes)$/i.test(String(process.env.OPERATOR_DIAGNOSTICS || process.env.GAUNTLET_OPERATOR_DIAGNOSTICS || ''));
 const OPERATOR_DIAGNOSTICS_TOKEN = String(process.env.OPERATOR_DIAGNOSTICS_TOKEN || process.env.PULSE_SHOWCASE_OPERATOR_DIAGNOSTICS_TOKEN || '').trim();
 const GAUNTLET_FIXTURE_FILE = String(process.env.GAUNTLET_FIXTURE_FILE || '').trim();
+const GAUNTLET_PROMPT_START = Math.max(1, Number(process.env.GAUNTLET_PROMPT_START || 1) || 1);
+const GAUNTLET_PROMPT_END = Math.max(0, Number(process.env.GAUNTLET_PROMPT_END || 0) || 0);
+const GAUNTLET_PROMPT_MATCH = String(process.env.GAUNTLET_PROMPT_MATCH || '').trim();
 const TURN_TIMEOUT_MS = Math.max(8000, Number(process.env.TURN_TIMEOUT_MS || 45000) || 45000);
 const IS_LOCAL_BACKEND = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/|$)/i.test(BACKEND_URL);
 const DEFAULT_GAUNTLET_TURN_DELAY_MS = IS_LOCAL_BACKEND ? 0 : 25000;
@@ -78,6 +81,24 @@ const PROMPTS = [
 
 function assertOk(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function selectedPromptsFor(prompts = []) {
+  const match = GAUNTLET_PROMPT_MATCH.toLowerCase();
+  return prompts.filter((prompt, index) => {
+    const ordinal = index + 1;
+    if (ordinal < GAUNTLET_PROMPT_START) return false;
+    if (GAUNTLET_PROMPT_END && ordinal > GAUNTLET_PROMPT_END) return false;
+    if (match) {
+      const haystack = [
+        prompt.userText,
+        prompt.mode,
+        prompt.sessionGroup
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(match)) return false;
+    }
+    return true;
+  });
 }
 
 function responderCapForPrompt(prompt = {}) {
@@ -677,7 +698,9 @@ const results = [];
 const groupState = new Map();
 let reactionProbe = null;
 let expandProbe = null;
-for (const prompt of PROMPTS) {
+const activePrompts = selectedPromptsFor(PROMPTS);
+assertOk(activePrompts.length > 0, `gauntlet prompt selection was empty: start=${GAUNTLET_PROMPT_START} end=${GAUNTLET_PROMPT_END || 'all'} match=${GAUNTLET_PROMPT_MATCH || '-'}`);
+for (const prompt of activePrompts) {
   const group = prompt.sessionGroup || 'main';
   const state = groupState.get(group) || { prior: {}, recentTurns: [], previousVisibleKey: '', visibleKeys: new Set(), visibleLineKeys: new Set() };
   state.recentTurns.push({ speakerId: 'user', role: 'user', text: prompt.userText });
@@ -778,7 +801,14 @@ const summary = {
   backendUrl: BACKEND_URL,
   ...(frontend ? { frontend } : {}),
   sessionId: SESSION_ID,
-  sessionIds: Object.fromEntries([...new Set(PROMPTS.map(item => item.sessionGroup || 'main'))].map(group => [group, sessionIdFor(group)])),
+  selection: {
+    totalPrompts: PROMPTS.length,
+    selectedPrompts: activePrompts.length,
+    start: GAUNTLET_PROMPT_START,
+    end: GAUNTLET_PROMPT_END || null,
+    match: GAUNTLET_PROMPT_MATCH || ''
+  },
+  sessionIds: Object.fromEntries([...new Set(activePrompts.map(item => item.sessionGroup || 'main'))].map(group => [group, sessionIdFor(group)])),
   status: {
     activeEngine: status.activeEngine,
     aishaEngineConnected: status.aishaEngineConnected,
@@ -813,11 +843,11 @@ if (!ALLOW_LOCAL_FALLBACK && summary.counts.fallback > 0) {
   console.error('One or more turns reported unavailable runtime fallback.');
   process.exit(1);
 }
-if (REQUIRE_MOST_ACCEPTED && summary.counts.accepted < Math.ceil(PROMPTS.length / 2)) {
-  console.error(`Only ${summary.counts.accepted}/${PROMPTS.length} turns were accepted by Pack 1.`);
+if (REQUIRE_MOST_ACCEPTED && summary.counts.accepted < Math.ceil(activePrompts.length / 2)) {
+  console.error(`Only ${summary.counts.accepted}/${activePrompts.length} turns were accepted by Pack 1.`);
   process.exit(1);
 }
-if (!ALLOW_LOCAL_FALLBACK && acceptedOrRepaired < PROMPTS.length) {
+if (!ALLOW_LOCAL_FALLBACK && acceptedOrRepaired < activePrompts.length) {
   console.error('One or more turns were neither accepted nor safely repaired.');
   process.exit(1);
 }
