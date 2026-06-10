@@ -1604,11 +1604,16 @@ function formatCurrentTurnAcceptanceTarget(value) {
   if (!socialDirector) return "";
   const impulsePlan = asRecord(socialDirector["impulsePlan"]);
   const topicClass = String(readString(impulsePlan, "topicClass") ?? readString(impulsePlan, "category") ?? "").toLowerCase();
+  const selectedLineJobs = Array.isArray(impulsePlan?.["selectedSpeakers"]) ? impulsePlan["selectedSpeakers"].map((item) => readString(asRecord(item), "lineJob") ?? "").join("\n").toLowerCase() : "";
   const currentTurn = [
     readString(socialDirector, "userMessage"),
-    readString(socialDirector, "generatorPrompt")
+    readString(socialDirector, "generatorPrompt"),
+    selectedLineJobs
   ].filter(Boolean).join("\n").toLowerCase();
   const targets = [];
+  if (/\b(20|twenty)[-\s]+minute\b/.test(currentTurn) && /\b(referenced workout|fitness follow-up|workout follow-up|compress the referenced workout|movement categories|push|pull|hinge|core|reps?)\b/.test(currentTurn)) {
+    targets.push("20-minute fitness follow-up: Claudia must speak first with a timed mini-plan using squat, hinge, push, pull, core, timer, reps; Vanya may only add a second line after Claudia. Vanya-only motivation, focused-work advice, and restating the old card are invalid.");
+  }
   if (/\b(actual tension|tension in this room|room tension)\b/.test(currentTurn)) {
     targets.push("room-tension: return visible speaker text naming the actual pressure, friction, dodge, safe-choice drift, or consensus problem; empty speakers, silence-only JSON, role summaries, and diagnostics are invalid.");
   }

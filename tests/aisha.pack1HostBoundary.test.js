@@ -1002,10 +1002,19 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
   assert.match(prompt.systemPrompt, /Use only selected speakers on the first attempt/i);
   assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
   assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
+  assert.match(prompt.systemPrompt, /Current turn acceptance target:/);
+  assert.match(prompt.systemPrompt, /20-minute fitness follow-up: Claudia must speak first with a timed mini-plan/i);
+  assert.match(prompt.systemPrompt, /squat, hinge, push, pull, core, timer, reps/i);
+  assert.match(prompt.systemPrompt, /Vanya may only add a second line after Claudia/i);
+  assert.match(prompt.systemPrompt, /Vanya-only motivation, focused-work advice, and restating the old card are invalid/i);
   assert.match(prompt.systemPrompt, /vanya: Start at home this week\. Three short sessions; no heroic rebrand required/i);
   assert.match(prompt.systemPrompt, /claudia: Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
   assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery/i);
+  assert.ok(
+    prompt.systemPrompt.indexOf('Current turn acceptance target:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
+    '20-minute current-turn target should beat softer examples'
+  );
   assert.doesNotMatch(
     prompt.systemPrompt,
     /20-minute fitness follow-up:[\s\S]*Let the clock do the arguing|GOOD:[^\n]*Let the clock do the arguing/i
