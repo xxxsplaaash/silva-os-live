@@ -509,7 +509,10 @@ test('social director fallback uses referenced fitness card for short-session fo
   const text = visibleText(body);
   assert.equal(result.statusCode, 200);
   assert.equal(body.activeEngine, 'local-social-director');
-  assert.match(text, /\b(Twenty minutes|three rounds|squat|hinge|push|pull|core|forty seconds|twenty off)\b/i);
+  assert.match(text, /\bTwenty minutes\b/i);
+  assert.match(text, /\b(push|pull|legs|hinge|core)\b/i);
+  assert.match(text, /\b(lowest rep count|rep count)\b/i);
+  assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
   assertCleanVisible(body);
 });
@@ -524,7 +527,10 @@ test('social director fallback uses recent fitness cards for short-session follo
   });
   const text = visibleText(fallback);
 
-  assert.match(text, /\b(Twenty minutes|three rounds|squat|hinge|push|pull|core|forty seconds|twenty off)\b/i);
+  assert.match(text, /\bTwenty minutes\b/i);
+  assert.match(text, /\b(push|pull|legs|hinge|core)\b/i);
+  assert.match(text, /\b(lowest rep count|rep count)\b/i);
+  assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
   assertCleanVisible(fallback);
 });
@@ -701,6 +707,37 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
   assert.match(prompt, /Do not answer with generic habit talk/i);
   assert.match(prompt, /Do not restate the prior starter list/i);
+});
+
+test('showcase prompt keeps Claudia practical plan first when Vanya card is referenced for 20-minute fitness', () => {
+  const input = buildRoomDirectorInput({
+    question: 'turn that into a 20 minute version',
+    roomState: { roomMood: 'focused' },
+    references: [{
+      speakerId: 'vanya',
+      speakerName: 'Vanya',
+      role: 'primary',
+      text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+    }],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.' }
+    ]
+  });
+  const rubric = acceptanceRubricFor(input);
+  const prompt = buildRoomDirectorPrompt(input);
+
+  assert.equal(input.impulsePlan.topicClass, 'reference-follow-up');
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
+  assert.ok(rubric.positiveTargets.some(item => /Vanya social framing/i.test(item)));
+  assert.match(prompt, /If the referenced card is Vanya social framing/i);
+  assert.match(prompt, /Claudia first with a timed mini-plan/i);
+  assert.match(prompt, /"speakerOrder": \[\s+"claudia",\s+"vanya"\s+\]/i);
+  assert.match(prompt, /Follow impulsePlan exactly: use only selectedSpeakers/i);
+  assert.match(prompt, /Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
+  assert.match(prompt, /BAD: user references Vanya's home-start card/i);
+  assert.match(prompt, /GOOD: Claudia says "Twenty minutes: warm up for 3/i);
+  assert.match(prompt, /not \\"20 minutes is a solid block\\" or generic encouragement/i);
 });
 
 test('showcase prompt carries anti-repeat and voice-contract acceptance pressure', () => {
@@ -2231,7 +2268,9 @@ test('social director fallback treats referenced exercise cards as fitness conte
 
   assert.match(text, /\bKeep it human: twenty minutes\b/i);
   assert.match(text, /\btwenty minutes\b/i);
-  assert.match(text, /\bthree rounds\b/i);
+  assert.match(text, /\btwo rounds\b/i);
+  assert.match(text, /\blowest rep count\b/i);
+  assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(first round proves|second round earns|mirror can wait|day is moving)\b/i);
   assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
   assertCleanVisible(fallback);

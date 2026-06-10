@@ -17,7 +17,7 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
 }, {
     readonly scenario: "20-minute fitness follow-up";
     readonly speakerId: "claudia";
-    readonly text: "Run three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.";
+    readonly text: "First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.";
 }, {
     readonly scenario: "20-minute fitness follow-up";
     readonly speakerId: "vanya";

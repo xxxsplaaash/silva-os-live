@@ -84,7 +84,7 @@ export const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
   {
     scenario: "20-minute fitness follow-up",
     speakerId: "claudia",
-    text: "Run three rounds: squat or hinge, push, pull, core. Forty seconds on, twenty off.",
+    text: "First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.",
   },
   {
     scenario: "20-minute fitness follow-up",

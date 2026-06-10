@@ -438,6 +438,38 @@ test('Pack 1 social-director fitness frustration target lines avoid generic rese
   assert.ok(!issues.includes('false-objective:command-posture'), issues.join(', '));
 });
 
+test('Pack 1 social-director 20-minute target lines avoid interval boilerplate', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-short-window-targets-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES } = await import(pathToFileURL(outfile).href);
+  const targetLines = SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES
+    .filter(item => item.scenario === '20-minute fitness follow-up');
+  const visibleText = targetLines.map(item => item.text).join('\n');
+  const issues = evaluateVisibleResponse({
+    userMessage: 'turn that into a 20 minute version',
+    visibleText,
+    recentTurns: [
+      { speakerId: 'vanya', role: 'primary', text: 'Start at home this week. Three short sessions; no heroic rebrand required.' },
+      { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.' }
+    ],
+    speakerLines: targetLines.map(item => ({ speakerId: item.speakerId, text: item.text }))
+  }).map(issue => issue.key || issue);
+
+  assert.match(visibleText, /\b20[- ]minutes?\b/i);
+  assert.match(visibleText, /\b(push|pull|legs|hinge|core)\b/i);
+  assert.match(visibleText, /\b(rep count|lowest rep|count)\b/i);
+  assert.doesNotMatch(visibleText, /\b(40|45)\s+seconds?\s+on|\b(15|20)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
+  assert.ok(!issues.includes('topic-ignored:referenced-fitness'), issues.join(', '));
+  assert.ok(!issues.includes('generic-advice:short-window-fitness'), issues.join(', '));
+});
+
 test('Pack 1 social-director built prompt carries line-quality fixture pressure', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-'));
   const outfile = path.join(tempDir, 'promptTemplate.mjs');
