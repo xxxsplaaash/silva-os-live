@@ -537,7 +537,7 @@ test('visible response quality rejects generic bruh recovery after fitness conte
 
   assert.ok(issueKeys(issues).includes('topic-ignored:fitness-context'));
 
-  const accepted = evaluateVisibleResponse({
+  const replayedObjective = evaluateVisibleResponse({
     userMessage: 'BRUH...',
     recentTurns: [
       { speakerId: 'claudia', role: 'side', text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write the reps down.' }
@@ -548,7 +548,7 @@ test('visible response quality rejects generic bruh recovery after fitness conte
     ].join('\n')
   });
 
-  assert.equal(issueKeys(accepted).includes('topic-ignored:fitness-context'), false);
+  assert.ok(issueKeys(replayedObjective).includes('frustration-miss:objective-replay'));
 });
 
 test('visible response quality rejects repeated short-session answer lines', () => {

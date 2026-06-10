@@ -3050,16 +3050,24 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
   let publicQualityIssues = publicQuality.issues || [];
   let fallbackValidationIssues = [];
   if (!publicQuality.ok || continuityLabelIssue) {
+    const repairRecentTurns = dedupeShowcaseRecentTurns([
+      ...continuityRecentTurns,
+      ...(Array.isArray(messageEvents) ? messageEvents : []).map(item => ({
+        speakerId: item?.speakerId,
+        role: item?.role || 'message',
+        text: item?.text
+      }))
+    ]);
     const fallbackOutput = socialFallbackFor(userText, {
-      history: continuityRecentTurns,
-      recentTurns: continuityRecentTurns,
+      history: repairRecentTurns,
+      recentTurns: repairRecentTurns,
       roomState,
       memorySummary,
       continuityLedger
     });
     const fallbackValidation = validateDirectorOutput(fallbackOutput, {
       userMessage: userText,
-      recentTurns: continuityRecentTurns,
+      recentTurns: repairRecentTurns,
       references,
       continuity: continuityQuality,
       impulsePlan: showcaseImpulsePlan
