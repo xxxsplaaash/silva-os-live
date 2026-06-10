@@ -130,3 +130,59 @@ test('social director enriches first-vs-repair diagnostics when repair accepts',
   assert.equal(validation.repairAttemptResponseMode, 'small_exchange');
   assert.deepEqual(validation.repairAttemptSpeakerOrder, ['claudia', 'vanya']);
 });
+
+test('social director exposes Vanya-referenced 20-minute first-attempt drift before repair', async () => {
+  let calls = 0;
+  const result = await runSocialDirectorTurn({
+    body: {
+      question: 'turn that into a 20 minute version',
+      roomState: { roomMood: 'focused' },
+      references: [{
+        speakerId: 'vanya',
+        speakerName: 'Vanya',
+        role: 'primary',
+        text: 'Start at home this week. Three short sessions; no heroic rebrand required.'
+      }],
+      recentTurns: [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        {
+          speakerId: 'claudia',
+          role: 'side',
+          text: 'Do incline push-ups, backpack rows, split squats, hip hinges, and a plank. Write reps down.'
+        }
+      ]
+    },
+    callAishaEngine: async () => {
+      calls += 1;
+      if (calls === 1) {
+        return mockAishaJson({
+          roomBeat: 'The first answer treats Vanya as the whole answer.',
+          roomMood: 'focused',
+          responseMode: 'single',
+          speakers: [
+            {
+              speakerId: 'vanya',
+              role: 'primary',
+              tone: 'warm',
+              text: 'Twenty minutes is a solid block for focused work.',
+              visibleState: 'Pushing'
+            }
+          ],
+          silentReactions: [],
+          stateUpdates: { notes: [] }
+        });
+      }
+      return mockAishaJson(validFitnessOutput());
+    }
+  });
+
+  const validation = result.payload.validation;
+  assert.equal(calls, 2);
+  assert.equal(result.payload.qualityAccepted, true);
+  assert.equal(result.payload.repairedByRuntime, true);
+  assert.equal(validation.firstAttemptCategory, 'quality-rejected');
+  assert.ok(validation.firstAttemptIssues.includes('product-topic-ignored:referenced-fitness'));
+  assert.deepEqual(validation.firstAttemptSpeakerOrder, ['vanya']);
+  assert.equal(validation.repairAttemptAccepted, true);
+  assert.deepEqual(validation.repairAttemptSpeakerOrder, ['claudia', 'vanya']);
+});

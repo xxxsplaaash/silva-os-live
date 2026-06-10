@@ -929,6 +929,24 @@ test('Pack 1 social-director prompt gives current-turn targets for stress and no
   const normalPrompt = promptFor('answer normally, what should I do today?', 'Return a normal answer. User asks: answer normally, what should I do today?');
   assert.match(normalPrompt.systemPrompt, /normal-answer recovery: if the current turn contains a practical task, answer that task directly/i);
   assert.match(normalPrompt.systemPrompt, /only make the line about repetition when the user actually mentions repeating/i);
+
+  const fitnessObjectivePrompt = promptFor(
+    'WHAT IS THE OBJECTIVE?',
+    [
+      'Return roomBeat, speakers, silentReactions, and stateUpdates.',
+      'Recent visible thread: user wants to grow muscles.',
+      'Claudia said: Twenty minutes: 3 minutes to warm up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.',
+      'Vanya said: Make it socially impossible to negotiate: twenty minutes, then proof.'
+    ].join('\n')
+  );
+  assert.match(fitnessObjectivePrompt.systemPrompt, /fitness terse follow-up: stay inside the muscle-building thread/i);
+  assert.match(fitnessObjectivePrompt.systemPrompt, /Do not use generic work-day phrases like rough pass, visible result, switching tasks, or make the day smaller/i);
+  assert.match(fitnessObjectivePrompt.systemPrompt, /Claudia must show exercises, reps\/logging, or training days/i);
+  assert.match(fitnessObjectivePrompt.systemPrompt, /push\/pull\/legs\/hinge\/core, reps, timer, or Monday\/Wednesday\/Friday/i);
+  assert.ok(
+    fitnessObjectivePrompt.systemPrompt.indexOf('fitness terse follow-up:') < fitnessObjectivePrompt.systemPrompt.indexOf('Acceptance examples:'),
+    'fitness objective target should beat softer examples'
+  );
 });
 
 test('Pack 1 social-director prompt keeps Claudia practical line first when Vanya is the referenced card', async () => {
@@ -1006,7 +1024,9 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
   assert.match(prompt.systemPrompt, /20-minute fitness follow-up: Claudia must speak first with a timed mini-plan/i);
   assert.match(prompt.systemPrompt, /squat, hinge, push, pull, core, timer, reps/i);
   assert.match(prompt.systemPrompt, /Vanya may only add a second line after Claudia/i);
-  assert.match(prompt.systemPrompt, /Vanya-only motivation, focused-work advice, and restating the old card are invalid/i);
+  assert.match(prompt.systemPrompt, /If the referenced card is Vanya social framing, preserve only that social context/i);
+  assert.match(prompt.systemPrompt, /do not let Vanya answer alone or turn the line into motivation/i);
+  assert.match(prompt.systemPrompt, /Focused-work advice and restating the old card are invalid/i);
   assert.match(prompt.systemPrompt, /vanya: Start at home this week\. Three short sessions; no heroic rebrand required/i);
   assert.match(prompt.systemPrompt, /claudia: Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);

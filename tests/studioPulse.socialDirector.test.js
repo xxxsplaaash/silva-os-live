@@ -3819,6 +3819,29 @@ test('social director quality validator rejects current live accepted fitness bo
 
   assert.equal(timerObjective.ok, false);
   assert.ok(timerObjective.issues.includes('false-objective-claim'));
+
+  const workdayObjective = validateDirectorOutput({
+    roomBeat: 'The room answers a muscle follow-up with generic work-day recovery.',
+    roomMood: 'focused',
+    responseMode: 'small_exchange',
+    speakers: [
+      { speakerId: 'claudia', role: 'primary', tone: 'flat', text: 'First step: set a twenty-minute timer, finish one rough pass, then write the visible result before switching tasks.' },
+      { speakerId: 'vanya', role: 'side', tone: 'flat', text: 'Make the day smaller: one useful pass, less ceremony, enough air to stay human.' }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: 3 minutes to warm up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.' }
+    ]
+  });
+
+  assert.equal(workdayObjective.ok, false);
+  assert.ok(workdayObjective.issues.includes('product-topic-ignored:fitness-context'));
 });
 
 test('social director quality validator rejects live thin movie and fake-quality answers', () => {

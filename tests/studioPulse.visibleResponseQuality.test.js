@@ -599,6 +599,22 @@ test('visible response quality rejects sustainable-routine objective drift from 
   });
 
   assert.ok(issueKeys(timerIssues).includes('false-objective:command-posture'));
+
+  const genericWorkdayIssues = evaluateVisibleResponse({
+    userMessage: 'WHAT IS THE OBJECTIVE?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: 3 minutes to warm up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.' }
+    ],
+    visibleText: [
+      'First step: set a twenty-minute timer, finish one rough pass, then write the visible result before switching tasks.',
+      'Make the day smaller: one useful pass, less ceremony, enough air to stay human.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(genericWorkdayIssues).includes('topic-ignored:fitness-context'));
 });
 
 test('visible response quality rejects live support-bot fitness encouragement', () => {
