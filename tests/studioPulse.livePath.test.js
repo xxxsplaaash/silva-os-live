@@ -294,6 +294,32 @@ test('pulse showcase public payload fills intentional silence for non-speaking c
   assert.equal(silent.find(item => item.speakerId === 'aisha').visibleState, 'Anchoring');
 });
 
+test('pulse showcase speaker cap preserves planned practical voices before final payload', () => {
+  assert.equal(typeof studioRouter.__enforcePulseShowcaseSpeakerCapForTests, 'function');
+  const capped = studioRouter.__enforcePulseShowcaseSpeakerCapForTests(
+    [
+      { speakerId: 'claudia', role: 'primary', text: 'One clean training move: ten minutes, write reps down, stop.' },
+      { speakerId: 'grok', role: 'side', text: 'Three speakers for a ten-minute problem is how rooms become meetings.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Fair catch. No task badge; first rep gets the floor now.' }
+    ],
+    {
+      maxSpeakers: 2,
+      speakerOrder: ['claudia', 'vanya'],
+      selectedSpeakers: [{ speakerId: 'claudia' }, { speakerId: 'vanya' }]
+    }
+  );
+
+  assert.deepEqual(capped.map(item => item.speakerId), ['claudia', 'vanya']);
+  assert.deepEqual(capped.map(item => item.role), ['primary', 'side']);
+  assert.equal(capped.some(item => item.speakerId === 'grok'), false);
+
+  const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(capped, [], {
+    selectedSpeakers: [{ speakerId: 'claudia' }, { speakerId: 'vanya' }],
+    intentionalSilence: [{ speakerId: 'grok', visibleState: 'Tracking', reason: 'watching for the premise fault inside the workout answer' }]
+  });
+  assert.ok(silent.some(item => item.speakerId === 'grok' && /premise fault/i.test(item.reason)));
+});
+
 test('pulse showcase public payload prefers planned beat-specific silence over generic repaired reasons', () => {
   assert.equal(typeof studioRouter.__ensurePulseShowcaseSilentPresenceForTests, 'function');
   const silent = studioRouter.__ensurePulseShowcaseSilentPresenceForTests(
@@ -2987,6 +3013,118 @@ test('Studio Pulse showcase repairs BRUH repeats from server visible history whe
         assert.doesNotMatch(text, /No slogan\. Put ten minutes on the clock/i);
         assert.doesNotMatch(text, /Action version: push, pull, legs/i);
         assert.doesNotMatch(JSON.stringify(final), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room repeats/i);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
+test('Studio Pulse showcase caps BRUH practical recovery to impulse speaker limit', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'The room recovers the fitness thread without over-filling the floor.',
+                roomMood: 'focused',
+                responseMode: 'small_exchange',
+                speakers: [
+                  {
+                    speakerId: 'claudia',
+                    role: 'primary',
+                    tone: 'practical',
+                    text: 'One clean training move: ten minutes, write reps down, stop. Repeat tomorrow before adding anything.',
+                    visibleState: 'Tracking next steps'
+                  },
+                  {
+                    speakerId: 'vanya',
+                    role: 'side',
+                    tone: 'host with bite',
+                    text: 'Fair catch. No task badge; first rep gets the floor now.',
+                    visibleState: 'Reading the room'
+                  },
+                  {
+                    speakerId: 'grok',
+                    role: 'side',
+                    tone: 'dry skeptic',
+                    text: 'Three speakers for a ten-minute problem is how rooms become meetings.',
+                    visibleState: 'Tracking'
+                  }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-bruh-practical-cap',
+            mode: 'social_hierarchy_lab',
+            userText: 'BRUH...',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+              { speakerId: 'claudia', role: 'primary', text: 'Action version: push, pull, legs; log reps, recover, repeat. Leave two reps in reserve.' },
+              { speakerId: 'vanya', role: 'side', text: 'No slogan. Put ten minutes on the clock, move first, and let the proof talk after.' },
+              { speakerId: 'user', role: 'user', text: 'BRUH...' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.messageEvents.length, 2);
+        assert.deepEqual(final.messageEvents.map(item => item.speakerId), ['claudia', 'vanya']);
+        assert.equal(final.messageEvents.some(item => item.speakerId === 'grok'), false);
+        assert.ok(final.silentReactions.some(item => item.speakerId === 'grok'));
+        assert.match(text, /One clean training move/i);
+        assert.doesNotMatch(text, /rooms become meetings/i);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

@@ -2837,6 +2837,33 @@ function ensurePulseShowcaseSilentPresence(messageEvents = [], silentReactions =
   return [...bySpeaker.values()].slice(0, 5);
 }
 
+function enforcePulseShowcaseSpeakerCap(messageEvents = [], impulsePlan = {}) {
+  const events = sanitizeShowcaseMessages(messageEvents);
+  const maxSpeakers = Math.max(0, Math.min(5, Math.round(Number(impulsePlan?.maxSpeakers || 0) || 0)));
+  if (!maxSpeakers || events.length <= maxSpeakers) return events;
+  const plannedOrder = (Array.isArray(impulsePlan?.speakerOrder) ? impulsePlan.speakerOrder : [])
+    .map(item => String(item || '').trim().toLowerCase())
+    .filter(id => PULSE_SHOWCASE_SPEAKERS.includes(id));
+  const selected = [];
+  const used = new Set();
+  plannedOrder.forEach(speakerId => {
+    if (selected.length >= maxSpeakers || used.has(speakerId)) return;
+    const event = events.find(item => item.speakerId === speakerId);
+    if (!event) return;
+    selected.push(event);
+    used.add(speakerId);
+  });
+  events.forEach(event => {
+    if (selected.length >= maxSpeakers || used.has(event.speakerId)) return;
+    selected.push(event);
+    used.add(event.speakerId);
+  });
+  return selected.slice(0, maxSpeakers).map((event, index) => ({
+    ...event,
+    role: index === 0 ? 'primary' : event.role === 'primary' ? 'side' : event.role
+  }));
+}
+
 function pulseShowcaseRequestHeader(req, name) {
   const key = String(name || '').toLowerCase();
   if (!key) return '';
@@ -3127,6 +3154,11 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     qualityAccepted = false;
     repairedByRuntime = true;
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(forcedContinuityRepair.issue || 'continuity-repair');
+  }
+  const cappedMessageEvents = enforcePulseShowcaseSpeakerCap(messageEvents, showcaseImpulsePlan);
+  if (cappedMessageEvents.length !== messageEvents.length) {
+    messageEvents = cappedMessageEvents;
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, silentReactions, showcaseImpulsePlan, { userText });
   }
   const finalVisibleQuality = validateDirectorOutput({
     roomBeat: payload.roomBeat || 'Public showcase turn.',
@@ -7194,6 +7226,7 @@ router.__getPulseShowcaseVisibleHistoryForTests = __getPulseShowcaseVisibleHisto
 router.__buildPulseShowcaseReactionPayloadForTests = buildPulseShowcaseReactionPayload;
 router.__buildPulseShowcaseExpandPayloadForTests = buildPulseShowcaseExpandPayload;
 router.__ensurePulseShowcaseSilentPresenceForTests = ensurePulseShowcaseSilentPresence;
+router.__enforcePulseShowcaseSpeakerCapForTests = enforcePulseShowcaseSpeakerCap;
 router.__parsePulseShowcaseTurnRequestForTests = parsePulseShowcaseTurnRequest;
 router.__buildPulseShowcaseTurnPayloadForTests = buildPulseShowcaseTurnPayload;
 router.__buildPulseShowcaseLedgerFromForTests = pulseShowcaseLedgerFrom;
