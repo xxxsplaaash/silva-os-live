@@ -2192,6 +2192,42 @@ test('social director fallback keeps start-here recovery lines character-attribu
   });
 });
 
+test('social director fallback avoids stale starter replay after accepted 20-minute sequence', async () => {
+  await withAishaFlag('false', async () => {
+    await withStudioServer(async baseUrl => {
+      const recentTurns = [
+        { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', role: 'primary', text: 'First step: set a timer for 20 minutes. Do three rounds of push-ups, backpack rows, and split squats.' },
+        { speakerId: 'vanya', role: 'side', text: 'Make the week human first; the mirror can join once the reps exist.' },
+        { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+        { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: warm up for 3, then two rounds of push, pull, legs, hinge, and core. Write the lowest rep count down.' },
+        { speakerId: 'vanya', role: 'side', text: 'Keep it human: no victory speech until the towel is wet.' },
+        { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
+        { speakerId: 'claudia', role: 'side', text: 'Use a short timer: reverse lunges, pushups, towel rows, wall sit. Four rounds, count reps, stop.' },
+        { speakerId: 'vanya', role: 'primary', text: 'Keep the body honest, not dramatic. Finish small; brag later.' }
+      ];
+      const { body } = await postSocial(baseUrl, 'WHERE DO I START', { recentTurns });
+      const text = visibleText(body);
+      const validation = validateDirectorOutput({
+        roomBeat: body.roomBeat || 'The room changes recovery shape after the 20-minute sequence.',
+        roomMood: body.roomMood || 'focused',
+        responseMode: body.responseMode || 'small_exchange',
+        speakers: body.messageEvents,
+        silentReactions: body.silentReactions,
+        stateUpdates: { notes: [] }
+      }, { userMessage: 'WHERE DO I START', recentTurns });
+
+      assert.equal(body.ok, true);
+      assert.doesNotMatch(text, /room dropped the thread/i);
+      assert.doesNotMatch(text, /without a gym/i);
+      assert.doesNotMatch(text, /incline push-ups, backpack rows/i);
+      assert.match(text, /\b(week can actually hold|identity speech|required|mark one number|beat that number by one)\b/i);
+      assert.equal(validation.ok, true, validation.issues.join(', '));
+      assertCleanVisible(body);
+    });
+  });
+});
+
 test('social director fallback changes shape after character-attributable start-here recovery', async () => {
   await withAishaFlag('false', async () => {
     await withStudioServer(async baseUrl => {
