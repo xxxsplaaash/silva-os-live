@@ -4012,6 +4012,43 @@ test('social director quality validator rejects live thin movie and fake-quality
   assert.ok(executionCheck.issues.includes('operational-jargon'));
 });
 
+test('social director quality validator accepts live movie title options as on-topic', () => {
+  const movie = validateDirectorOutput({
+    roomBeat: 'The room pivots cleanly from training to movie taste.',
+    roomMood: 'playful',
+    responseMode: 'small_exchange',
+    speakers: [
+      {
+        speakerId: 'leah',
+        role: 'primary',
+        tone: 'sharp taste',
+        text: "Forget the obvious choices. I'd pick something with a visual pulse, like Blade Runner 2049 for atmosphere or Parasite for its sharp social commentary.",
+        visibleState: 'Holding critique'
+      },
+      {
+        speakerId: 'vanya',
+        role: 'side',
+        tone: 'host with taste',
+        text: "Or, if we're leaning into comfort with a twist, Knives Out always delivers. Let's make it a human decision, not a data point.",
+        visibleState: 'Reading the room'
+      }
+    ],
+    silentReactions: [],
+    stateUpdates: { notes: [] }
+  }, {
+    userMessage: 'new topic: what movie should we watch tonight?',
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave.' },
+      { speakerId: 'user', role: 'user', text: 'I am hungry before training, what should I eat?' }
+    ]
+  });
+
+  assert.equal(movie.ok, true);
+  assert.ok(!movie.issues.includes('topic-ignored:movie'));
+  assert.ok(!movie.issues.includes('movie-answer-too-thin'));
+});
+
 test('visible response evaluator flags audit-level product failures', () => {
   const families = (options) => evaluateVisibleResponse(options).map(item => item.family);
 
