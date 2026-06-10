@@ -1611,6 +1611,9 @@ function formatCurrentTurnAcceptanceTarget(value) {
     selectedLineJobs
   ].filter(Boolean).join("\n").toLowerCase();
   const targets = [];
+  if (/\b(only have|only got|just have)\s+(20|twenty)\s+minutes?\b/.test(currentTurn) && /\b(record total reps|wall push-ups|glute bridges|5 minutes for plank|3 minutes warm-up|squats, wall push-ups)\b/.test(currentTurn)) {
+    targets.push("repeated 20-minute constraint: the 20-minute plan was already answered. Do not repeat the prior warm-up/squats/wall-push-ups/towel-rows/glute-bridges/plank line. Claudia should change shape to a one-pass circuit such as chair squats, incline push-ups, backpack rows, dead bugs, two clean rounds, 20-minute cap, log reps. Vanya may add one pressure line that names the constraint as useful; do not repeat the previous Vanya proof/negotiation line.");
+  }
   if (/\b(20|twenty)[-\s]+minute\b/.test(currentTurn) && /\b(referenced workout|fitness follow-up|workout follow-up|compress the referenced workout|movement categories|push|pull|hinge|core|reps?)\b/.test(currentTurn)) {
     targets.push("20-minute fitness follow-up: Claudia must speak first with a timed mini-plan using squat, hinge, push, pull, core, timer, reps; Vanya may only add a second line after Claudia. Vanya-only motivation, focused-work advice, and restating the old card are invalid.");
   }

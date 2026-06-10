@@ -1021,6 +1021,81 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
   );
 });
 
+test('Pack 1 social-director prompt changes shape for repeated explicit 20-minute constraint', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-short-window-'));
+  const outfile = path.join(tempDir, 'promptTemplate.mjs');
+  esbuild.buildSync({
+    entryPoints: [path.join(__dirname, '..', 'packages', 'aisha-runtime-pack1', 'src', 'generation', 'promptTemplate.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'esm',
+    outfile,
+  });
+  const { buildGenerationPrompt } = await import(pathToFileURL(outfile).href);
+  const generatorPrompt = [
+    'The recent visible answer already said:',
+    'Claudia: Twenty minutes: 3 minutes warm-up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.',
+    'Vanya: Make it socially impossible to negotiate: twenty minutes, then proof.',
+    'The user repeats the same constraint. Return a fresh useful room answer, not the same block.'
+  ].join('\n');
+
+  const prompt = buildGenerationPrompt({
+    turn: {
+      rawText: 'ok but I only have 20 minutes',
+      text: 'ok but I only have 20 minutes',
+    },
+    snapshot: {
+      expressiveEnvelope: {
+        certainty: 0.7,
+        load: 0.2,
+        tension: 0.1,
+      },
+    },
+    studioPulseContext: {
+      roomId: 'studio-pulse-social-director',
+      activeSpeakerId: 'aisha',
+      recentMessages: [
+        { speakerId: 'user', content: 'LOL I WANNA GROW MY MUSCLES' },
+        { speakerId: 'claudia', content: 'First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+        { speakerId: 'vanya', content: 'Keep it human: no victory speech until the towel is wet.' },
+        { speakerId: 'user', content: 'turn that into a 20 minute version' },
+        { speakerId: 'claudia', content: 'Twenty minutes: 3 minutes warm-up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.' },
+        { speakerId: 'vanya', content: 'Make it socially impossible to negotiate: twenty minutes, then proof.' },
+      ],
+      projectContext: {
+        socialDirectorV1: {
+          schemaVersion: 'studio-pulse.social-director.v1',
+          userMessage: 'ok but I only have 20 minutes',
+          generatorPrompt,
+          structuredOutput: { kind: 'socialDirectorV1', jsonOnly: true },
+          impulsePlan: {
+            category: 'practical',
+            topicClass: 'practical',
+            maxSpeakers: 2,
+            enforceSelectedSpeakers: true,
+            speakerOrder: ['claudia', 'vanya'],
+            selectedSpeakers: [
+              { speakerId: 'claudia', lineJob: 'change the repeated 20-minute constraint into a fresh one-pass circuit with exercises and reps to log' },
+              { speakerId: 'vanya', lineJob: 'add one short pressure line without repeating the previous proof or negotiation wording' },
+            ],
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(prompt.systemPrompt, /Current turn acceptance target:/);
+  assert.match(prompt.systemPrompt, /repeated 20-minute constraint: the 20-minute plan was already answered/i);
+  assert.match(prompt.systemPrompt, /Do not repeat the prior warm-up\/squats\/wall-push-ups\/towel-rows\/glute-bridges\/plank line/i);
+  assert.match(prompt.systemPrompt, /chair squats, incline push-ups, backpack rows, dead bugs/i);
+  assert.match(prompt.systemPrompt, /two clean rounds, 20-minute cap, log reps/i);
+  assert.match(prompt.systemPrompt, /do not repeat the previous Vanya proof\/negotiation line/i);
+  assert.ok(
+    prompt.systemPrompt.indexOf('Current turn acceptance target:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
+    'repeated 20-minute target should beat softer examples'
+  );
+});
+
 test('Pack 1 social-director built prompt locks repeat phrase families', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aisha-prompt-template-repeat-family-'));
   const outfile = path.join(tempDir, 'promptTemplate.mjs');

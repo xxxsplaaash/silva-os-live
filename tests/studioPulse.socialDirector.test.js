@@ -2376,6 +2376,36 @@ test('social director fallback changes short-session shape after referenced 20-m
   assertCleanVisible(fallback);
 });
 
+test('social director fallback changes shape after accepted explicit 20-minute block', () => {
+  const body = {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+      { speakerId: 'vanya', role: 'side', text: 'Keep it human: no victory speech until the towel is wet.' },
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: 3 minutes warm-up, 12 minutes for squats, wall push-ups, towel rows, and glute bridges, then 5 minutes for plank. Record total reps.' },
+      { speakerId: 'vanya', role: 'side', text: 'Make it socially impossible to negotiate: twenty minutes, then proof.' }
+    ]
+  };
+  const fallback = socialFallbackFor('ok but I only have 20 minutes', body);
+  const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'ok but I only have 20 minutes',
+    recentTurns: body.recentTurns
+  });
+
+  assert.match(text, /\bKeep the body honest, not dramatic\b/i);
+  assert.match(text, /\bUse a short timer\b/i);
+  assert.match(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
+  assert.match(text, /\bFour rounds, count reps, stop\b/i);
+  assert.doesNotMatch(text, /\b3 minutes warm-up\b/i);
+  assert.doesNotMatch(text, /\bsquats, wall push-ups, towel rows, and glute bridges\b/i);
+  assert.doesNotMatch(text, /\bRecord total reps\b/i);
+  assert.doesNotMatch(text, /\bMake it socially impossible to negotiate\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assertCleanVisible(fallback);
+});
+
 test('social director fallback changes short-session shape after generated focused-session plan', () => {
   const body = {
     recentTurns: [
