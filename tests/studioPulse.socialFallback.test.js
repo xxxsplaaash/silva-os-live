@@ -2,6 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { socialFallbackFor } = require('../lib/studio/socialDirector/socialDirectorFallback');
+const { buildRoomDirectorInput } = require('../lib/studio/socialDirector/roomDirectorPrompt');
+const { validateDirectorOutput } = require('../lib/studio/socialDirector/socialDirectorValidator');
 
 function fallbackVisibleText(output = {}) {
   return [
@@ -84,4 +86,30 @@ test('social fallback changes objective recovery shape across full visible histo
   assert.doesNotMatch(text, /First step: set a twenty-minute timer for four blocks/i);
   assert.doesNotMatch(text, /Start where the week can actually hold it/i);
   assert.doesNotMatch(text, /objective is clear|personal fitness routines/i);
+});
+
+test('social fallback changes watch-next shape after a recent movie card', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
+    { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
+    { speakerId: 'leah', role: 'side', text: 'Decision rule: if nobody wants subtitles, go animated; if dinner talk is already sharp, go darker.' },
+    { speakerId: 'user', role: 'user', text: 'open floor: what should the room watch next?' }
+  ];
+  const fallback = socialFallbackFor('open floor: what should the room watch next?', { recentTurns });
+  const input = buildRoomDirectorInput({
+    message: 'open floor: what should the room watch next?',
+    recentTurns
+  });
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'open floor: what should the room watch next?',
+    recentTurns,
+    impulsePlan: input.impulsePlan
+  });
+  const text = fallbackVisibleText(fallback);
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
+  assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
+  assert.doesNotMatch(text, /Decision rule: if nobody wants subtitles/i);
+  assert.doesNotMatch(text, /Spider-Verse|The Menu|quiet pressure, Spider-Verse for voltage/i);
 });

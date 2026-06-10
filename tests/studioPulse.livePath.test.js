@@ -2765,6 +2765,117 @@ test('Studio Pulse showcase repairs objective repeats from the full client visib
   });
 });
 
+test('Studio Pulse showcase repairs repeated movie follow-up cards from client visible history', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            assert.match(String(request.messageText || request.userText || ''), /what should the room watch next/i);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'The generated room repeats the same watch card.',
+                  roomMood: 'playful',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    {
+                      speakerId: 'vanya',
+                      role: 'primary',
+                      tone: 'host with taste',
+                      text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.',
+                      visibleState: 'Reading the room'
+                    },
+                    {
+                      speakerId: 'leah',
+                      role: 'side',
+                      tone: 'sharp taste',
+                      text: 'Decision rule: if nobody wants subtitles, go animated; if dinner talk is already sharp, go darker.',
+                      visibleState: 'Holding critique'
+                    }
+                  ],
+                  silentReactions: [],
+                  socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                  stateUpdates: { notes: [] }
+                })
+              }],
+              memorySummary: {
+                activeTruths: [],
+                supersededTruths: [],
+                memoryCandidates: [],
+                sessionId: request.sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.83
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-movie-repeat-client-history',
+            mode: 'social_hierarchy_lab',
+            userText: 'open floor: what should the room watch next?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
+              { speakerId: 'vanya', role: 'primary', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
+              { speakerId: 'leah', role: 'side', text: 'Decision rule: if nobody wants subtitles, go animated; if dinner talk is already sharp, go darker.' },
+              { speakerId: 'user', role: 'user', text: 'open floor: what should the room watch next?' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.qualityAccepted, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.match(final.qualityFailureCategory, /recent-repeat-risk|product-repetition:recent-line|quality-rejected/);
+        assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
+        assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
+        assert.doesNotMatch(text, /Decision rule: if nobody wants subtitles/i);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room repeats|generated room repeats the same watch card/i);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase repairs thin accepted old preference recall using Pack 1 evidence', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

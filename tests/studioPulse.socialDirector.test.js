@@ -2714,7 +2714,8 @@ test('social director fallback lets watch intent beat open-floor prefix', async 
 
       assert.equal(body.ok, true);
       assert.doesNotMatch(text, /panel show|jazz hands|not the same as volunteering/i);
-      assert.match(text, /\b(Arrival|Spider-Verse|The Menu|quiet pressure|voltage|bite|watch|title|movie|film)\b/i);
+      assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|pressure|social teeth|bright chaos|watch|title|movie|film)\b/i);
+      assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
       assertCleanVisible(body);
     });
   });
@@ -2744,7 +2745,7 @@ test('social director fallback does not repeat the same watch recommendation blo
       assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
       assert.doesNotMatch(text, /One strong world, not wallpaper/i);
       assert.doesNotMatch(text, /constraint before the title/i);
-      assert.match(text, /\b(Heat|Everything Everywhere All at Once|Knives Out|pressure|wonder|comfort)\b/i);
+      assert.match(text, /\b(Heat|Everything Everywhere All at Once|Knives Out|pressure|social teeth|bright chaos)\b/i);
       assert.equal(validation.ok, true, validation.issues.join(', '));
       assertCleanVisible(body);
     });
@@ -6544,6 +6545,26 @@ test('room director repair prompt tells Pack 1 how to recover old-preference no-
   assert.match(prompt, /Old record: \[prior claim\]\. Current record: \[active claim\]/);
   assert.match(prompt, /dashboard preference is obsidian with one red accent/i);
   assert.match(prompt, /dashboard preference is pale blue with no red accents/i);
+});
+
+test('room director repair prompt tells Pack 1 to change watch-next title lanes after repeats', () => {
+  const input = buildRoomDirectorInput({
+    message: 'open floor: what should the room watch next?',
+    recentTurns: [
+      { speakerId: 'user', text: 'new topic: what movie should we watch tonight?' },
+      { speakerId: 'vanya', text: 'Tonight I would choose Arrival for quiet pressure, Spider-Verse for voltage, or The Menu if you want bite.' },
+      { speakerId: 'leah', text: 'Decision rule: if nobody wants subtitles, go animated; if dinner talk is already sharp, go darker.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input, { issues: ['recent-repeat-risk', 'product-repetition:recent-line'] });
+
+  assert.match(prompt, /Watch-repeat repair/);
+  assert.match(prompt, /Arrival, Spider-Verse, The Menu/i);
+  assert.match(prompt, /subtitles\/darker decision rule/i);
+  assert.match(prompt, /Heat for pressure, Knives Out for social teeth, Everything Everywhere All at Once for bright chaos/i);
+  assert.match(prompt, /Keep it to Leah plus Vanya/i);
+  assert.doesNotMatch(prompt, /provider payload|raw model|GEMINI_API_KEY|GOOGLE_API_KEY/);
 });
 
 test('social director defaults to fast structured model without changing main Pulse route', async () => {
