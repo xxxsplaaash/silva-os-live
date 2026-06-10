@@ -2879,6 +2879,122 @@ test('Studio Pulse showcase repairs BRUH repeats from the previous objective pai
   });
 });
 
+test('Studio Pulse showcase repairs BRUH repeats from server visible history when client history is thin', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => ({
+            ok: true,
+            responses: [{
+              speakerId: 'aisha',
+              content: JSON.stringify({
+                roomBeat: 'The generated room repeats the objective recovery.',
+                roomMood: 'focused',
+                responseMode: 'small_exchange',
+                speakers: [
+                  {
+                    speakerId: 'vanya',
+                    role: 'primary',
+                    tone: 'host with bite',
+                    text: 'No slogan. Put ten minutes on the clock, move first, and let the proof talk after.',
+                    visibleState: 'Reading the room'
+                  },
+                  {
+                    speakerId: 'claudia',
+                    role: 'side',
+                    tone: 'practical',
+                    text: 'Action version: push, pull, legs; log reps, recover, repeat. Leave two reps in reserve.',
+                    visibleState: 'Tracking next steps'
+                  }
+                ],
+                silentReactions: [],
+                socialCues: { roomMove: 'observe', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                stateUpdates: { notes: [] }
+              })
+            }],
+            memorySummary: {
+              activeTruths: [],
+              supersededTruths: [],
+              memoryCandidates: [],
+              sessionId: request.sessionId
+            },
+            stateEnvelope: { mood: 0.2 },
+            relationshipDeltas: [],
+            trace: {
+              status: 'succeeded',
+              aishaDiagnostics: {
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              }
+            },
+            diagnostics: {
+              responseTraceStatus: 'succeeded',
+              runtimeCredentialProvided: true,
+              runtimeCredentialSource: 'Mock Gemini',
+              runtimeCredentialLength: 'test-room-provider-key'.length,
+              aishaPersistenceMode: 'postgres',
+              aishaPersistenceBackend: 'postgres',
+              aishaPersistenceConnected: true
+            },
+            engineMode: 'production',
+            aishaEngineConnected: true,
+            confidence: 0.83
+          })
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const sessionId = 'showcase-bruh-objective-repeat-server-history';
+        const postTurn = async (userText, recentTurns) => {
+          const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+            body: JSON.stringify({
+              sessionId,
+              mode: 'social_hierarchy_lab',
+              userText,
+              recentTurns
+            })
+          });
+          assert.equal(response.status, 200);
+          const events = parseSseEvents(await response.text());
+          return events.find(item => item.event === 'final').data;
+        };
+
+        await postTurn('WHAT IS THE OBJECTIVE?', [
+          { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+          { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' }
+        ]);
+
+        const final = await postTurn('BRUH...', [
+          { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+          { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+          { speakerId: 'user', role: 'user', text: 'BRUH...' }
+        ]);
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.match(final.qualityFailureCategory, /frustration-miss:objective-replay|recent-repeat-risk|quality-rejected|product-repetition:recent-line/);
+        assert.match(text, /\b(One clean training move|first rep gets the floor)\b/i);
+        assert.doesNotMatch(text, /No slogan\. Put ten minutes on the clock/i);
+        assert.doesNotMatch(text, /Action version: push, pull, legs/i);
+        assert.doesNotMatch(JSON.stringify(final), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room repeats/i);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase repairs repeated movie follow-up cards from client visible history', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;

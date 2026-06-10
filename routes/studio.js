@@ -3128,6 +3128,68 @@ async function buildPulseShowcaseTurnPayload(parsed = {}) {
     repairedByRuntime = true;
     qualityFailureCategory = normalizePulseShowcaseFallbackCategory(forcedContinuityRepair.issue || 'continuity-repair');
   }
+  const finalVisibleQuality = validateDirectorOutput({
+    roomBeat: payload.roomBeat || 'Public showcase turn.',
+    roomMood,
+    responseMode,
+    speakers: messageEvents.map(item => ({
+      speakerId: item.speakerId,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })),
+    silentReactions: silentReactions.map(item => ({
+      speakerId: item.speakerId,
+      visibleState: item.visibleState,
+      reason: item.reason
+    })),
+    stateUpdates: { notes: [] }
+  }, { userMessage: userText, recentTurns: continuityRecentTurns, references, continuity: continuityQuality });
+  if (!finalVisibleQuality.ok) {
+    const lastMileRecentTurns = dedupeShowcaseRecentTurns([
+      ...continuityRecentTurns,
+      ...(Array.isArray(messageEvents) ? messageEvents : []).map(item => ({
+        speakerId: item?.speakerId,
+        role: item?.role || 'message',
+        text: item?.text
+      }))
+    ]);
+    const fallbackOutput = socialFallbackFor(userText, {
+      history: lastMileRecentTurns,
+      recentTurns: lastMileRecentTurns,
+      roomState,
+      memorySummary,
+      continuityLedger
+    });
+    const fallbackValidation = validateDirectorOutput(fallbackOutput, {
+      userMessage: userText,
+      recentTurns: lastMileRecentTurns,
+      references,
+      continuity: continuityQuality
+    });
+    publicQualityIssues = [...new Set([...(publicQualityIssues || []), ...(finalVisibleQuality.issues || [])])];
+    fallbackValidationIssues = [...new Set([...(fallbackValidationIssues || []), ...(fallbackValidation.issues || [])])];
+    const fallbackSafe = fallbackValidation.output || fallbackOutput || {};
+    responseMode = safeShowcaseText(fallbackSafe.responseMode || responseMode, 40) || responseMode;
+    roomMood = safeShowcaseText(fallbackSafe.roomMood || roomMood, 40) || roomMood;
+    messageEvents = sanitizeShowcaseMessages((Array.isArray(fallbackSafe.speakers) ? fallbackSafe.speakers : []).map(item => ({
+      speakerId: item.speakerId,
+      speakerName: item.speakerName,
+      role: item.role,
+      tone: item.tone,
+      text: item.text,
+      visibleState: item.visibleState
+    })));
+    silentReactions = ensurePulseShowcaseSilentPresence(messageEvents, fallbackSafe.silentReactions || [], showcaseImpulsePlan, { userText });
+    socialCues = null;
+    activeEngine = 'local-social-director';
+    fallbackUsed = true;
+    fallbackCategory = isRootRuntimeFallbackCategory(fallbackCategory) ? fallbackCategory : 'quality-rejected';
+    qualityAccepted = false;
+    repairedByRuntime = true;
+    qualityFailureCategory = normalizePulseShowcaseFallbackCategory(finalVisibleQuality.issues?.[0] || fallbackValidation.issues?.[0] || qualityFailureCategory || 'quality-rejected');
+  }
   const runtimeConnected = aishaEngineConnected || (runtimeStatusConnectedNow && fallbackCategory !== 'invalid-key');
   fallbackCategory = normalizeConnectedPulseShowcaseFallbackCategory(fallbackCategory, qualityFailureCategory, runtimeConnected);
   if (runtimeConnected === true && fallbackCategory === 'quality-rejected' && repairedByRuntime !== true) {
