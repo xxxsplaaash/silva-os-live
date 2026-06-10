@@ -1270,14 +1270,14 @@ function removeCurrentUserTurnFromRecentTurns(items = [], userText = '') {
     && /\b(is|=)\b/i.test(item.text)
   );
   const seen = new Set();
-  return [...continuityClaims, ...output.slice(-8)]
+  return [...continuityClaims, ...output.slice(-PULSE_SHOWCASE_VISIBLE_HISTORY_LIMIT)]
     .filter(item => {
       const key = `${item.speakerId}:${item.role}:${showcaseTurnTextKey(item.text)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
-    .slice(-12);
+    .slice(-PULSE_SHOWCASE_VISIBLE_HISTORY_LIMIT);
 }
 
 function isShowcaseContinuityClaimTurn(item = {}) {

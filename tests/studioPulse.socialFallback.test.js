@@ -58,3 +58,30 @@ test('social fallback compresses live short-session starter wording without repe
   assert.doesNotMatch(text, /three rounds of incline push-ups, backpack rows, and split squats/i);
   assert.doesNotMatch(text, /Make it socially impossible to negotiate/i);
 });
+
+test('social fallback changes objective recovery shape across full visible history', () => {
+  const body = {
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a twenty-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+      { speakerId: 'vanya', role: 'side', text: 'Make the week human first; the mirror can join once the reps exist.' },
+      { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+      { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: 3 to warm up, 12 for squats, wall push-ups, towel rows, and glute bridges, 5 for plank. Record total reps.' },
+      { speakerId: 'vanya', role: 'side', text: 'Make it socially impossible to negotiate: twenty minutes, then proof.' },
+      { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
+      { speakerId: 'claudia', role: 'side', text: 'Use a short timer: reverse lunges, pushups, towel rows, wall sit. Four rounds, count reps, stop.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Keep the body honest, not dramatic. Finish small; brag later.' },
+      { speakerId: 'user', role: 'user', text: 'WHERE DO I START' },
+      { speakerId: 'claudia', role: 'side', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave; next week beat that number by one.' },
+      { speakerId: 'vanya', role: 'primary', text: 'Start where the week can actually hold it: Monday, Wednesday, Friday; no identity speech required.' }
+    ]
+  };
+  const fallback = socialFallbackFor('WHAT IS THE OBJECTIVE?', body);
+  const text = fallbackVisibleText(fallback);
+
+  assert.match(text, /Action version: push, pull, legs; log reps, recover, repeat/i);
+  assert.match(text, /Premise check: specific beats motivational fog/i);
+  assert.doesNotMatch(text, /First step: set a twenty-minute timer for four blocks/i);
+  assert.doesNotMatch(text, /Start where the week can actually hold it/i);
+  assert.doesNotMatch(text, /objective is clear|personal fitness routines/i);
+});

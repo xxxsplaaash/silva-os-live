@@ -2646,6 +2646,125 @@ test('Studio Pulse showcase repairs short-session follow-up when generated room 
   });
 });
 
+test('Studio Pulse showcase repairs objective repeats from the full client visible history window', async () => {
+  await withAishaFlag('true', async () => {
+    const originalGemini = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = 'test-room-provider-key';
+    try {
+      __setAishaRuntimeImporterForTests(async specifier => {
+        assert.equal(specifier, 'aisha-runtime-pack1');
+        return {
+          processAishaRequest: async request => {
+            assert.match(String(request.messageText || request.userText || ''), /WHAT IS THE OBJECTIVE/i);
+            return {
+              ok: true,
+              responses: [{
+                speakerId: 'aisha',
+                content: JSON.stringify({
+                  roomBeat: 'The generated room repeats the starter line.',
+                  roomMood: 'focused',
+                  responseMode: 'small_exchange',
+                  speakers: [
+                    {
+                      speakerId: 'claudia',
+                      role: 'primary',
+                      tone: 'practical',
+                      text: 'First step: set a twenty-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.',
+                      visibleState: 'Ready'
+                    },
+                    {
+                      speakerId: 'vanya',
+                      role: 'side',
+                      tone: 'host with bite',
+                      text: 'Keep it human: no victory speech until the towel is wet.',
+                      visibleState: 'Reading the room'
+                    }
+                  ],
+                  silentReactions: [],
+                  socialCues: { roomMove: 'anchor', tensionDelta: 0, continuityDelta: 0, speakerCues: [] },
+                  stateUpdates: { notes: [] }
+                })
+              }],
+              memorySummary: {
+                activeTruths: [],
+                supersededTruths: [],
+                memoryCandidates: [],
+                sessionId: request.sessionId
+              },
+              stateEnvelope: { mood: 0.2 },
+              relationshipDeltas: [],
+              trace: {
+                status: 'succeeded',
+                aishaDiagnostics: {
+                  aishaPersistenceMode: 'postgres',
+                  aishaPersistenceBackend: 'postgres',
+                  aishaPersistenceConnected: true
+                }
+              },
+              diagnostics: {
+                responseTraceStatus: 'succeeded',
+                runtimeCredentialProvided: true,
+                runtimeCredentialSource: 'Mock Gemini',
+                runtimeCredentialLength: 'test-room-provider-key'.length,
+                aishaPersistenceMode: 'postgres',
+                aishaPersistenceBackend: 'postgres',
+                aishaPersistenceConnected: true
+              },
+              engineMode: 'production',
+              aishaEngineConnected: true,
+              confidence: 0.83
+            };
+          }
+        };
+      });
+
+      await withStudioServer(async baseUrl => {
+        const response = await fetch(`${baseUrl}/api/studio/pulse-showcase/turn-stream`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+          body: JSON.stringify({
+            sessionId: 'showcase-objective-repeat-full-client-history',
+            mode: 'social_hierarchy_lab',
+            userText: 'WHAT IS THE OBJECTIVE?',
+            recentTurns: [
+              { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+              { speakerId: 'claudia', role: 'primary', text: 'First step: set a twenty-minute timer for four blocks: push or pull, legs, hinge, core. Write the lowest rep count before you stop.' },
+              { speakerId: 'vanya', role: 'side', text: 'Make the week human first; the mirror can join once the reps exist.' },
+              { speakerId: 'user', role: 'user', text: 'turn that into a 20 minute version' },
+              { speakerId: 'claudia', role: 'primary', text: 'Twenty minutes: 3 to warm up, 12 for squats, wall push-ups, towel rows, and glute bridges, 5 for plank. Record total reps.' },
+              { speakerId: 'vanya', role: 'side', text: 'Make it socially impossible to negotiate: twenty minutes, then proof.' },
+              { speakerId: 'user', role: 'user', text: 'ok but I only have 20 minutes' },
+              { speakerId: 'claudia', role: 'side', text: 'Use a short timer: reverse lunges, pushups, towel rows, wall sit. Four rounds, count reps, stop.' },
+              { speakerId: 'vanya', role: 'primary', text: 'Keep the body honest, not dramatic. Finish small; brag later.' },
+              { speakerId: 'user', role: 'user', text: 'WHERE DO I START' },
+              { speakerId: 'claudia', role: 'side', text: 'Two rounds: push, row, squat, hinge. Mark one number before you leave; next week beat that number by one.' },
+              { speakerId: 'vanya', role: 'primary', text: 'Start where the week can actually hold it: Monday, Wednesday, Friday; no identity speech required.' },
+              { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' }
+            ]
+          })
+        });
+        assert.equal(response.status, 200);
+        const events = parseSseEvents(await response.text());
+        const final = events.find(item => item.event === 'final').data;
+        const text = visibleText(final.messageEvents);
+
+        assert.equal(final.ok, true);
+        assert.equal(final.activeEngine, 'local-social-director');
+        assert.equal(final.acceptedByPack1, false);
+        assert.equal(final.qualityAccepted, false);
+        assert.equal(final.repairedByRuntime, true);
+        assert.match(final.qualityFailureCategory, /recent-repeat-risk|product-repetition:recent-line|quality-rejected/);
+        assert.doesNotMatch(text, /First step: set a twenty-minute timer for four blocks/i);
+        assert.match(text, /\b(Action version|Premise check|push, pull, legs|log reps)\b/i);
+        assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room repeats/);
+      });
+    } finally {
+      if (originalGemini == null) delete process.env.GEMINI_API_KEY;
+      else process.env.GEMINI_API_KEY = originalGemini;
+    }
+  });
+});
+
 test('Studio Pulse showcase repairs thin accepted old preference recall using Pack 1 evidence', async () => {
   await withAishaFlag('true', async () => {
     const originalGemini = process.env.GEMINI_API_KEY;
