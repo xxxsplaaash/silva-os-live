@@ -2396,7 +2396,7 @@ test('social director fallback treats referenced 20-minute conversion before rep
 
   assert.match(text, /\bTwenty minutes\b/i);
   assert.match(text, /\bRun two rounds: squat, push, row, hinge, plank\b/i);
-  assert.match(text, /\bwrite the count\b/i);
+  assert.match(text, /\bwrite the rep count\b/i);
   assert.doesNotMatch(text, /\bMake it socially impossible to negotiate: twenty minutes, then proof\b/i);
   assert.doesNotMatch(text, /\bKeep the body honest, not dramatic\b/i);
   assert.doesNotMatch(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
@@ -2428,7 +2428,7 @@ test('social director fallback treats live accepted starter wording as prior sho
   });
 
   assert.match(text, /\bRun two rounds: squat, push, row, hinge, plank\b/i);
-  assert.match(text, /\bStop at twenty minutes and write the count\b/i);
+  assert.match(text, /\bStop at twenty minutes and write the rep count\b/i);
   assert.doesNotMatch(text, /\bTwenty minutes: 3 to warm up\b/i);
   assert.doesNotMatch(text, /\bMake it socially impossible to negotiate\b/i);
   assert.equal(validation.ok, true, validation.issues.join(', '));

@@ -56,7 +56,7 @@ test('social fallback compresses live short-session starter wording without repe
   const text = fallbackVisibleText(fallback);
 
   assert.match(text, /Run two rounds: squat, push, row, hinge, plank/i);
-  assert.match(text, /Stop at twenty minutes and write the count/i);
+  assert.match(text, /Stop at twenty minutes and write the rep count/i);
   assert.doesNotMatch(text, /three rounds of incline push-ups, backpack rows, and split squats/i);
   assert.doesNotMatch(text, /Make it socially impossible to negotiate/i);
 });
@@ -138,6 +138,8 @@ test('social fallback changes watch-next shape after a recent movie card', () =>
   assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
   assert.doesNotMatch(text, /Decision rule: if nobody wants subtitles/i);
   assert.doesNotMatch(text, /Spider-Verse|The Menu|quiet pressure, Spider-Verse for voltage/i);
+  assert.doesNotMatch(text, /one title now/i);
+  assert.doesNotMatch(text, /earns another sentence/i);
 });
 
 test('social fallback treats watch-next as a fresh title lane even without visible history', () => {
@@ -157,4 +159,6 @@ test('social fallback treats watch-next as a fresh title lane even without visib
   assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
   assert.doesNotMatch(text, /Arrival for quiet pressure/i);
   assert.doesNotMatch(text, /Spider-Verse|The Menu/i);
+  assert.doesNotMatch(text, /one title now/i);
+  assert.doesNotMatch(text, /earns another sentence/i);
 });

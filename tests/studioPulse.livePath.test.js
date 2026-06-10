@@ -2981,6 +2981,8 @@ test('Studio Pulse showcase repairs repeated movie follow-up cards from client v
         assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
         assert.doesNotMatch(text, /Tonight I would choose Arrival/i);
         assert.doesNotMatch(text, /Decision rule: if nobody wants subtitles/i);
+        assert.doesNotMatch(text, /one title now/i);
+        assert.doesNotMatch(text, /earns another sentence/i);
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room repeats|generated room repeats the same watch card/i);
       });
     } finally {
@@ -3103,6 +3105,8 @@ test('Studio Pulse showcase repairs repeated movie follow-up cards across a live
         assert.match(secondText, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
         assert.doesNotMatch(secondText, /Arrival for quiet pressure/i);
         assert.doesNotMatch(secondText, /Keep the night human/i);
+        assert.doesNotMatch(secondText, /one title now/i);
+        assert.doesNotMatch(secondText, /earns another sentence/i);
       });
     } finally {
       if (originalGemini == null) delete process.env.GEMINI_API_KEY;

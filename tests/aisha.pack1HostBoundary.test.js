@@ -343,7 +343,16 @@ test('Pack 1 social-director contract asks for blind-attributable diverse speake
   assert.match(promptSource, /For stress\/frustration turns, do not answer with objective slogans/i);
   assert.match(promptSource, /For repetition complaints, acknowledge the loop once/i);
   assert.match(promptSource, /For room-tension asks, at least one speaker must name the actual social pressure/i);
+  assert.match(promptSource, /For exact room-tension asks like \\"everyone, what is the actual tension in this room\?\\"/i);
+  assert.match(promptSource, /use Vanya, Leah, and Grok if selected/i);
+  assert.match(promptSource, /empty speakers, diagnostics, old-topic advice, and silence-only output are invalid/i);
+  assert.match(promptSource, /Room tension exact ask/i);
+  assert.match(promptSource, /Alive, but the warmth in the room is fighting the urge to sound useful/i);
   assert.match(promptSource, /ask-finding loops/i);
+  assert.match(promptSource, /For denial asks like 'No, I never said X\. Did I\?'/i);
+  assert.match(promptSource, /do not concede the denial and do not reverse active\/prior values/i);
+  assert.match(promptSource, /Continuity denial receipt/i);
+  assert.match(promptSource, /Yes: Prior record was landing page style is black glass with a single red pulse/i);
   assert.match(promptSource, /visible silence reason/i);
   assert.match(promptSource, /Vanya:/);
   assert.match(promptSource, /Claudia:/);

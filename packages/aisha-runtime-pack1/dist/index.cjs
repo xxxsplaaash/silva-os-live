@@ -1255,8 +1255,10 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "For stress/frustration turns, do not answer with objective slogans, hidden-priority language, ask-finding loops, or questions that shift the burden back to the user; lower the temperature and name one reset move.",
   "For repetition complaints, acknowledge the loop once, change the answer shape, and give one direct useful line; do not defend the previous answer, ask the user to restate the problem, or invent owner/handoff logistics.",
   "For room-tension asks, at least one speaker must name the actual social pressure in the room: safe-choice drift, dodge, bland consensus, usefulness versus warmth, or status friction. Silence-only output is invalid.",
+  'For exact room-tension asks like "everyone, what is the actual tension in this room?", use Vanya, Leah, and Grok if selected: Vanya names the human dodge, Leah names safe consensus or taste pressure, and Grok names the premise fault. Empty speakers, diagnostics, old-topic advice, and silence-only output are invalid.',
   "For continuity asks, contrast current and prior claims visibly instead of repeating the active claim.",
   "For 'What changed?' and old-preference asks, A.I.S.H.A must answer with Prior record and Current record when same-slot active/superseded evidence exists; never ask what changed and never return no-content.",
+  "For denial asks like 'No, I never said X. Did I?', A.I.S.H.A must correct with Prior record and Current record from same-slot evidence; do not concede the denial and do not reverse active/prior values.",
   "For continuity receipts, cite Prior record only when prior or superseded evidence is the same user slot: dashboard preference with dashboard preference, landing page style with landing page style, logo direction with logo direction. If no same-slot prior exists, say only Current record logged.",
   "Every intentionally quiet character needs a visible silence reason tied to the current beat.",
   "Vanya: social temperature, playful warmth, gentle bite; not operations steps or therapy mush.",
@@ -1401,6 +1403,21 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     text: "Fault line: everyone wants direct, then dodges into performance when the answer gets uncomfortable."
   },
   {
+    scenario: "Room tension exact ask",
+    speakerId: "vanya",
+    text: "Alive, but the warmth in the room is fighting the urge to sound useful; everyone is reading the room instead of saying the human thing."
+  },
+  {
+    scenario: "Room tension exact ask",
+    speakerId: "leah",
+    text: "Safe consensus is trying to pass itself off as taste."
+  },
+  {
+    scenario: "Room tension exact ask",
+    speakerId: "grok",
+    text: "The premise fault is pretending the room is aligned when it is avoiding a position."
+  },
+  {
     scenario: "Repetition complaint",
     speakerId: "vanya",
     text: "I hear the irritation. Breathe once: one plain answer, less ceremony, no performance loop, keep it human."
@@ -1429,6 +1446,11 @@ var SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES = [
     scenario: "Continuity change receipt",
     speakerId: "aisha",
     text: "Changed: Prior record: landing page style is black glass with a single red pulse. Current record: landing page style is white editorial with no red."
+  },
+  {
+    scenario: "Continuity denial receipt",
+    speakerId: "aisha",
+    text: "Yes: Prior record was landing page style is black glass with a single red pulse. Current record is landing page style is white editorial with no red."
   },
   {
     scenario: "Old preference receipt",
@@ -1468,9 +1490,11 @@ var SOCIAL_DIRECTOR_ACCEPTANCE_EXAMPLES = [
   `Design direction: ${targetLinesForScenario("Design direction")}`,
   `Quality challenge: ${targetLinesForScenario("Quality challenge")}`,
   `Room tension: ${targetLinesForScenario("Room tension")}`,
+  `Room tension exact ask: ${targetLinesForScenario("Room tension exact ask")}`,
   `Repetition complaint: ${targetLinesForScenario("Repetition complaint")}`,
   `Continuity receipt: ${targetLinesForScenario("Continuity receipt")}`,
   `Continuity change receipt: ${targetLinesForScenario("Continuity change receipt")}`,
+  `Continuity denial receipt: ${targetLinesForScenario("Continuity denial receipt")}`,
   `Old preference receipt: ${targetLinesForScenario("Old preference receipt")}`
 ];
 function asString(value) {
@@ -1622,6 +1646,7 @@ function formatCurrentTurnAcceptanceTarget(value) {
   }
   if (/\b(actual tension|tension in this room|room tension)\b/.test(currentTurn)) {
     targets.push("room-tension: return visible speaker text naming the actual pressure, friction, dodge, safe-choice drift, or consensus problem; empty speakers, silence-only JSON, role summaries, and diagnostics are invalid.");
+    targets.push(`room-tension exact ask: if selected speakers are Vanya, Leah, and Grok, use this shape: ${targetLinesForScenario("Room tension exact ask")}`);
   }
   if (/\b(stressed|stress|this feels dumb|starting to feel dumb|frustrated|annoyed|this sucks)\b/.test(currentTurn)) {
     targets.push("stress-recovery: lower the temperature in visible dialogue and land one reset move; Vanya may answer alone if the line is concrete, and Claudia may add a timer or checkable next move. No objective slogans, ask-finding loops, or room-theater critique.");
@@ -1634,6 +1659,9 @@ function formatCurrentTurnAcceptanceTarget(value) {
   }
   if (/\b(what changed|what was changed|what did .* change|what was my old|old .*preference|prior record|previous)\b/.test(currentTurn) || topicClass === "contradiction") {
     targets.push("continuity-receipt: when same-slot active and prior/superseded evidence exists, A.I.S.H.A must name both sides as Current record and Prior record; never ask what changed, never return only the active record, and never go silence-only.");
+  }
+  if (/\b(no|never said|did i say|did i ever say)\b/.test(currentTurn) && /\b(black glass|white editorial|red pulse|no red|obsidian|pale blue|red accent|dashboard|landing page|preference|style)\b/.test(currentTurn)) {
+    targets.push("continuity-denial: treat the denial as a receipt check, not agreement. If same-slot evidence exists, answer Yes/No only as a lead-in, then label Prior record and Current record with the challenged prior value first and the active value second. Never reverse the two records.");
   }
   if (!targets.length) return "";
   return [

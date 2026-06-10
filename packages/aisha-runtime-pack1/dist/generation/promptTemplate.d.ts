@@ -103,6 +103,18 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly speakerId: "grok";
     readonly text: "Fault line: everyone wants direct, then dodges into performance when the answer gets uncomfortable.";
 }, {
+    readonly scenario: "Room tension exact ask";
+    readonly speakerId: "vanya";
+    readonly text: "Alive, but the warmth in the room is fighting the urge to sound useful; everyone is reading the room instead of saying the human thing.";
+}, {
+    readonly scenario: "Room tension exact ask";
+    readonly speakerId: "leah";
+    readonly text: "Safe consensus is trying to pass itself off as taste.";
+}, {
+    readonly scenario: "Room tension exact ask";
+    readonly speakerId: "grok";
+    readonly text: "The premise fault is pretending the room is aligned when it is avoiding a position.";
+}, {
     readonly scenario: "Repetition complaint";
     readonly speakerId: "vanya";
     readonly text: "I hear the irritation. Breathe once: one plain answer, less ceremony, no performance loop, keep it human.";
@@ -126,6 +138,10 @@ export declare const SOCIAL_DIRECTOR_ATTRIBUTION_TARGET_LINES: readonly [{
     readonly scenario: "Continuity change receipt";
     readonly speakerId: "aisha";
     readonly text: "Changed: Prior record: landing page style is black glass with a single red pulse. Current record: landing page style is white editorial with no red.";
+}, {
+    readonly scenario: "Continuity denial receipt";
+    readonly speakerId: "aisha";
+    readonly text: "Yes: Prior record was landing page style is black glass with a single red pulse. Current record is landing page style is white editorial with no red.";
 }, {
     readonly scenario: "Old preference receipt";
     readonly speakerId: "aisha";
