@@ -1322,6 +1322,32 @@ test('showcase impulse planner keeps casual everyone check-ins out of all-five p
   assert.deepEqual(explicit.impulsePlan.speakerOrder, ['aisha', 'vanya', 'leah', 'claudia', 'grok']);
 });
 
+test('showcase impulse planner routes actual-tension asks to bounded tension voices', () => {
+  const input = buildRoomDirectorInput({
+    message: 'everyone, what is the actual tension in this room?',
+    recentTurns: [
+      { speakerId: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', text: 'Twenty minutes: squat, hinge, push, pull, core. Write reps down.' },
+      { speakerId: 'vanya', text: 'Small enough to finish, real enough that tomorrow notices.' }
+    ],
+    roomState: { roomMood: 'focused' }
+  });
+  const prompt = buildRoomDirectorPrompt(input);
+  const jobs = Object.fromEntries(input.impulsePlan.selectedSpeakers.map(item => [item.speakerId, item.lineJob]));
+
+  assert.equal(input.impulsePlan.topicClass, 'room-tension');
+  assert.equal(input.impulsePlan.category, 'normal');
+  assert.equal(input.impulsePlan.maxSpeakers, 3);
+  assert.equal(input.impulsePlan.enforceSelectedSpeakers, true);
+  assert.deepEqual(input.impulsePlan.speakerOrder, ['vanya', 'leah', 'grok']);
+  assert.match(jobs.vanya, /human pressure|warmth-versus-usefulness tension/i);
+  assert.match(jobs.leah, /safe-choice|consensus pressure/i);
+  assert.match(jobs.grok, /premise fault|dodge/i);
+  assert.match(prompt, /If the user asks for the actual room tension, name the social tension/i);
+  assert.match(prompt, /Follow impulsePlan exactly: use only selectedSpeakers/i);
+  assert.doesNotMatch(prompt, /Speaker order:\s*aisha -> vanya -> leah -> claudia -> grok/i);
+});
+
 test('silent reactions preserve intentional silence reasons for visible presence', () => {
   const input = buildRoomDirectorInput({
     message: 'I need a sharper logo direction',

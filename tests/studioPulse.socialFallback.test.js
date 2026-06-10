@@ -88,6 +88,32 @@ test('social fallback changes objective recovery shape across full visible histo
   assert.doesNotMatch(text, /objective is clear|personal fitness routines/i);
 });
 
+test('social fallback changes bruh recovery after objective-action pair', () => {
+  const recentTurns = [
+    { speakerId: 'user', role: 'user', text: 'WHAT IS THE OBJECTIVE?' },
+    { speakerId: 'claudia', role: 'side', text: 'Action version: push, pull, legs; log reps, recover, repeat. Leave two reps in reserve.' },
+    { speakerId: 'vanya', role: 'primary', text: 'No slogan. Put ten minutes on the clock, move first, and let the proof talk after.' },
+    { speakerId: 'user', role: 'user', text: 'BRUH...' }
+  ];
+  const fallback = socialFallbackFor('BRUH...', { recentTurns });
+  const input = buildRoomDirectorInput({
+    message: 'BRUH...',
+    recentTurns
+  });
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'BRUH...',
+    recentTurns,
+    impulsePlan: input.impulsePlan
+  });
+  const text = fallbackVisibleText(fallback);
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.match(text, /\b(One clean training move|first rep gets the floor)\b/i);
+  assert.doesNotMatch(text, /No slogan\. Put ten minutes on the clock/i);
+  assert.doesNotMatch(text, /Action version: push, pull, legs/i);
+  assert.doesNotMatch(text, /Premise check: specific beats motivational fog/i);
+});
+
 test('social fallback changes watch-next shape after a recent movie card', () => {
   const recentTurns = [
     { speakerId: 'user', role: 'user', text: 'new topic: what movie should we watch tonight?' },
