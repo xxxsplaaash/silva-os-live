@@ -1242,7 +1242,7 @@ var SOCIAL_DIRECTOR_LINE_QUALITY_RULES = [
   "Avoid recent-repeat-risk by naming the current turn's new receipt before expanding.",
   "For practical asks, give a concrete first move, proof point, or next action instead of generic advice.",
   "Fitness first asks must name the actual starter circuit: incline push-ups, backpack rows, split squats, hip hinges, plank, plus reps or a tracking action. No solid-goal, protein/sleep, consistency, habit, or progressive-overload boilerplate.",
-  "20-minute fitness follow-ups must compress the recent starter list instead of restating it: use movement categories like push, pull, legs, hinge, core, plus timer/count. Do not repeat incline push-ups, backpack rows, split squats, hip hinges, and plank as the whole answer.",
+  "20-minute fitness follow-ups must compress the recent starter list instead of restating it: use movement categories or named moves like push, pull, legs, hinge, core, chair squats, incline push-ups, backpack rows, dead bugs, plus timer/count. Never say 'chosen exercises', and do not use 40/20, 45/15, or work/rest interval boilerplate.",
   "For planning-tomorrow asks, give a plain day skeleton with blocks, a checkpoint/risk, and a recovery gap; do not invent owners, handoffs, client agendas, KPI decks, deliverables, or EOD reporting.",
   "For food or design asks, answer the food or design direction directly; do not punt to operations language.",
   "Food/design answers must land a named option or visible design decision before caveats, briefs, specs, or implementation posture.",
@@ -1618,7 +1618,7 @@ function formatCurrentTurnAcceptanceTarget(value) {
     targets.push("fitness terse follow-up: stay inside the muscle-building thread. Do not use generic work-day phrases like rough pass, visible result, switching tasks, or make the day smaller. Claudia must show exercises, reps/logging, or training days; Vanya may pressure action without saying objective. A useful answer names push/pull/legs/hinge/core, reps, timer, or Monday/Wednesday/Friday.");
   }
   if (/\b(20|twenty)[-\s]+minute\b/.test(currentTurn) && /\b(referenced workout|fitness follow-up|workout follow-up|compress the referenced workout|movement categories|push|pull|hinge|core|reps?)\b/.test(currentTurn)) {
-    targets.push("20-minute fitness follow-up: Claudia must speak first with a timed mini-plan using squat, hinge, push, pull, core, timer, reps. If the referenced card is Vanya social framing, preserve only that social context; do not let Vanya answer alone or turn the line into motivation. Vanya may only add a second line after Claudia. Focused-work advice and restating the old card are invalid.");
+    targets.push("20-minute fitness follow-up: Claudia must speak first with a timed mini-plan using squat, hinge, push, pull, core, timer, reps, or named moves like chair squats, incline push-ups, backpack rows, dead bugs. If the referenced card is Vanya social framing, preserve only that social context; do not let Vanya answer alone or turn the line into motivation. Vanya may only add a second line after Claudia. Focused-work advice, 'chosen exercises', work/rest interval boilerplate, and restating the old card are invalid.");
   }
   if (/\b(actual tension|tension in this room|room tension)\b/.test(currentTurn)) {
     targets.push("room-tension: return visible speaker text naming the actual pressure, friction, dodge, safe-choice drift, or consensus problem; empty speakers, silence-only JSON, role summaries, and diagnostics are invalid.");

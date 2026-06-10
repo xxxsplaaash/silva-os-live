@@ -139,3 +139,22 @@ test('social fallback changes watch-next shape after a recent movie card', () =>
   assert.doesNotMatch(text, /Decision rule: if nobody wants subtitles/i);
   assert.doesNotMatch(text, /Spider-Verse|The Menu|quiet pressure, Spider-Verse for voltage/i);
 });
+
+test('social fallback treats watch-next as a fresh title lane even without visible history', () => {
+  const fallback = socialFallbackFor('open floor: what should the room watch next?', { recentTurns: [] });
+  const input = buildRoomDirectorInput({
+    message: 'open floor: what should the room watch next?',
+    recentTurns: []
+  });
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'open floor: what should the room watch next?',
+    recentTurns: [],
+    impulsePlan: input.impulsePlan
+  });
+  const text = fallbackVisibleText(fallback);
+
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assert.match(text, /\b(Heat|Knives Out|Everything Everywhere All at Once|social teeth|bright chaos)\b/i);
+  assert.doesNotMatch(text, /Arrival for quiet pressure/i);
+  assert.doesNotMatch(text, /Spider-Verse|The Menu/i);
+});

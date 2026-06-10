@@ -8,7 +8,8 @@ test('showcase impulse planner gives exact no-content recovery turns concrete li
     userMessage: 'everyone, what is the actual tension in this room?',
     roomState: { roomMood: 'focused' }
   });
-  assert.equal(tension.category, 'everyone');
+  assert.equal(tension.category, 'normal');
+  assert.equal(tension.topicClass, 'room-tension');
   assert.ok(tension.selectedSpeakers.some(item => /room tension|human pressure|safe-choice|premise fault/i.test(item.lineJob)));
   assert.ok(tension.selectedSpeakers.every(item => item.lineJob && !/undefined|null/i.test(item.lineJob)));
 
@@ -38,8 +39,8 @@ test('showcase impulse planner keeps Claudia first for Vanya-referenced 20-minut
 
   assert.equal(plan.category, 'practical');
   assert.deepEqual(plan.speakerOrder, ['claudia', 'vanya']);
-  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute timer plan|movement categories|prior starter list/i);
-  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /fresh human pressure|avoid recent mirror|first-round/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'claudia').lineJob, /20-minute timer plan|named movement categories|chosen exercises|work\/rest intervals/i);
+  assert.match(plan.selectedSpeakers.find(item => item.speakerId === 'vanya').lineJob, /fresh human pressure|avoid recent mirror|first-round|solid-block/i);
 });
 
 test('showcase impulse planner gives ordinary lunch distinct Claudia and Vanya line jobs', () => {

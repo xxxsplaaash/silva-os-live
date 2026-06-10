@@ -771,8 +771,8 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
             enforceSelectedSpeakers: true,
             speakerOrder: ['claudia', 'vanya'],
             selectedSpeakers: [
-              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using movement categories, not the prior starter list' },
-              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery' },
+              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using named movement categories or moves plus one rep count; never say chosen exercises or work/rest intervals' },
+              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, heroic-rebrand, and solid-block imagery' },
             ],
           },
         },
@@ -784,10 +784,11 @@ test('Pack 1 social-director built prompt carries first-attempt selected speaker
   assert.match(prompt.systemPrompt, /Speaker order: claudia -> vanya/);
   assert.match(prompt.systemPrompt, /Max speakers: 2/);
   assert.match(prompt.systemPrompt, /Use only selected speakers on the first attempt/i);
-  assert.match(prompt.systemPrompt, /claudia: compress the referenced workout into a 20-minute timer plan using movement categories/i);
-  assert.match(prompt.systemPrompt, /not the prior starter list/i);
+  assert.match(prompt.systemPrompt, /claudia: compress the referenced workout into a 20-minute timer plan using named movement categories/i);
+  assert.match(prompt.systemPrompt, /never say chosen exercises or work\/rest intervals/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
   assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego/i);
+  assert.match(prompt.systemPrompt, /solid-block imagery/i);
   assert.match(prompt.systemPrompt, /Claudia must land the concrete movement\/timer\/reps line before Vanya/i);
   assert.match(prompt.systemPrompt, /Vanya-first generic encouragement line is a first-attempt failure/i);
   assert.match(prompt.systemPrompt, /For terse frustration after recent fitness context/i);
@@ -1007,8 +1008,8 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
             enforceSelectedSpeakers: true,
             speakerOrder: ['claudia', 'vanya'],
             selectedSpeakers: [
-              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using movement categories, not the prior starter list' },
-              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery' },
+              { speakerId: 'claudia', lineJob: 'compress the referenced workout into a 20-minute timer plan using named movement categories or moves plus one rep count; never say chosen exercises or work/rest intervals' },
+              { speakerId: 'vanya', lineJob: 'add one fresh human pressure line after Claudia; avoid recent mirror, first-round, clock, ego, heroic-rebrand, and solid-block imagery' },
             ],
           },
         },
@@ -1023,14 +1024,17 @@ test('Pack 1 social-director prompt keeps Claudia practical line first when Vany
   assert.match(prompt.systemPrompt, /Current turn acceptance target:/);
   assert.match(prompt.systemPrompt, /20-minute fitness follow-up: Claudia must speak first with a timed mini-plan/i);
   assert.match(prompt.systemPrompt, /squat, hinge, push, pull, core, timer, reps/i);
+  assert.match(prompt.systemPrompt, /chair squats, incline push-ups, backpack rows, dead bugs/i);
+  assert.match(prompt.systemPrompt, /chosen exercises/i);
+  assert.match(prompt.systemPrompt, /work\/rest interval boilerplate/i);
   assert.match(prompt.systemPrompt, /Vanya may only add a second line after Claudia/i);
   assert.match(prompt.systemPrompt, /If the referenced card is Vanya social framing, preserve only that social context/i);
   assert.match(prompt.systemPrompt, /do not let Vanya answer alone or turn the line into motivation/i);
-  assert.match(prompt.systemPrompt, /Focused-work advice and restating the old card are invalid/i);
+  assert.match(prompt.systemPrompt, /Focused-work advice, 'chosen exercises', work\/rest interval boilerplate, and restating the old card are invalid/i);
   assert.match(prompt.systemPrompt, /vanya: Start at home this week\. Three short sessions; no heroic rebrand required/i);
   assert.match(prompt.systemPrompt, /claudia: Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
   assert.match(prompt.systemPrompt, /vanya: add one fresh human pressure line after Claudia/i);
-  assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego, and heroic-rebrand imagery/i);
+  assert.match(prompt.systemPrompt, /avoid recent mirror, first-round, clock, ego, heroic-rebrand, and solid-block imagery/i);
   assert.ok(
     prompt.systemPrompt.indexOf('Current turn acceptance target:') < prompt.systemPrompt.indexOf('Acceptance examples:'),
     '20-minute current-turn target should beat softer examples'

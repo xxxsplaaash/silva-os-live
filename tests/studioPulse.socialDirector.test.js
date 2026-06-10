@@ -698,7 +698,7 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.equal(input.impulsePlan.topicClass, 'reference-follow-up');
   assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
   assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
-  assert.ok(rubric.positiveTargets.some(item => /movement categories, timer blocks/i.test(item)));
+  assert.ok(rubric.positiveTargets.some(item => /named movement categories or moves, timer blocks/i.test(item)));
   assert.match(prompt, /Twenty minutes: 3 to warm up/i);
   assert.match(prompt, /squats, wall push-ups, towel rows, and glute bridges/i);
   assert.match(prompt, /Make it socially impossible to negotiate: twenty minutes, then proof\./i);
@@ -6513,7 +6513,9 @@ test('room director repair prompt gives issue-specific acceptance guidance for f
   assert.match(prompt, /incline push-ups, backpack rows, split squats, hip hinges, plank/);
   assert.match(prompt, /Referenced fitness repair/);
   assert.match(prompt, /Claudia must answer with a timed 20-minute mini-plan/);
-  assert.match(prompt, /compresses the referenced moves into categories/i);
+  assert.match(prompt, /compresses the referenced moves into named categories or moves/i);
+  assert.match(prompt, /chosen exercises/i);
+  assert.match(prompt, /work\/rest interval boilerplate/i);
   assert.match(prompt, /do not restate the prior starter list/i);
   assert.match(prompt, /Recent-repeat repair/);
   assert.match(prompt, /compress the prior starter list into categories/i);
