@@ -2378,6 +2378,37 @@ test('social director fallback treats referenced 20-minute conversion before rep
   assertCleanVisible(fallback);
 });
 
+test('social director fallback treats live accepted starter wording as prior short-session shape', () => {
+  const body = {
+    references: [
+      {
+        speakerId: 'claudia',
+        speakerName: 'Claudia Naidoo',
+        text: 'First step: set a timer for twenty minutes. Focus on three rounds of incline push-ups, backpack rows, and split squats.'
+      }
+    ],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a timer for twenty minutes. Focus on three rounds of incline push-ups, backpack rows, and split squats.' },
+      { speakerId: 'vanya', role: 'side', text: 'Make the week human first; the mirror can join once the reps exist.' }
+    ]
+  };
+  const fallback = socialFallbackFor('turn that into a 20 minute version', body);
+  const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'turn that into a 20 minute version',
+    recentTurns: body.recentTurns,
+    references: body.references
+  });
+
+  assert.match(text, /\bRun two rounds: squat, push, row, hinge, plank\b/i);
+  assert.match(text, /\bStop at twenty minutes and write the count\b/i);
+  assert.doesNotMatch(text, /\bTwenty minutes: 3 to warm up\b/i);
+  assert.doesNotMatch(text, /\bMake it socially impossible to negotiate\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assertCleanVisible(fallback);
+});
+
 test('social director fallback changes short-session shape after referenced 20-minute plan', () => {
   const body = {
     recentTurns: [
