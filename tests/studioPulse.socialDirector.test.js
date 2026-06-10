@@ -2344,6 +2344,40 @@ test('social director fallback avoids repeated Vanya towel phrase on referenced 
   assertCleanVisible(fallback);
 });
 
+test('social director fallback treats referenced 20-minute conversion before repeated constraint variation', () => {
+  const body = {
+    references: [
+      {
+        speakerId: 'vanya',
+        speakerName: 'Vanya',
+        text: 'Make the week human first; the mirror can join once the reps exist.'
+      }
+    ],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a timer for twenty minutes. Do three rounds of incline push-ups, backpack rows, and split squats, aiming for ten reps each.' },
+      { speakerId: 'vanya', role: 'side', text: 'Make the week human first; the mirror can join once the reps exist.' },
+      { speakerId: 'vanya', role: 'side', text: 'Twenty minutes is enough time to feel it tomorrow, if you start small today.' }
+    ]
+  };
+  const fallback = socialFallbackFor('turn that into a 20 minute version', body);
+  const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'turn that into a 20 minute version',
+    recentTurns: body.recentTurns,
+    references: body.references
+  });
+
+  assert.match(text, /\bTwenty minutes\b/i);
+  assert.match(text, /\bRun two rounds: squat, push, row, hinge, plank\b/i);
+  assert.match(text, /\bwrite the count\b/i);
+  assert.doesNotMatch(text, /\bMake it socially impossible to negotiate: twenty minutes, then proof\b/i);
+  assert.doesNotMatch(text, /\bKeep the body honest, not dramatic\b/i);
+  assert.doesNotMatch(text, /\breverse lunges, pushups, towel rows, wall sit\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
+  assertCleanVisible(fallback);
+});
+
 test('social director fallback changes short-session shape after referenced 20-minute plan', () => {
   const body = {
     recentTurns: [
