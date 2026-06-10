@@ -510,8 +510,8 @@ test('social director fallback uses referenced fitness card for short-session fo
   assert.equal(result.statusCode, 200);
   assert.equal(body.activeEngine, 'local-social-director');
   assert.match(text, /\bTwenty minutes\b/i);
-  assert.match(text, /\b(push|pull|legs|hinge|core)\b/i);
-  assert.match(text, /\b(lowest rep count|rep count)\b/i);
+  assert.match(text, /\b(push|pull|legs|hinge|core|squats|wall push-ups|towel rows|glute bridges|plank)\b/i);
+  assert.match(text, /\b(lowest rep count|rep count|total reps|Record total reps)\b/i);
   assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
   assertCleanVisible(body);
@@ -528,8 +528,8 @@ test('social director fallback uses recent fitness cards for short-session follo
   const text = visibleText(fallback);
 
   assert.match(text, /\bTwenty minutes\b/i);
-  assert.match(text, /\b(push|pull|legs|hinge|core)\b/i);
-  assert.match(text, /\b(lowest rep count|rep count)\b/i);
+  assert.match(text, /\b(push|pull|legs|hinge|core|squats|wall push-ups|towel rows|glute bridges|plank)\b/i);
+  assert.match(text, /\b(lowest rep count|rep count|total reps|Record total reps)\b/i);
   assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
   assertCleanVisible(fallback);
@@ -699,9 +699,9 @@ test('showcase prompt carries concrete referenced 20-minute fitness acceptance t
   assert.deepEqual(input.impulsePlan.speakerOrder, ['claudia', 'vanya']);
   assert.ok(rubric.mustPass.includes('referenced fitness follow-up becomes a concrete 20-minute plan'));
   assert.ok(rubric.positiveTargets.some(item => /movement categories, timer blocks/i.test(item)));
-  assert.match(prompt, /Twenty minutes: warm up for 3/i);
-  assert.match(prompt, /push, pull, legs, hinge, core/i);
-  assert.match(prompt, /no victory speech until the towel is wet/i);
+  assert.match(prompt, /Twenty minutes: 3 to warm up/i);
+  assert.match(prompt, /squats, wall push-ups, towel rows, and glute bridges/i);
+  assert.match(prompt, /Make it socially impossible to negotiate: twenty minutes, then proof\./i);
   assert.doesNotMatch(prompt, /GOOD:[^\n]*Let the clock do the arguing/i);
   assert.doesNotMatch(prompt, /GOOD: Claudia says "Twenty minutes: warm up for 3, then two rounds of incline push-ups, backpack rows, split squats, hip hinges, and plank/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough that tomorrow notices/i);
@@ -736,7 +736,7 @@ test('showcase prompt keeps Claudia practical plan first when Vanya card is refe
   assert.match(prompt, /Follow impulsePlan exactly: use only selectedSpeakers/i);
   assert.match(prompt, /Do incline push-ups, backpack rows, split squats, hip hinges, and a plank/i);
   assert.match(prompt, /BAD: user references Vanya's home-start card/i);
-  assert.match(prompt, /GOOD: Claudia says "Twenty minutes: warm up for 3/i);
+  assert.match(prompt, /GOOD: Claudia says "Twenty minutes: 3 to warm up/i);
   assert.match(prompt, /not \\"20 minutes is a solid block\\" or generic encouragement/i);
 });
 
@@ -760,7 +760,7 @@ test('showcase prompt carries anti-repeat and voice-contract acceptance pressure
   assert.match(prompt, /Do not reuse recent line openings, catchphrases, sentence frames, or advice shapes/i);
   assert.match(prompt, /Use different sentence shapes across speakers/i);
   assert.match(prompt, /Vanya must not live on one catchphrase/i);
-  assert.match(prompt, /no victory speech until the towel is wet/i);
+  assert.match(prompt, /Make it socially impossible to negotiate: twenty minutes, then proof\./i);
   assert.doesNotMatch(prompt, /GOOD:[^\n]*Let the clock do the arguing/i);
   assert.doesNotMatch(prompt, /Small enough to finish, real enough/i);
   assert.match(prompt, /A\.I\.S\.H\.A: receipt or continuity anchor/i);
@@ -2302,13 +2302,45 @@ test('social director fallback treats referenced exercise cards as fitness conte
   const fallback = socialFallbackFor('turn that into a 20 minute version', body);
   const text = fallbackVisibleText(fallback);
 
-  assert.match(text, /\bKeep it human: twenty minutes\b/i);
+  assert.match(text, /\bMake it socially impossible to negotiate: twenty minutes, then proof\./i);
   assert.match(text, /\btwenty minutes\b/i);
-  assert.match(text, /\btwo rounds\b/i);
-  assert.match(text, /\blowest rep count\b/i);
+  assert.match(text, /\bsquats, wall push-ups, towel rows, and glute bridges\b/i);
+  assert.match(text, /\bRecord total reps\b/i);
   assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
   assert.doesNotMatch(text, /\b(first round proves|second round earns|mirror can wait|day is moving)\b/i);
-  assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence\b/i);
+  assert.doesNotMatch(text, /\broom is here|earn a voice|silence means absence|Keep it human|victory speech|towel is wet\b/i);
+  assertCleanVisible(fallback);
+});
+
+test('social director fallback avoids repeated Vanya towel phrase on referenced 20-minute follow-up', () => {
+  const body = {
+    references: [
+      {
+        speakerId: 'vanya',
+        speakerName: 'Vanya',
+        text: 'Keep it human: no victory speech until the towel is wet.'
+      }
+    ],
+    recentTurns: [
+      { speakerId: 'user', role: 'user', text: 'LOL I WANNA GROW MY MUSCLES' },
+      { speakerId: 'claudia', role: 'primary', text: 'First step: set a 20-minute timer for four blocks: push or pull, legs, hinge, and core. Write the lowest rep count before you stop.' },
+      { speakerId: 'vanya', role: 'side', text: 'Keep it human: no victory speech until the towel is wet.' }
+    ]
+  };
+  const fallback = socialFallbackFor('turn that into a 20 minute version', body);
+  const text = fallbackVisibleText(fallback);
+  const validation = validateDirectorOutput(fallback, {
+    userMessage: 'turn that into a 20 minute version',
+    recentTurns: body.recentTurns,
+    references: body.references
+  });
+
+  assert.match(text, /\bTwenty minutes\b/i);
+  assert.match(text, /\bsquats, wall push-ups, towel rows, and glute bridges\b/i);
+  assert.match(text, /\bRecord total reps\b/i);
+  assert.match(text, /\bMake it socially impossible to negotiate: twenty minutes, then proof\./i);
+  assert.doesNotMatch(text, /\bKeep it human|victory speech|towel is wet\b/i);
+  assert.equal(validation.ok, true, validation.issues.join(', '));
   assertCleanVisible(fallback);
 });
 

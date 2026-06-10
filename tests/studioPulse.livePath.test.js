@@ -2633,8 +2633,8 @@ test('Studio Pulse showcase repairs short-session follow-up when generated room 
         assert.equal(final.qualityAccepted, false);
         assert.equal(final.repairedByRuntime, true);
         assert.match(text, /\bTwenty minutes\b/i);
-        assert.match(text, /\b(push|pull|legs|hinge|core)\b/i);
-        assert.match(text, /\b(lowest rep count|rep count)\b/i);
+        assert.match(text, /\b(push|pull|legs|hinge|core|squats|wall push-ups|towel rows|glute bridges|plank)\b/i);
+        assert.match(text, /\b(lowest rep count|rep count|total reps|Record total reps)\b/i);
         assert.doesNotMatch(text, /\b(40|45|forty|forty-five)\s+seconds?\s+on|\b(15|20|fifteen|twenty)\s+seconds?\s+(off|rest)|work\/rest|work rest/i);
         assert.doesNotMatch(text, /\b(room is here|earn a voice|silence means absence)\b/i);
         assert.doesNotMatch(JSON.stringify(events), /test-room-provider-key|generatorPrompt|aishaDiagnostics|generated room loses/);
