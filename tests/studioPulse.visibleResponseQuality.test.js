@@ -961,6 +961,16 @@ test('visible response quality rejects question-bounce repetition recovery from 
   });
 
   assert.ok(issueKeys(liveLoopClearIssues).includes('frustration-miss:repeat-complaint'));
+
+  const timerResetIssues = evaluateVisibleResponse({
+    userMessage: 'you keep repeating yourself',
+    visibleText: [
+      'First step: close the noisy tab, set a ten-minute timer, mark one visible result, then stop.',
+      'Make the room human again: water first, one clear surface, and let the drama wait outside.'
+    ].join('\n')
+  });
+
+  assert.ok(issueKeys(timerResetIssues).includes('frustration-miss:repeat-complaint'));
 });
 
 test('visible response quality rejects normal-answer question bounce from live gauntlet', () => {
